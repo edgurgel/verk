@@ -6,6 +6,8 @@ otp_release:
   - 17.5
 script:
   - MIX_ENV=test mix test --no-start
+after_script:
+  - MIX_ENV=test mix coveralls.travis --no-start
 services:
   - redis-server
 sudo: false
