@@ -1,0 +1,8 @@
+%{"combine": {:hex, :combine, "0.5.2"},
+  "connection": {:hex, :connection, "1.0.1"},
+  "meck": {:hex, :meck, "0.8.3"},
+  "poison": {:hex, :poison, "1.5.0"},
+  "poolboy": {:hex, :poolboy, "1.5.1"},
+  "redix": {:hex, :redix, "0.1.0"},
+  "timex": {:hex, :timex, "0.19.2"},
+  "tzdata": {:hex, :tzdata, "0.1.7"}}
