@@ -36,7 +36,7 @@ defmodule Verk.Mixfile do
   end
 
   defp package do
-    [ contributors: ["Eduardo Gurgel Pinho"],
+    [ maintainers: ["Eduardo Gurgel Pinho"],
       licenses: ["MIT"],
       links: %{"Github" => "https://github.com/edgurgel/verk"} ]
   end
