@@ -109,3 +109,7 @@ Verk's goal is to never have a job that exists only in memory. It uses Redis as 
 Verk will re-enqueue jobs if the application crashed while jobs were running. It will also retry jobs that failed keeping track of the errors that happened.
 
 The jobs that will run on top of Verk should be idempotent as they may run more than once.
+
+## Sponsorship
+
+Initial development sponsored by [Carnival.io](carnival.io)
