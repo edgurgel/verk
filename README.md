@@ -112,4 +112,4 @@ The jobs that will run on top of Verk should be idempotent as they may run more 
 
 ## Sponsorship
 
-Initial development sponsored by [Carnival.io](carnival.io)
+Initial development sponsored by [Carnival.io](http://carnival.io)
