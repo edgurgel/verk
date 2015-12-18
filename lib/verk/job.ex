@@ -1,6 +1,6 @@
 defmodule Verk.Job do
   @keys [error_message: nil, failed_at: nil, retry_count: 0, queue: nil, class: nil, args: [],
-         jid: nil, finished_at: nil, enqueued_at: nil, original_json: nil]
+         jid: nil, finished_at: nil, enqueued_at: nil]
 
   @derive { Poison.Encoder, only: Keyword.keys(@keys) }
   defstruct [:original_json | @keys]
