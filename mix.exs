@@ -20,7 +20,8 @@ defmodule Verk.Mixfile do
   end
 
   def application do
-    [applications: [:logger],
+    [applications: [:logger, :tzdata],
+     included_applications: [:poison, :timex, :redix, :poolboy],
      mod: {Verk, []}]
   end
 
