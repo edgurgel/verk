@@ -30,7 +30,7 @@ Feature set:
 
 TODO:
 
-* Error reporting (GenEvent?)
+* Error reporting (GenEvent?) [#3](https://github.com/edgurgel/verk/issues/3)
 * Metrics (GenEvent?)
 * Scheduled jobs
 * Store dead jobs (too many retries)
