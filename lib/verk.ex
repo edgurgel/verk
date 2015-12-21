@@ -12,13 +12,7 @@ defmodule Verk do
   alias Verk.Job
 
   @doc false
-  def start(_type, _args) do
-    redis_url = Application.get_env(:verk, :redis_url, "redis://127.0.0.1:6379")
-    { :ok, redis } = Redix.start_link(redis_url)
-    Verk.Scripts.load(redis)
-    :ok = Redix.stop(redis)
-    Verk.Supervisor.start_link
-  end
+  def start(_type, _args), do: Verk.Supervisor.start_link
 
   @doc """
   Add a new `queue` with a pool of size `size` of workers

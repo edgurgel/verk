@@ -74,6 +74,8 @@ defmodule Verk.QueueManager do
     node_id = Application.get_env(:verk, :node_id, "1")
     redis_url = Application.get_env(:verk, :redis_url, "redis://127.0.0.1:6379")
     { :ok, redis } = Redix.start_link(redis_url)
+    Verk.Scripts.load(redis)
+
     state = %State{ queue_name: queue_name, redis: redis, node_id: node_id }
 
     Logger.info "Queue Manager started for queue #{queue_name}"
@@ -84,9 +86,10 @@ defmodule Verk.QueueManager do
   def handle_call(:enqueue_inprogress, _from, state) do
     case Redix.command(state.redis, ["EVALSHA", @lpop_rpush_src_dest_script_sha, 2, inprogress(state.queue_name, state.node_id), "queue:#{state.queue_name}"]) do
       { :ok, n } -> Logger.info("#{n} jobs readded to the queue #{state.queue_name} from inprogress list")
-      error -> Logger.error("Failed to add jobs back to queue #{state.queue_name} from inprogress list. Error: #{inspect error}")
+        { :reply, :ok, state }
+      { :error, reason } -> Logger.error("Failed to add jobs back to queue #{state.queue_name} from inprogress list. Error: #{inspect reason}")
+        { :stop, :redis_failed, state }
     end
-    { :reply, :ok, state }
   end
 
   def handle_call({ :dequeue, n }, _from, state) do
@@ -96,7 +99,10 @@ defmodule Verk.QueueManager do
       { :ok, jobs } ->
         jobs = for job <- jobs, do: Verk.Job.decode!(job)
         { :reply, jobs, state }
-      _ ->
+      { :error, %Redix.Error{message: message} } ->
+        Logger.error("Failed to fetch jobs: #{message}")
+        { :stop, :redis_failed, :redis_failed, state }
+      { :error, _ } ->
         { :reply, :redis_failed, state }
     end
   end
