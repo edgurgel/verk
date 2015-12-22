@@ -99,14 +99,16 @@ defmodule Verk.WorkersManagerTest do
     pool_name = "pool_name"
     state = %State{ monitors: monitors, pool_name: pool_name, queue_manager_name: queue_manager_name }
     worker = self
-    job = "job"
+    job = %Verk.Job{}
     job_id = "job_id"
 
     expect(:poolboy, :checkin, [pool_name, worker], :ok)
     expect(Verk.QueueManager, :ack, [queue_manager_name, job], :ok)
 
-    :ets.insert(monitors, { worker, job_id, job, make_ref })
+    :ets.insert(monitors, { worker, job_id, job, make_ref, Timex.Date.now })
     assert handle_cast({ :done, worker, job_id }, state) == { :noreply, state, 0 }
+
+    assert :ets.lookup(state.monitors, worker) == []
 
     assert validate [:poolboy, Verk.QueueManager]
   end
