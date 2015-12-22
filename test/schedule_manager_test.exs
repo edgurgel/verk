@@ -11,6 +11,21 @@ defmodule Verk.ScheduleManagerTest do
     { :ok, %{ script: script } }
   end
 
+  test "init load scripts and schedule fetch" do
+    state = %State{ redis: :redis }
+
+    Application.put_env(:verk, :redis_url, "redis_url")
+    Application.put_env(:verk, :node_id, "test_node")
+
+    expect(Redix, :start_link, ["redis_url"], {:ok, :redis })
+    expect(Verk.Scripts, :load, [:redis], :ok)
+    expect(Process, :send_after, [self, :fetch_retryable, 4200], make_ref)
+
+    assert init(:args) == { :ok, state }
+
+    assert validate [Redix, Verk.Scripts, Process]
+  end
+
   test "handle_info :fetch_retryable without jobs to retry", %{ script: script } do
     state = %State{ redis: :redis }
     now = :now
@@ -32,6 +47,17 @@ defmodule Verk.ScheduleManagerTest do
 
     assert handle_info(:fetch_retryable, state) == { :noreply, state }
     assert_receive :fetch_retryable
+
+    assert validate [Timex.Time, Redix]
+  end
+
+  test "handle_info :fetch_retryable with jobs to retry and redis failed to apply the script", %{ script: script } do
+    state = %State{ redis: :redis }
+    now = :now
+    expect(Timex.Time, :now, [:secs], now)
+    expect(Redix, :command, [:redis, ["EVALSHA", script, 1, "retry", now]], {:error, %Redix.Error{message: "a message"}})
+
+    assert handle_info(:fetch_retryable, state) == { :stop, :redis_failed, state }
 
     assert validate [Timex.Time, Redix]
   end

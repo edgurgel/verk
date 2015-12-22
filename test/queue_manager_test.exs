@@ -20,10 +20,11 @@ defmodule Verk.QueueManagerTest do
     Application.put_env(:verk, :node_id, "test_node")
 
     expect(Redix, :start_link, ["redis_url"], {:ok, :redis })
+    expect(Verk.Scripts, :load, [:redis], :ok)
 
     assert init(["queue_name"]) == { :ok, %State{ node_id: "test_node", queue_name: "queue_name", redis: :redis } }
 
-    assert validate Redix
+    assert validate [Redix, Verk.Scripts]
   end
 
   test "call enqueue_inprogress" do
@@ -33,6 +34,17 @@ defmodule Verk.QueueManagerTest do
     state = %State{ queue_name: "test_queue", redis: :redis, node_id: "test_node" }
 
     assert handle_call(:enqueue_inprogress, :from, state) == { :reply, :ok, state }
+
+    assert validate Redix
+  end
+
+  test "call enqueue_inprogress and redis failed" do
+    script = Verk.Scripts.sha("lpop_rpush_src_dest")
+    expect(Redix, :command, [:redis, ["EVALSHA", script, 2, "inprogress:test_queue:test_node", "queue:test_queue"]], { :error, :reason })
+
+    state = %State{ queue_name: "test_queue", redis: :redis, node_id: "test_node" }
+
+    assert handle_call(:enqueue_inprogress, :from, state) == { :stop, :redis_failed, state }
 
     assert validate Redix
   end
@@ -65,6 +77,16 @@ defmodule Verk.QueueManagerTest do
     state = %State{ queue_name: "test_queue", redis: :redis }
 
     assert handle_call({ :dequeue, 3 }, :from, state) == { :reply, :redis_failed, state }
+
+    assert validate Redix
+  end
+
+  test "call dequeue and redis failed to evalue the script" do
+    expect(Redix, :command, 2, { :error, %Redix.Error{message: "a message" } })
+
+    state = %State{ queue_name: "test_queue", redis: :redis }
+
+    assert handle_call({ :dequeue, 3 }, :from, state) == { :stop, :redis_failed, :redis_failed, state }
 
     assert validate Redix
   end

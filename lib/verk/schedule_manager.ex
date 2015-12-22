@@ -29,6 +29,8 @@ defmodule Verk.ScheduleManager do
   def init(_) do
     redis_url = Application.get_env(:verk, :redis_url, "redis://127.0.0.1:6379")
     { :ok, redis } = Redix.start_link(redis_url)
+    Verk.Scripts.load(redis)
+
     state = %State{ redis: redis }
 
     Logger.info "Schedule Manager started"
@@ -43,13 +45,18 @@ defmodule Verk.ScheduleManager do
     case Redix.command(state.redis, ["EVALSHA", @enqueue_retriable_script_sha, 1, @retry_key, Time.now(:secs)]) do
       { :ok, nil } ->
         schedule_fetch_retryable!
+        { :noreply, state }
       { :ok, _job } ->
         schedule_fetch_retryable!(0)
+        { :noreply, state }
+      { :error, %Redix.Error{message: message} } ->
+        Logger.error("Failed to fetch retry set. Error: #{message}")
+        { :stop, :redis_failed, state }
       error ->
         Logger.error("Failed to fetch retry set. Error: #{inspect error}")
         schedule_fetch_retryable!
+        { :noreply, state }
     end
-    { :noreply, state }
   end
 
   defp schedule_fetch_retryable! do
