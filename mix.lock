@@ -1,6 +1,6 @@
 %{"certifi": {:hex, :certifi, "0.3.0"},
   "combine": {:hex, :combine, "0.5.2"},
-  "connection": {:hex, :connection, "1.0.1"},
+  "connection": {:hex, :connection, "1.0.2"},
   "earmark": {:hex, :earmark, "0.1.19"},
   "ex_doc": {:hex, :ex_doc, "0.8.4"},
   "excoveralls": {:hex, :excoveralls, "0.4.3"},
@@ -12,7 +12,7 @@
   "mimerl": {:hex, :mimerl, "1.0.2"},
   "poison": {:hex, :poison, "1.5.0"},
   "poolboy": {:hex, :poolboy, "1.5.1"},
-  "redix": {:hex, :redix, "0.1.0"},
+  "redix": {:hex, :redix, "0.3.3"},
   "ssl_verify_hostname": {:hex, :ssl_verify_hostname, "1.0.5"},
   "timex": {:hex, :timex, "0.19.2"},
   "tzdata": {:hex, :tzdata, "0.1.7"}}
