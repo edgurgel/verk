@@ -23,7 +23,7 @@ defmodule Verk do
   end
 
   @doc """
-  Remve `queue` from the list of queues that are being processed
+  Remove `queue` from the list of queues that are being processed
   """
   @spec remove_queue(atom) :: :ok | { :error, :not_found }
   def remove_queue(queue) when is_atom(queue) do
