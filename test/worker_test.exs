@@ -15,4 +15,11 @@ defmodule Verk.WorkerTest do
     assert_receive :perform_executed
     assert_receive {:"$gen_cast", {:done, ^worker, "job_id"}}
   end
+
+  test "perform_async cast message to worker to perform the job" do
+    worker = self
+    assert perform_async(worker, :manager, :module, :args, :job_id)
+
+    assert_receive {:"$gen_cast", {:perform, :module, :args, :job_id, :manager}}
+  end
 end
