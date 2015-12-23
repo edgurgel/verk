@@ -4,8 +4,29 @@ defmodule Verk.WorkersManagerTest do
   import Verk.WorkersManager
   alias Verk.WorkersManager.State
 
+  defmodule TestHandler do
+    use GenEvent
+
+    def init(pid), do: {:ok, pid}
+    def handle_event(event, pid) do
+      send pid, event
+      {:ok, pid}
+    end
+  end
+
+  setup_all do
+    { :ok, pid } = GenEvent.start(name: Verk.EventManager)
+    on_exit fn -> GenEvent.stop(pid) end
+    :ok
+  end
+
   setup do
-    on_exit fn -> unload end
+    pid = self
+    on_exit fn ->
+      GenEvent.remove_handler(Verk.EventManager, TestHandler, pid)
+      unload
+    end
+    GenEvent.add_mon_handler(Verk.EventManager, TestHandler, pid)
     table = :ets.new(:"queue_name.workers_manager", [:named_table, read_concurrency: true])
     { :ok, monitors: table }
   end
@@ -90,6 +111,7 @@ defmodule Verk.WorkersManagerTest do
 
     assert handle_info(:timeout, state) == { :noreply, state, 1000 }
     assert match?([{^worker, ^job_id, ^job, _, _}], :ets.lookup(monitors, worker))
+    assert_receive %Verk.Events.JobStarted{ job: ^job, started_at: _ }
 
     assert validate [Verk.QueueManager, :poolboy, Verk.Worker]
   end
@@ -109,6 +131,7 @@ defmodule Verk.WorkersManagerTest do
     assert handle_cast({ :done, worker, job_id }, state) == { :noreply, state, 0 }
 
     assert :ets.lookup(state.monitors, worker) == []
+    assert_receive %Verk.Events.JobFinished{ job: ^job, finished_at: _ }
 
     assert validate [:poolboy, Verk.QueueManager]
   end
@@ -132,6 +155,7 @@ defmodule Verk.WorkersManagerTest do
     assert handle_info({ :DOWN, ref, :_, worker, :reason }, state) == { :noreply, state, 0 }
 
     assert :ets.lookup(monitors, worker) == []
+    assert_receive %Verk.Events.JobFailed{ job: ^job, failed_at: _ }
 
     assert validate [:poolboy, Verk.Log, Verk.QueueManager]
   end

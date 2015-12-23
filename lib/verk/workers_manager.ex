@@ -7,6 +7,7 @@ defmodule Verk.WorkersManager do
 
   use GenServer
   require Logger
+  alias Verk.Events
 
   @default_timeout 1000
 
@@ -84,6 +85,7 @@ defmodule Verk.WorkersManager do
         demonitor!(state.monitors, worker, mref)
         :ok = Verk.QueueManager.retry(state.queue_manager_name, job, reason)
         :ok = Verk.QueueManager.ack(state.queue_manager_name, job)
+        notify!(%Events.JobFailed{ job: job, failed_at: Timex.Date.now })
       error -> Logger.warn("Worker got down but it was not found, error: #{inspect error}")
     end
     { :noreply, state, 0 }
@@ -95,6 +97,7 @@ defmodule Verk.WorkersManager do
         monitor!(state.monitors, worker, job)
         Verk.Log.start(job, worker)
         ask_to_perform(worker, job_id, module, args)
+        notify!(%Events.JobStarted{ job: job, started_at: Timex.Date.now })
     end
   end
 
@@ -118,6 +121,7 @@ defmodule Verk.WorkersManager do
         true = Process.demonitor(mref, [:flush])
         true = :ets.delete(state.monitors, worker)
         :poolboy.checkin(state.pool_name, worker)
+        notify!(%Events.JobFinished{ job: job, finished_at: Timex.Date.now })
       _ -> Logger.error "#{job_id} finished but no worker was monitored"
     end
     { :noreply, state, 0 }
@@ -127,6 +131,10 @@ defmodule Verk.WorkersManager do
   def terminate(reason, _state) do
     Logger.error "Manager terminating, reason: #{inspect reason}"
     :ok
+  end
+
+  defp notify!(event) do
+    :ok = GenEvent.ack_notify(Verk.EventManager, event)
   end
 
   defp free_workers(monitors, size) do
