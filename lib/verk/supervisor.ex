@@ -10,7 +10,11 @@ defmodule Verk.Supervisor do
   def init(_) do
     queues = Application.get_env(:verk, :queues, [])
     children = for { queue, size } <- queues, do: queue_child(queue, size)
-    children = [worker(Verk.ScheduleManager, [], id: :schedule_manager) | children]
+
+    schedule_manager = worker(Verk.ScheduleManager, [], id: :schedule_manager)
+    verk_event_manager  = worker(GenEvent, [[name: Verk.EventManager]])
+
+    children = [verk_event_manager | [schedule_manager | children]]
     supervise(children, strategy: :one_for_one)
   end
 
