@@ -1,5 +1,5 @@
 [![Build Status](https://travis-ci.org/edgurgel/verk.svg?branch=master)](https://travis-ci.org/edgurgel/verk)
-[![Hex pm](http://img.shields.io/hexpm/v/verk.svg?style=flat)](https://hex.pm/packages/verk) 
+[![Hex pm](http://img.shields.io/hexpm/v/verk.svg?style=flat)](https://hex.pm/packages/verk)
 [![Coverage Status](https://coveralls.io/repos/edgurgel/verk/badge.svg?branch=master&service=github)](https://coveralls.io/github/edgurgel/verk?branch=master)
 Verk
 ===
@@ -109,6 +109,52 @@ Verk's goal is to never have a job that exists only in memory. It uses Redis as 
 Verk will re-enqueue jobs if the application crashed while jobs were running. It will also retry jobs that failed keeping track of the errors that happened.
 
 The jobs that will run on top of Verk should be idempotent as they may run more than once.
+
+## Error tracking
+
+One can track when jobs start and finish or fail. Verk has an Event Manager that notify the following events:
+
+* `Verk.Events.JobStarted`
+* `Verk.Events.JobFinished`
+* `Verk.Events.JobFailed`
+
+Here is an example of a `GenEvent` handler to print any event:
+
+```elixir
+defmodule PrintHandler do
+  use GenEvent
+
+  def handle_event(event, state) do
+    IO.puts "Event received: #{inspect event}"
+    { :ok, state }
+  end
+end
+```
+
+One can define an error tracking handler like this:
+
+```elixir
+defmodule TrackingErrorHandler do
+  use GenEvent
+
+  def handle_event(%Verk.Events.JobFailed{job: job, failed_at: failed_at, stacktrace: trace}, state) do
+    MyTrackingExceptionSystem.track(stacktrace: trace, name: job.module)
+    { :ok, state }
+  end
+  def handle_event(_, state) do
+    # Ignore other events
+    { :ok, state }
+  end
+end
+```
+
+You also need to add the handler to connect with the event manager:
+
+```elixir
+GenEvent.add_mon_handler(Verk.EventManager, TrackingErrorHandler, [])
+```
+
+More info about `GenEvent.add_mon_handler/3` [here](http://elixir-lang.org/docs/v1.1/elixir/GenEvent.html#add_mon_handler/3).
 
 ## Sponsorship
 
