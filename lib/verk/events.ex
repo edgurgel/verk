@@ -8,6 +8,6 @@ defmodule Verk.Events do
   end
 
   defmodule JobFailed do
-    defstruct [:job, :failed_at, :stacktrace]
+    defstruct [:job, :failed_at, :stacktrace, :exception]
   end
 end

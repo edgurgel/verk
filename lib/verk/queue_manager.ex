@@ -45,9 +45,9 @@ defmodule Verk.QueueManager do
   @doc """
   Add job to be retried in the assigned queue
   """
-  def retry(queue_manager, job, reason, timeout \\ 5000) do
+  def retry(queue_manager, job, exception, timeout \\ 5000) do
     try do
-      GenServer.call(queue_manager, { :retry, job, Timex.Time.now(:secs), reason }, timeout)
+      GenServer.call(queue_manager, { :retry, job, Timex.Time.now(:secs), exception }, timeout)
     catch
       :exit, { :timeout, _ } -> :timeout
     end
@@ -107,8 +107,8 @@ defmodule Verk.QueueManager do
     end
   end
 
-  def handle_call({ :retry, job, failed_at, reason }, _from, state) do
-    job = %{ job | failed_at: failed_at, error_message: inspect(reason) }
+  def handle_call({ :retry, job, failed_at, exception }, _from, state) do
+    job = %{ job | failed_at: failed_at, error_message: Exception.message(exception) }
     retry_count = (job.retry_count || 0) + 1
     if retry_count <= @max_retry do
       job = %{ job | retry_count: retry_count }

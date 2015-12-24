@@ -112,12 +112,13 @@ defmodule Verk.QueueManagerTest do
     failed_at = 100
 
     expect(Redix, :command, [:redis, ["ZADD", "retry", :_, "payload"]], { :ok, 1 })
-    expect(Poison, :encode!, [%Job{ retry_count: 1, failed_at: failed_at, error_message: ":reason" }], "payload")
+    expect(Poison, :encode!, [%Job{ retry_count: 1, failed_at: failed_at, error_message: "reasons" }], "payload")
 
     state = %State{ redis: :redis }
     job = %Job{ retry_count: 0 }
+    exception = RuntimeError.exception("reasons")
 
-    assert handle_call({ :retry, job, failed_at, :reason }, :from, state) == { :reply, :ok, state }
+    assert handle_call({ :retry, job, failed_at, exception }, :from, state) == { :reply, :ok, state }
 
     assert validate [Redix, Poison]
   end
@@ -126,12 +127,13 @@ defmodule Verk.QueueManagerTest do
     failed_at = 100
 
     expect(Redix, :command, [:redis, ["ZADD", "retry", :_, "payload"]], { :ok, 1 })
-    expect(Poison, :encode!, [%Job{ retry_count: 1, failed_at: failed_at, error_message: ":reason" }], "payload")
+    expect(Poison, :encode!, [%Job{ retry_count: 1, failed_at: failed_at, error_message: "reasons" }], "payload")
 
     state = %State{ redis: :redis }
     job = %Job{}
+    exception = RuntimeError.exception("reasons")
 
-    assert handle_call({ :retry, job, failed_at, :reason }, :from, state) == { :reply, :ok, state }
+    assert handle_call({ :retry, job, failed_at, exception }, :from, state) == { :reply, :ok, state }
 
     assert validate [Redix, Poison]
   end
@@ -140,12 +142,13 @@ defmodule Verk.QueueManagerTest do
     failed_at = 100
 
     expect(Redix, :command, [:redis, ["ZADD", "retry", :_, "payload"]], { :error, :reason })
-    expect(Poison, :encode!, [%Job{ retry_count: 1, failed_at: failed_at, error_message: ":reason" }], "payload")
+    expect(Poison, :encode!, [%Job{ retry_count: 1, failed_at: failed_at, error_message: "reasons" }], "payload")
 
     state = %State{ redis: :redis }
     job = %Job{ retry_count: 0 }
+    exception = RuntimeError.exception("reasons")
 
-    assert handle_call({ :retry, job, failed_at, :reason }, :from, state) == { :reply, :ok, state }
+    assert handle_call({ :retry, job, failed_at, exception }, :from, state) == { :reply, :ok, state }
 
     assert validate [Redix, Poison]
   end

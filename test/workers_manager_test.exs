@@ -142,6 +142,8 @@ defmodule Verk.WorkersManagerTest do
     pool_name = "pool_name"
     job = "job"
     queue_manager_name = "queue_manager_name"
+    reason = :reason
+    exception = RuntimeError.exception(inspect(reason))
 
     :ets.insert(monitors, { worker, "job_id", job, ref, "start_time" })
 
@@ -149,13 +151,43 @@ defmodule Verk.WorkersManagerTest do
 
     expect(:poolboy, :checkin, [pool_name, worker], true)
     expect(Verk.Log, :fail, [job, "start_time", worker], :ok)
-    expect(Verk.QueueManager, :retry, [queue_manager_name, job, :reason], :ok)
+    expect(Verk.QueueManager, :retry, [queue_manager_name, job, exception], :ok)
     expect(Verk.QueueManager, :ack, [queue_manager_name, job], :ok)
 
-    assert handle_info({ :DOWN, ref, :_, worker, :reason }, state) == { :noreply, state, 0 }
+    assert handle_info({ :DOWN, ref, :_, worker, { reason, :stacktrace } }, state) == { :noreply, state, 0 }
 
     assert :ets.lookup(monitors, worker) == []
-    assert_receive %Verk.Events.JobFailed{ job: ^job, failed_at: _ }
+    assert_receive %Verk.Events.JobFailed{ job: ^job, failed_at: _,
+                                           stacktrace: :stacktrace,
+                                           exception: ^exception }
+
+    assert validate [:poolboy, Verk.Log, Verk.QueueManager]
+  end
+
+  test "cast failed coming from worker", %{ monitors: monitors } do
+    ref = make_ref
+    worker = self
+    pool_name = "pool_name"
+    job = "job"
+    job_id = "job_id"
+    queue_manager_name = "queue_manager_name"
+    exception = RuntimeError.exception("reasons")
+
+    :ets.insert(monitors, { worker, job_id, job, ref, "start_time" })
+
+    state = %State{ monitors: monitors, pool_name: pool_name, queue_manager_name: queue_manager_name }
+
+    expect(:poolboy, :checkin, [pool_name, worker], true)
+    expect(Verk.Log, :fail, [job, "start_time", worker], :ok)
+    expect(Verk.QueueManager, :retry, [queue_manager_name, job, exception], :ok)
+    expect(Verk.QueueManager, :ack, [queue_manager_name, job], :ok)
+
+    assert handle_cast({ :failed, worker, job_id, exception, :stacktrace }, state) == { :noreply, state, 0 }
+
+    assert :ets.lookup(monitors, worker) == []
+    assert_receive %Verk.Events.JobFailed{ job: ^job, failed_at: _,
+                                           stacktrace: :stacktrace,
+                                           exception: ^exception }
 
     assert validate [:poolboy, Verk.Log, Verk.QueueManager]
   end

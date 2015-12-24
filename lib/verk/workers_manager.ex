@@ -77,15 +77,12 @@ defmodule Verk.WorkersManager do
     end
   end
 
-  def handle_info({ :DOWN, mref, _, worker, reason }, state) do
+  def handle_info({ :DOWN, mref, _, worker, { reason, stack } }, state) do
     Logger.debug "Worker got down, reason: #{inspect reason}, #{inspect([mref, worker])}"
     case :ets.match(state.monitors, {worker, :'_', :'$1', mref, :'$2'}) do
       [[job, start_time]] ->
-        Verk.Log.fail(job, start_time, worker)
-        demonitor!(state.monitors, worker, mref)
-        :ok = Verk.QueueManager.retry(state.queue_manager_name, job, reason)
-        :ok = Verk.QueueManager.ack(state.queue_manager_name, job)
-        notify!(%Events.JobFailed{ job: job, failed_at: Timex.Date.now })
+        exception = RuntimeError.exception(inspect(reason))
+        fail(job, start_time, worker, mref, state.monitors, state.queue_manager_name, exception, stack)
       error -> Logger.warn("Worker got down but it was not found, error: #{inspect error}")
     end
     { :noreply, state, 0 }
@@ -125,6 +122,24 @@ defmodule Verk.WorkersManager do
       _ -> Logger.error "#{job_id} finished but no worker was monitored"
     end
     { :noreply, state, 0 }
+  end
+
+  def handle_cast({ :failed, worker, job_id, exception, stacktrace }, state) do
+    Logger.debug "Job failed reason: #{inspect exception}"
+    case :ets.lookup(state.monitors, worker) do
+      [{ ^worker, ^job_id, job, mref, start_time}] ->
+        fail(job, start_time, worker, mref, state.monitors, state.queue_manager_name, exception, stacktrace)
+      _ -> Logger.error "#{job_id} failed but no worker was monitored"
+    end
+    { :noreply, state, 0 }
+  end
+
+  defp fail(job, start_time, worker, mref, monitors, queue_manager_name, exception, stacktrace) do
+    Verk.Log.fail(job, start_time, worker)
+    demonitor!(monitors, worker, mref)
+    :ok = Verk.QueueManager.retry(queue_manager_name, job, exception)
+    :ok = Verk.QueueManager.ack(queue_manager_name, job)
+    notify!(%Events.JobFailed{ job: job, failed_at: Timex.Date.now, exception: exception, stacktrace: stacktrace })
   end
 
   @doc false
