@@ -60,7 +60,7 @@ defmodule Verk do
   """
   @spec enqueue(%Job{}) :: { :ok, binary } | { :error, term }
   def enqueue(job) do
-    redis_url = Application.get_env(:verk, :redis_url, "redis://127.0.0.1:6379")
+    { :ok, redis_url } = Application.fetch_env(:verk, :redis_url)
     { :ok, redis } = Redix.start_link(redis_url)
     result = enqueue(redis, job)
     :ok = Redix.stop(redis)

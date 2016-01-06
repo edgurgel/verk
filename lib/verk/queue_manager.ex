@@ -72,7 +72,7 @@ defmodule Verk.QueueManager do
   """
   def init([queue_name]) do
     node_id = Application.get_env(:verk, :node_id, "1")
-    redis_url = Application.get_env(:verk, :redis_url, "redis://127.0.0.1:6379")
+    { :ok, redis_url } = Application.fetch_env(:verk, :redis_url)
     { :ok, redis } = Redix.start_link(redis_url)
     Verk.Scripts.load(redis)
 
