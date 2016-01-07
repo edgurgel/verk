@@ -5,7 +5,7 @@ elixir:
 otp_release:
   - 17.5
 script:
-  - MIX_ENV=test mix test --no-start
+  - MIX_ENV=test mix test --no-start --trace
 after_script:
   - MIX_ENV=test mix coveralls.travis --no-start
 services:
