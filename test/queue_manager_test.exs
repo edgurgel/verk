@@ -16,13 +16,13 @@ defmodule Verk.QueueManagerTest do
   end
 
   test "init sets up redis connection" do
-    Application.put_env(:verk, :redis_url, "redis_url")
-    Application.put_env(:verk, :node_id, "test_node")
+    { :ok, redis_url } = Application.fetch_env(:verk, :redis_url)
+    node_id = Application.get_env(:verk, :node_id, "1")
 
-    expect(Redix, :start_link, ["redis_url"], {:ok, :redis })
+    expect(Redix, :start_link, [redis_url], {:ok, :redis })
     expect(Verk.Scripts, :load, [:redis], :ok)
 
-    assert init(["queue_name"]) == { :ok, %State{ node_id: "test_node", queue_name: "queue_name", redis: :redis } }
+    assert init(["queue_name"]) == { :ok, %State{ node_id: node_id, queue_name: "queue_name", redis: :redis } }
 
     assert validate [Redix, Verk.Scripts]
   end
