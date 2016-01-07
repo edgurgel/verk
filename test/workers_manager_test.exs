@@ -36,11 +36,23 @@ defmodule Verk.WorkersManagerTest do
     assert name(:queue_name) == :"queue_name.workers_manager"
   end
 
-  test "list running jobs", %{ monitors: monitors } do
+  test "list running jobs with jobs to list", %{ monitors: monitors } do
     row = { self, "job_id", "job", make_ref, "start_time" }
     :ets.insert(monitors, row)
 
-    assert running_jobs("queue_name") == [row]
+    assert running_jobs("queue_name") == [%{ process: self, job: "job", started_at: "start_time" }]
+  end
+
+  test "list running jobs with a limit", %{ monitors: monitors } do
+    row1 = { self, "job_id", "job", make_ref, "start_time" }
+    row2 = { self, "job_id2", "job2", make_ref, "start_time2" }
+    :ets.insert(monitors, [row2, row1])
+
+    assert running_jobs("queue_name", 1) == [%{ process: self, job: "job", started_at: "start_time" }]
+  end
+
+  test "list running jobs with no jobs" do
+    assert running_jobs("queue_name") == []
   end
 
   test "init" do
