@@ -27,10 +27,9 @@ Feature set:
 * Retry mechanism
 * Dynamic addition/removal of queues
 * Reliable job processing (RPOPLPUSH and Lua scripts to the rescue)
+* Error tracking
 
 TODO:
-
-* Error reporting (GenEvent?) [#3](https://github.com/edgurgel/verk/issues/3)
 * Metrics (GenEvent?)
 * Scheduled jobs
 * Store dead jobs (too many retries)
