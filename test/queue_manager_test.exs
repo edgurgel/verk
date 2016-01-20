@@ -92,7 +92,7 @@ defmodule Verk.QueueManagerTest do
   end
 
   test "call dequeue and timeout" do
-    assert dequeue(self, 1) == :timeout
+    assert dequeue(self, 1, 1) == :timeout
   end
 
   test "cast ack job" do
