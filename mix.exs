@@ -11,8 +11,7 @@ defmodule Verk.Mixfile do
      elixir: "~> 1.0",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
-     test_coverage: [tool: ExCoveralls],
-     preferred_cli_env: ["coveralls": :test, "coveralls.detail": :test, "coveralls.post": :test],
+     test_coverage: [tool: Coverex.Task, coveralls: true],
      name: "Verk",
      description: @description,
      package: package,
@@ -31,7 +30,7 @@ defmodule Verk.Mixfile do
      { :poolboy, "~> 1.5.1" },
      { :earmark, "~> 0.1.17", only: :docs },
      { :ex_doc, "~> 0.8.0", only: :docs },
-     { :excoveralls, "~> 0.4", only: :test },
+     { :coverex, "~> 1.4.7", only: :test },
      { :meck, "~> 0.8", only: :test }]
   end
 
