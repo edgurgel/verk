@@ -32,11 +32,18 @@ defmodule Verk.WorkersManager do
   List running jobs
 
   Example:
-      [{#PID<0.186.0>, "113b780b0918a51f1f40c59e", %Verk.Job{...}, #Reference<0.0.1.286>}]
+      [%{ process: #PID<0.186.0>, job: %Verk.Job{...}, started_at: %Timex.DateTime{...}} ]
   """
-  @spec running_jobs(binary | atom) :: [{pid, binary, %Verk.Job{}, reference, Timex.DateTime.t}]
-  def running_jobs(queue) do
-    :ets.tab2list(name(queue))
+  @spec running_jobs(binary | atom) :: Map.t
+  def running_jobs(queue, limit \\ 100) do
+    match_spec = [{{:"$1", :_, :"$2", :_, :"$3"}, [], [{{:"$1", :"$2", :"$3"}}]}]
+    case :ets.select(name(queue), match_spec, limit) do
+      :'$end_of_table' -> []
+      { jobs, _continuation } ->
+        for { pid, job, started_at } <- jobs do
+          %{ process: pid, job: job, started_at: started_at }
+        end
+    end
   end
 
   @doc """
