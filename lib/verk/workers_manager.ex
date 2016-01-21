@@ -84,6 +84,10 @@ defmodule Verk.WorkersManager do
     end
   end
 
+  # The worker died normally after finishing the job. Message :done will come soon
+  # or already came. This case here is just to discard the message if it comes with :normal
+  def handle_info({ :DOWN, _mref, _worker, :normal }, state), do: { :noreply, state }
+
   def handle_info({ :DOWN, mref, _, worker, { reason, stack } }, state) do
     Logger.debug "Worker got down, reason: #{inspect reason}, #{inspect([mref, worker])}"
     case :ets.match(state.monitors, {worker, :'_', :'$1', mref, :'$2'}) do
