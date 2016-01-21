@@ -148,7 +148,7 @@ defmodule Verk.WorkersManagerTest do
     assert validate [:poolboy, Verk.QueueManager]
   end
 
-  test "handle info DOWN coming from dead worker", %{ monitors: monitors } do
+  test "handle info DOWN coming from dead worker with reason and stacktrace", %{ monitors: monitors } do
     ref = make_ref
     worker = self
     pool_name = "pool_name"
@@ -174,6 +174,10 @@ defmodule Verk.WorkersManagerTest do
                                            exception: ^exception }
 
     assert validate [:poolboy, Verk.Log, Verk.QueueManager]
+  end
+
+  test "handle info DOWN coming from dead worker with normal reason" do
+    assert handle_info({ :DOWN, :_, :_, :normal }, :state) == { :noreply, :state }
   end
 
   test "cast failed coming from worker", %{ monitors: monitors } do
