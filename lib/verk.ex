@@ -39,31 +39,19 @@ defmodule Verk do
    * a module to perform (`class`)
    * a valid `jid`
   """
-  @spec enqueue(pid, %Job{}) :: { :ok, binary } | { :error, term }
-  def enqueue(_, job = %Job{ queue: nil }), do: { :error, { :missing_queue, job } }
-  def enqueue(_, job = %Job{ class: nil }), do: { :error, { :missing_module, job } }
-  def enqueue(_, job = %Job{ args: args }) when not is_list(args), do: { :error, { :missing_args, job } }
-  def enqueue(redis, job = %Job{ jid: nil }) do
+  @spec enqueue(%Job{}) :: { :ok, binary } | { :error, term }
+  def enqueue(job = %Job{ queue: nil }), do: { :error, { :missing_queue, job } }
+  def enqueue(job = %Job{ class: nil }), do: { :error, { :missing_module, job } }
+  def enqueue(job = %Job{ args: args }) when not is_list(args), do: { :error, { :missing_args, job } }
+  def enqueue(job = %Job{ jid: nil }) do
     <<part1::32, part2::32>> = :crypto.rand_bytes(8)
     jid = "#{part1}.#{part2}"
-    enqueue(redis, %Job{ job | jid: jid })
+    enqueue(%Job{ job | jid: jid })
   end
-  def enqueue(redis, %Job{ jid: jid, queue: queue } = job) do
-    case Redix.command(redis, ["LPUSH", "queue:#{queue}", Poison.encode!(job)]) do
+  def enqueue(%Job{ jid: jid, queue: queue } = job) do
+    case Redix.command(Verk.Redis, ["LPUSH", "queue:#{queue}", Poison.encode!(job)]) do
       { :ok, _ } -> { :ok, jid }
       { :error, reason } -> { :error, reason }
     end
-  end
-
-  @doc """
-  Similar to enqueue/2
-  """
-  @spec enqueue(%Job{}) :: { :ok, binary } | { :error, term }
-  def enqueue(job) do
-    { :ok, redis_url } = Application.fetch_env(:verk, :redis_url)
-    { :ok, redis } = Redix.start_link(redis_url)
-    result = enqueue(redis, job)
-    :ok = Redix.stop(redis)
-    result
   end
 end
