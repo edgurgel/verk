@@ -1,4 +1,9 @@
 defmodule Verk.RetrySet do
+  @moduledoc """
+  This module interacts with the jobs on the retry set
+  """
+  alias Verk.Job
+
   @retry_key "retry"
 
   @doc """
@@ -15,7 +20,18 @@ defmodule Verk.RetrySet do
   @spec range(integer, integer) :: [Verk.Job.T]
   def range(start \\ 0, stop \\ -1) do
     for job <- Redix.command!(Verk.Redis, ["ZRANGE", @retry_key, start, stop]) do
-      Poison.decode!(job, as: Verk.Job)
+      Job.decode!(job)
     end
+  end
+
+  @doc """
+  Deletes the job from the retry set
+  """
+  @spec delete_job(%Job{} | binary) :: boolean
+  def delete_job(%Job{ original_json: original_json }) do
+    Redix.command!(Verk.Redis, ["ZREM", @retry_key, original_json]) == 1
+  end
+  def delete_job(original_json) do
+    Redix.command!(Verk.Redis, ["ZREM", @retry_key, original_json]) == 1
   end
 end
