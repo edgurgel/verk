@@ -55,9 +55,9 @@ defmodule VerkTest do
     job = %Verk.Job{ queue: "test_queue", jid: "job_id", class: "TestWorker", args: [] }
     encoded_job = "encoded_job"
     expect(Poison, :encode!, [job], encoded_job)
-    expect(Redix, :command, [:redis, ["LPUSH", "queue:test_queue", encoded_job]], { :ok, :_ })
+    expect(Redix, :command, [Verk.Redis, ["LPUSH", "queue:test_queue", encoded_job]], { :ok, :_ })
 
-    assert enqueue(:redis, job) == { :ok, "job_id" }
+    assert enqueue(job) == { :ok, "job_id" }
 
     assert validate [Poison, Redix]
   end
@@ -66,10 +66,9 @@ defmodule VerkTest do
     job = %Verk.Job{ queue: "test_queue", jid: "job_id", class: "TestWorker", args: [] }
     encoded_job = "encoded_job"
     expect(Poison, :encode!, [job], encoded_job)
-    expect(Redix, :start_link, 1, { :ok, :redis })
-    expect(Redix, :command, [:redis, ["LPUSH", "queue:test_queue", encoded_job]], { :ok, :_ })
+    expect(Redix, :command, [Verk.Redis, ["LPUSH", "queue:test_queue", encoded_job]], { :ok, :_ })
 
-    assert enqueue(:redis, job) == { :ok, "job_id" }
+    assert enqueue(job) == { :ok, "job_id" }
 
     assert validate [Poison, Redix]
   end
@@ -79,9 +78,9 @@ defmodule VerkTest do
     encoded_job = "encoded_job"
 
     expect(Poison, :encode!, 1, encoded_job)
-    expect(Redix, :command, [:redis, ["LPUSH", "queue:test_queue", encoded_job]], { :ok, :_ })
+    expect(Redix, :command, [Verk.Redis, ["LPUSH", "queue:test_queue", encoded_job]], { :ok, :_ })
 
-    { :ok, jid } = enqueue(:redis, job)
+    { :ok, jid } = enqueue(job)
 
     assert is_binary(jid)
   end
@@ -89,18 +88,18 @@ defmodule VerkTest do
   test "enqueue a job without a queue" do
     job = %Verk.Job{ queue: nil, jid: "job_id" }
 
-    assert enqueue(:redis, job) == { :error, { :missing_queue, job } }
+    assert enqueue(job) == { :error, { :missing_queue, job } }
   end
 
   test "enqueue a job with non-list args" do
     job = %Verk.Job{ queue: "queue", jid: "job_id", class: "TestWorker", args: 123 }
 
-    assert enqueue(:redis, job) == { :error, { :missing_args, job } }
+    assert enqueue(job) == { :error, { :missing_args, job } }
   end
 
   test "enqueue a job with no module to perform" do
     job = %Verk.Job{ queue: "queue", jid: "job_id", args: [123], class: nil }
 
-    assert enqueue(:redis, job) == { :error, { :missing_module, job } }
+    assert enqueue(job) == { :error, { :missing_module, job } }
   end
 end

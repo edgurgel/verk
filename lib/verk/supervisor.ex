@@ -11,11 +11,14 @@ defmodule Verk.Supervisor do
     queues = Application.get_env(:verk, :queues, [])
     children = for { queue, size } <- queues, do: queue_child(queue, size)
 
+    { :ok, redis_url } = Application.fetch_env(:verk, :redis_url)
+
     schedule_manager    = worker(Verk.ScheduleManager, [], id: :schedule_manager)
     verk_event_manager  = worker(GenEvent, [[name: Verk.EventManager]])
     queue_stats_watcher = worker(Verk.QueueStatsWatcher, [])
+    redis               = worker(Redix, [redis_url, [name: Verk.Redis]])
 
-    children = [verk_event_manager | [queue_stats_watcher | [schedule_manager | children]]]
+    children = [redis, verk_event_manager, queue_stats_watcher, schedule_manager] ++ children
     supervise(children, strategy: :one_for_one)
   end
 
