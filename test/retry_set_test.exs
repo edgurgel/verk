@@ -26,12 +26,32 @@ defmodule Verk.RetryTest do
 
   test "range" do
     job = %Verk.Job{class: "Class", args: []}
-    Redix.command!(Verk.Redis, ~w(ZADD retry 123 #{Poison.encode!(job)}))
+    json = Poison.encode!(job)
+    Redix.command!(Verk.Redis, ~w(ZADD retry 123 #{json}))
 
-    assert range == [job]
+    assert range == [%{ job | original_json: json }]
   end
 
   test "range with no items" do
     assert range == []
+  end
+
+  test "delete_job having job with original_json" do
+    job = %Verk.Job{class: "Class", args: []}
+    json = Poison.encode!(job)
+
+    Redix.command!(Verk.Redis, ~w(ZADD retry 123 #{json}))
+
+    job = %{ job | original_json: json}
+
+    assert delete_job(job) == true
+  end
+
+  test "delete_job with original_json" do
+    json = %Verk.Job{class: "Class", args: []} |> Poison.encode!
+
+    Redix.command!(Verk.Redis, ~w(ZADD retry 123 #{json}))
+
+    assert delete_job(json) == true
   end
 end
