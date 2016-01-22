@@ -108,10 +108,9 @@ defmodule Verk.QueueManager do
   end
 
   def handle_call({ :retry, job, failed_at, exception }, _from, state) do
-    job = %{ job | failed_at: failed_at, error_message: Exception.message(exception) }
     retry_count = (job.retry_count || 0) + 1
     if retry_count <= @max_retry do
-      job = %{ job | retry_count: retry_count }
+      job = build_retry_job(job, retry_count, failed_at, exception)
       payload = Poison.encode!(job)
       retry_at = retry_at(failed_at, retry_count) |> to_string
       case Redix.command(state.redis, ["ZADD", @retry_key, retry_at, payload]) do
@@ -122,6 +121,15 @@ defmodule Verk.QueueManager do
       Logger.error "Max retries reached to job_id #{job.jid}, job: #{inspect job}"
     end
     { :reply, :ok, state }
+  end
+
+  # Set the retried_at if this job was already retried at least once
+  defp build_retry_job(job, retry_count, failed_at, exception) when retry_count > 1 do
+     %{ job | retried_at: failed_at, error_message: Exception.message(exception), retry_count: retry_count }
+  end
+
+  defp build_retry_job(job, retry_count, failed_at, exception) do
+     %{ job | failed_at: failed_at, error_message: Exception.message(exception), retry_count: retry_count }
   end
 
   defp retry_at(failed_at, retry_count) do
