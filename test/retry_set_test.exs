@@ -4,8 +4,8 @@ defmodule Verk.RetryTest do
 
   setup do
     { :ok, pid } = Application.fetch_env(:verk, :redis_url)
-                       |> elem(1)
-                       |> Redix.start_link([name: Verk.Redis])
+                    |> elem(1)
+                    |> Redix.start_link([name: Verk.Redis])
     Redix.command!(pid, ~w(DEL retry))
     on_exit fn ->
       ref = Process.monitor(pid)

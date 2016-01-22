@@ -6,7 +6,9 @@ defmodule RedisScriptsTest do
   @enqueue_retriable_job_script File.read!("#{:code.priv_dir(:verk)}/enqueue_retriable_job.lua")
 
   setup do
-    { :ok, redis } = Redix.start_link
+    { :ok, redis } = Application.fetch_env(:verk, :redis_url)
+                      |> elem(1)
+                      |> Redix.start_link([name: Verk.Redis])
     on_exit fn -> Redix.stop(redis) end
     { :ok, %{ redis: redis } }
   end
