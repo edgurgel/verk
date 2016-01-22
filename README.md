@@ -14,13 +14,15 @@ Every queue has its own supervision tree:
 * A `QueueManager` that interacts with Redis to get jobs and enqueue them back to be retried if necessary;
 * A `WorkersManager` that will interact with the `QueueManager` and the pool to execute jobs.
 
-Verk will hold 1 connection to Redis per queue plus 1 dedicated to the `ScheduleManager`.
+Verk will hold one connection to Redis per queue plus one dedicated to the `ScheduleManager` and one general connection for other use cases like deleting a job from retry set or enqueuing new jobs.
 
 The `ScheduleManager` fetches jobs from the `retry` set to be enqueued back to the original queue when it's ready to be retried.
 
+It also has one GenEvent manager called `EventManager`.
+
 The image below is an overview of Verk's supervision tree running with a queue named `default` having 5 workers.
 
-![Supervision Tree](http://i.imgur.com/4FDOOJH.png)
+![Supervision Tree](http://i.imgur.com/8BW8D04.png)
 
 Feature set:
 
