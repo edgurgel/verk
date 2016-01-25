@@ -177,7 +177,7 @@ defmodule Verk.WorkersManagerTest do
   end
 
   test "handle info DOWN coming from dead worker with normal reason" do
-    assert handle_info({ :DOWN, :_, :_, :normal }, :state) == { :noreply, :state }
+    assert handle_info({ :DOWN, :_, :_, :normal }, :state) == { :noreply, :state, 0 }
   end
 
   test "cast failed coming from worker", %{ monitors: monitors } do
