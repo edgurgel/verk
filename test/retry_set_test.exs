@@ -20,6 +20,14 @@ defmodule Verk.RetryTest do
     assert count == 1
   end
 
+  test "clear" do
+    Redix.command!(Verk.Redis, ~w(ZADD retry 123 abc))
+
+    assert clear
+
+    assert Redix.command!(Verk.Redis, ~w(GET retry)) == nil
+  end
+
   test "count with no items" do
     assert count == 0
   end

@@ -15,6 +15,14 @@ defmodule Verk.RetrySet do
   end
 
   @doc """
+  Clears the retry set
+  """
+  @spec clear :: boolean
+  def clear do
+    Redix.command!(Verk.Redis, ["DEL", @retry_key]) == 1
+  end
+
+  @doc """
   Lists jobs from `start` to `stop`
   """
   @spec range(integer, integer) :: [Verk.Job.T]
