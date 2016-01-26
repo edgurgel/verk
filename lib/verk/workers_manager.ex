@@ -148,7 +148,7 @@ defmodule Verk.WorkersManager do
   defp fail(job, start_time, worker, mref, monitors, queue_manager_name, exception, stacktrace) do
     Verk.Log.fail(job, start_time, worker)
     demonitor!(monitors, worker, mref)
-    :ok = Verk.QueueManager.retry(queue_manager_name, job, exception)
+    :ok = Verk.QueueManager.retry(queue_manager_name, job, exception, stacktrace)
     :ok = Verk.QueueManager.ack(queue_manager_name, job)
     notify!(%Events.JobFailed{ job: job, failed_at: Timex.Date.now, exception: exception, stacktrace: stacktrace })
   end

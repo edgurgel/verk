@@ -45,9 +45,9 @@ defmodule Verk.QueueManager do
   @doc """
   Add job to be retried in the assigned queue
   """
-  def retry(queue_manager, job, exception, timeout \\ 5000) do
+  def retry(queue_manager, job, exception, stacktrace, timeout \\ 5000) do
     try do
-      GenServer.call(queue_manager, { :retry, job, Timex.Time.now(:secs), exception }, timeout)
+      GenServer.call(queue_manager, { :retry, job, Timex.Time.now(:secs), exception, stacktrace }, timeout)
     catch
       :exit, { :timeout, _ } -> :timeout
     end
@@ -107,10 +107,10 @@ defmodule Verk.QueueManager do
     end
   end
 
-  def handle_call({ :retry, job, failed_at, exception }, _from, state) do
+  def handle_call({ :retry, job, failed_at, exception, stacktrace }, _from, state) do
     retry_count = (job.retry_count || 0) + 1
     if retry_count <= @max_retry do
-      job = build_retry_job(job, retry_count, failed_at, exception)
+      job = build_retry_job(job, retry_count, failed_at, exception, stacktrace)
       payload = Poison.encode!(job)
       retry_at = retry_at(failed_at, retry_count) |> to_string
       case Redix.command(state.redis, ["ZADD", @retry_key, retry_at, payload]) do
@@ -123,13 +123,17 @@ defmodule Verk.QueueManager do
     { :reply, :ok, state }
   end
 
-  # Set the retried_at if this job was already retried at least once
-  defp build_retry_job(job, retry_count, failed_at, exception) when retry_count > 1 do
-     %{ job | retried_at: failed_at, error_message: Exception.message(exception), retry_count: retry_count }
-  end
-
-  defp build_retry_job(job, retry_count, failed_at, exception) do
-     %{ job | failed_at: failed_at, error_message: Exception.message(exception), retry_count: retry_count }
+  defp build_retry_job(job, retry_count, failed_at, exception, stacktrace) do
+    job = %{ job | error_backtrace: Exception.format_stacktrace(stacktrace),
+                   error_message: Exception.message(exception),
+                   retry_count: retry_count }
+    if retry_count > 1 do
+      # Set the retried_at if this job was already retried at least once
+      %{ job | retried_at: failed_at }
+    else
+      # Set the failed_at if this the first time the job failed
+      %{ job | failed_at: failed_at }
+    end
   end
 
   defp retry_at(failed_at, retry_count) do
