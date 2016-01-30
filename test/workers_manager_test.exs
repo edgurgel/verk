@@ -163,7 +163,7 @@ defmodule Verk.WorkersManagerTest do
 
     expect(:poolboy, :checkin, [pool_name, worker], true)
     expect(Verk.Log, :fail, [job, "start_time", worker], :ok)
-    expect(Verk.QueueManager, :retry, [queue_manager_name, job, exception], :ok)
+    expect(Verk.QueueManager, :retry, [queue_manager_name, job, exception, :stacktrace], :ok)
     expect(Verk.QueueManager, :ack, [queue_manager_name, job], :ok)
 
     assert handle_info({ :DOWN, ref, :_, worker, { reason, :stacktrace } }, state) == { :noreply, state, 0 }
@@ -195,7 +195,7 @@ defmodule Verk.WorkersManagerTest do
 
     expect(:poolboy, :checkin, [pool_name, worker], true)
     expect(Verk.Log, :fail, [job, "start_time", worker], :ok)
-    expect(Verk.QueueManager, :retry, [queue_manager_name, job, exception], :ok)
+    expect(Verk.QueueManager, :retry, [queue_manager_name, job, exception, :stacktrace], :ok)
     expect(Verk.QueueManager, :ack, [queue_manager_name, job], :ok)
 
     assert handle_cast({ :failed, worker, job_id, exception, :stacktrace }, state) == { :noreply, state, 0 }

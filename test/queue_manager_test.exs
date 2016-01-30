@@ -108,17 +108,20 @@ defmodule Verk.QueueManagerTest do
     assert validate Redix
   end
 
-  test "call retry on a job" do
+  test "call retry on a job with retry count 0" do
     failed_at = 100
 
     expect(Redix, :command, [:redis, ["ZADD", "retry", :_, "payload"]], { :ok, 1 })
-    expect(Poison, :encode!, [%Job{ retry_count: 1, failed_at: failed_at, error_message: "reasons" }], "payload")
+    expect(Poison, :encode!, [%Job{ retry_count: 1,
+                                    failed_at: failed_at,
+                                    error_backtrace: "\n",
+                                    error_message: "reasons" }], "payload")
 
     state = %State{ redis: :redis }
     job = %Job{ retry_count: 0 }
     exception = RuntimeError.exception("reasons")
 
-    assert handle_call({ :retry, job, failed_at, exception }, :from, state) == { :reply, :ok, state }
+    assert handle_call({ :retry, job, failed_at, exception, [] }, :from, state) == { :reply, :ok, state }
 
     assert validate [Redix, Poison]
   end
@@ -127,13 +130,34 @@ defmodule Verk.QueueManagerTest do
     failed_at = 100
 
     expect(Redix, :command, [:redis, ["ZADD", "retry", :_, "payload"]], { :ok, 1 })
-    expect(Poison, :encode!, [%Job{ retry_count: 1, failed_at: failed_at, error_message: "reasons" }], "payload")
+    expect(Poison, :encode!, [%Job{ retry_count: 1,
+                                    failed_at: failed_at,
+                                    error_backtrace: "\n",
+                                    error_message: "reasons" }], "payload")
 
     state = %State{ redis: :redis }
-    job = %Job{}
+    job = %Job{ retry_count: nil }
     exception = RuntimeError.exception("reasons")
 
-    assert handle_call({ :retry, job, failed_at, exception }, :from, state) == { :reply, :ok, state }
+    assert handle_call({ :retry, job, failed_at, exception, [] }, :from, state) == { :reply, :ok, state }
+
+    assert validate [Redix, Poison]
+  end
+
+  test "call retry on a job with retry_count greater than 0" do
+    failed_at = 100
+
+    expect(Redix, :command, [:redis, ["ZADD", "retry", :_, "payload"]], { :ok, 1 })
+    expect(Poison, :encode!, [%Job{ retry_count: 2,
+                                    retried_at: failed_at,
+                                    error_backtrace: "\n",
+                                    error_message: "reasons" }], "payload")
+
+    state = %State{ redis: :redis }
+    job = %Job{ retry_count: 1 }
+    exception = RuntimeError.exception("reasons")
+
+    assert handle_call({ :retry, job, failed_at, exception, [] }, :from, state) == { :reply, :ok, state }
 
     assert validate [Redix, Poison]
   end
@@ -142,13 +166,16 @@ defmodule Verk.QueueManagerTest do
     failed_at = 100
 
     expect(Redix, :command, [:redis, ["ZADD", "retry", :_, "payload"]], { :error, :reason })
-    expect(Poison, :encode!, [%Job{ retry_count: 1, failed_at: failed_at, error_message: "reasons" }], "payload")
+    expect(Poison, :encode!, [%Job{ retry_count: 1,
+                                    error_backtrace: "\n",
+                                    failed_at: failed_at,
+                                    error_message: "reasons" }], "payload")
 
     state = %State{ redis: :redis }
     job = %Job{ retry_count: 0 }
     exception = RuntimeError.exception("reasons")
 
-    assert handle_call({ :retry, job, failed_at, exception }, :from, state) == { :reply, :ok, state }
+    assert handle_call({ :retry, job, failed_at, exception, [] }, :from, state) == { :reply, :ok, state }
 
     assert validate [Redix, Poison]
   end
