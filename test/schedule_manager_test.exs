@@ -60,4 +60,40 @@ defmodule Verk.ScheduleManagerTest do
 
     assert validate [Timex.Time, Redix]
   end
+
+  test "handle_info :fetch_scheduled without jobs to run", %{ script: script } do
+    state = %State{ redis: :redis }
+    now = :now
+    expect(Timex.Time, :now, [:secs], now)
+    expect(Redix, :command, [:redis, ["EVALSHA", script, 1, "schedule", now]], {:ok, nil})
+    expect(Process, :send_after, [self, :fetch_retryable, 4200], make_ref)
+
+    assert handle_info(:fetch_scheduled, state) == { :noreply, state }
+
+    assert validate [Timex.Time, Redix]
+  end
+
+  test "handle_info :fetch_scheduled with jobs to run", %{ script: script } do
+    state = %State{ redis: :redis }
+    now = :now
+    encoded_job = "encoded_job"
+    expect(Timex.Time, :now, [:secs], now)
+    expect(Redix, :command, [:redis, ["EVALSHA", script, 1, "schedule", now]], {:ok, encoded_job})
+
+    assert handle_info(:fetch_scheduled, state) == { :noreply, state }
+    assert_receive :fetch_scheduled
+
+    assert validate [Timex.Time, Redix]
+  end
+
+  test "handle_info :fetch_scheduled with jobs to run and redis failed to apply the script", %{ script: script } do
+    state = %State{ redis: :redis }
+    now = :now
+    expect(Timex.Time, :now, [:secs], now)
+    expect(Redix, :command, [:redis, ["EVALSHA", script, 1, "schedule", now]], {:error, %Redix.Error{message: "a message"}})
+
+    assert handle_info(:fetch_scheduled, state) == { :stop, :redis_failed, state }
+
+    assert validate [Timex.Time, Redix]
+  end
 end

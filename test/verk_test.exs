@@ -102,4 +102,18 @@ defmodule VerkTest do
 
     assert enqueue(job) == { :error, { :missing_module, job } }
   end
+
+  test "schedule a job with a jid, a queue and a perform_in" do
+    now = Timex.Date.now
+    perform_at = Timex.Date.shift(now, days: 1)
+    job = %Verk.Job{ queue: "test_queue", jid: "job_id", class: "TestWorker", args: [] }
+    encoded_job = "encoded_job"
+    expect(Poison, :encode!, [job], encoded_job)
+    perform_at_secs = Timex.Date.to_secs(perform_at)
+    expect(Redix, :command, [Verk.Redis, ["ZADD", "schedule", perform_at_secs, encoded_job]], { :ok, :_ })
+
+    assert schedule(job, perform_at) == { :ok, "job_id" }
+
+    assert validate [Poison, Redix]
+  end
 end

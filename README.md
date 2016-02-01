@@ -33,7 +33,6 @@ Feature set:
 
 TODO:
 * Metrics (GenEvent?)
-* Scheduled jobs
 * Store dead jobs (too many retries)
 * JSON API (external library?)
 
@@ -74,6 +73,13 @@ This job can be enqueued using `Verk.enqueue/1`:
 
 ```elixir
 Verk.enqueue(%Verk.Job{queue: :default, class: "ExampleWorker", args: [1,2]})
+```
+
+This job can also be scheduled using `Verk.schedule/2`:
+
+ ```elixir
+ perform_at = Timex.Date.shift(Timex.Date.now, secs: 30)
+ Verk.schedule(%Verk.Job{queue: :default, class: "ExampleWorker", args: [1,2]}, perform_at)
  ```
 
 ## Configuration

@@ -10,6 +10,11 @@ defmodule Verk do
   """
   use Application
   alias Verk.Job
+  alias Timex.Time
+  alias Timex.DateTime
+  alias Timex.Date
+
+  @schedule_key "schedule"
 
   @doc false
   def start(_type, _args), do: Verk.Supervisor.start_link
@@ -52,6 +57,37 @@ defmodule Verk do
     case Redix.command(Verk.Redis, ["LPUSH", "queue:#{queue}", Poison.encode!(job)]) do
       { :ok, _ } -> { :ok, jid }
       { :error, reason } -> { :error, reason }
+    end
+  end
+
+  @doc """
+  Schedules a Job to the specified queue returning the respective job id
+
+  The job must have:
+   * a valid `queue`
+   * a list of `args` to perform
+   * a module to perform (`class`)
+   * a valid `jid`
+  """
+  @spec schedule(%Job{}, %DateTime{}) :: { :ok, binary } | { :error, term }
+  def schedule(job = %Job{ queue: nil }, %DateTime{}), do: { :error, { :missing_queue, job } }
+  def schedule(job = %Job{ class: nil }, %DateTime{}), do: { :error, { :missing_module, job } }
+  def schedule(job = %Job{ args: args }, %DateTime{}) when not is_list(args), do: { :error, { :missing_args, job } }
+  def schedule(job = %Job{ jid: nil }, perform_at = %DateTime{}) do
+    <<part1::32, part2::32>> = :crypto.rand_bytes(8)
+    jid = "#{part1}.#{part2}"
+    schedule(%Job{ job | jid: jid }, perform_at)
+  end
+  def schedule(%Job{ jid: jid } = job, %DateTime{} = perform_at) do
+    perform_at_secs = Date.to_secs(perform_at)
+
+    if perform_at_secs < Time.now(:secs) do
+      enqueue(job)
+    else
+      case Redix.command(Verk.Redis, ["ZADD", @schedule_key, perform_at_secs, Poison.encode!(job)]) do
+        { :ok, _ } -> { :ok, jid }
+        { :error, reason } -> { :error, reason }
+      end
     end
   end
 end
