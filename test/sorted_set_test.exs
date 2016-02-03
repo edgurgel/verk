@@ -1,6 +1,6 @@
-defmodule Verk.RetryTest do
+defmodule Verk.SortedSetTest do
   use ExUnit.Case
-  import Verk.RetrySet
+  import Verk.SortedSet
 
   setup do
     { :ok, pid } = Application.fetch_env(:verk, :redis_url)
@@ -17,19 +17,19 @@ defmodule Verk.RetryTest do
   test "count" do
     Redix.command!(Verk.Redis, ~w(ZADD retry 123 abc))
 
-    assert count == 1
+    assert count("retry") == 1
   end
 
   test "clear" do
     Redix.command!(Verk.Redis, ~w(ZADD retry 123 abc))
 
-    assert clear
+    assert clear("retry")
 
     assert Redix.command!(Verk.Redis, ~w(GET retry)) == nil
   end
 
   test "count with no items" do
-    assert count == 0
+    assert count("retry") == 0
   end
 
   test "range" do
@@ -37,11 +37,11 @@ defmodule Verk.RetryTest do
     json = Poison.encode!(job)
     Redix.command!(Verk.Redis, ~w(ZADD retry 123 #{json}))
 
-    assert range == [%{ job | original_json: json }]
+    assert range("retry") == [%{ job | original_json: json }]
   end
 
   test "range with no items" do
-    assert range == []
+    assert range("retry") == []
   end
 
   test "delete_job having job with original_json" do
@@ -52,7 +52,7 @@ defmodule Verk.RetryTest do
 
     job = %{ job | original_json: json}
 
-    assert delete_job(job) == true
+    assert delete_job("retry", job) == true
   end
 
   test "delete_job with original_json" do
@@ -60,6 +60,6 @@ defmodule Verk.RetryTest do
 
     Redix.command!(Verk.Redis, ~w(ZADD retry 123 #{json}))
 
-    assert delete_job(json) == true
+    assert delete_job("retry", json) == true
   end
 end
