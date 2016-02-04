@@ -33,7 +33,6 @@ Feature set:
 
 TODO:
 * Metrics (GenEvent?)
-* Store dead jobs (too many retries)
 * JSON API (external library?)
 
 ## Installation

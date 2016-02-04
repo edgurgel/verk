@@ -8,11 +8,13 @@ defmodule Verk.QueueManager do
 
   @processing_key "processing"
   @retry_key "retry"
+  @dead_key "dead"
 
   @lpop_rpush_src_dest_script_sha Verk.Scripts.sha("lpop_rpush_src_dest")
   @mrpop_lpush_src_dest_script_sha Verk.Scripts.sha("mrpop_lpush_src_dest")
 
   @max_retry 25
+  @max_dead 100
 
   defmodule State do
     defstruct [:queue_name, :redis, :node_id]
@@ -109,16 +111,21 @@ defmodule Verk.QueueManager do
 
   def handle_call({ :retry, job, failed_at, exception, stacktrace }, _from, state) do
     retry_count = (job.retry_count || 0) + 1
+    job = build_retry_job(job, retry_count, failed_at, exception, stacktrace)
+    payload = Poison.encode!(job)
+
     if retry_count <= @max_retry do
-      job = build_retry_job(job, retry_count, failed_at, exception, stacktrace)
-      payload = Poison.encode!(job)
       retry_at = retry_at(failed_at, retry_count) |> to_string
       case Redix.command(state.redis, ["ZADD", @retry_key, retry_at, payload]) do
         { :ok, _ } -> :ok
-        error -> Logger.error("Failed to add job_id #{job.jid} to retry. Error: #{inspect error}")
+        error -> Logger.error("Failed to add job_id #{job.jid} to #{@retry_key} set. Error: #{inspect error}")
       end
     else
-      Logger.error "Max retries reached to job_id #{job.jid}, job: #{inspect job}"
+      Logger.error("Max retries reached to job_id #{job.jid}, job: #{inspect job}")
+      case Redix.pipeline(state.redis, [["LPUSH", @dead_key, payload], ["LTRIM", @dead_key, 0, @max_dead - 1]]) do
+        { :ok, _ } -> :ok
+        error -> Logger.error("Failed to add job_id #{job.jid} to #{@dead_key} list. Error: #{inspect error}")
+      end
     end
     { :reply, :ok, state }
   end

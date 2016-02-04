@@ -179,4 +179,22 @@ defmodule Verk.QueueManagerTest do
 
     assert validate [Redix, Poison]
   end
+
+  test "call retry on a job failing too many times" do
+    failed_at = 100
+
+    expect(Redix, :pipeline, [:redis, [["LPUSH", "dead", "payload"], ["LTRIM", "dead", 0, 99]]], { :error, :reason })
+    expect(Poison, :encode!, [%Job{ retry_count: 26,
+                                    error_backtrace: "\n",
+                                    retried_at: failed_at,
+                                    error_message: "reasons" }], "payload")
+
+    state = %State{ redis: :redis }
+    job = %Job{ retry_count: 25 }
+    exception = RuntimeError.exception("reasons")
+
+    assert handle_call({ :retry, job, failed_at, exception, [] }, :from, state) == { :reply, :ok, state }
+
+    assert validate [Redix, Poison]
+  end
 end
