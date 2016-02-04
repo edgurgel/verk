@@ -33,7 +33,7 @@ defmodule Verk.SortedSet do
   @doc """
   Deletes the job from the sorted set
   """
-  @spec delete_job(String.t, %Job{} | binary) :: boolean
+  @spec delete_job(String.t, %Job{} | String.t) :: boolean
   def delete_job(key, %Job{ original_json: original_json }) do
     Redix.command!(Verk.Redis, ["ZREM", key, original_json]) == 1
   end
