@@ -5,9 +5,9 @@ defmodule Verk.QueueManager do
 
   use GenServer
   require Logger
+  alias Verk.RetrySet
 
   @processing_key "processing"
-  @retry_key "retry"
   @dead_key "dead"
 
   @lpop_rpush_src_dest_script_sha Verk.Scripts.sha("lpop_rpush_src_dest")
@@ -116,9 +116,9 @@ defmodule Verk.QueueManager do
 
     if retry_count <= @max_retry do
       retry_at = retry_at(failed_at, retry_count) |> to_string
-      case Redix.command(state.redis, ["ZADD", @retry_key, retry_at, payload]) do
+      case Redix.command(state.redis, ["ZADD", RetrySet.key, retry_at, payload]) do
         { :ok, _ } -> :ok
-        error -> Logger.error("Failed to add job_id #{job.jid} to #{@retry_key} set. Error: #{inspect error}")
+        error -> Logger.error("Failed to add job_id #{job.jid} to #{RetrySet.key} set. Error: #{inspect error}")
       end
     else
       Logger.error("Max retries reached to job_id #{job.jid}, job: #{inspect job}")
