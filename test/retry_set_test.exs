@@ -1,41 +1,47 @@
 defmodule Verk.RetrySetTest do
   use ExUnit.Case
+  alias Verk.SortedSet
   import Verk.RetrySet
   import :meck
 
   setup do
+    new SortedSet
     on_exit fn -> :meck.unload end
     :ok
   end
 
   test "count" do
-    expect(Verk.SortedSet, :count, [key], 1)
+    expect(SortedSet, :count, [key, Verk.Redis], 1)
 
     assert count == 1
+    assert validate SortedSet
   end
 
   test "clear" do
-    expect(Verk.SortedSet, :clear, [key], true)
+    expect(SortedSet, :clear, [key, Verk.Redis], true)
 
     assert clear
+    assert validate SortedSet
   end
 
   test "range" do
     job = %Verk.Job{class: "Class", args: []}
     json = Poison.encode!(job)
 
-    expect(Verk.SortedSet, :range, [key, 0, -1], [%{ job | original_json: json }])
+    expect(SortedSet, :range, [key, 0, -1, Verk.Redis], [%{ job | original_json: json }])
 
     assert range == [%{ job | original_json: json }]
+    assert validate SortedSet
   end
 
   test "range with start and stop" do
     job = %Verk.Job{class: "Class", args: []}
     json = Poison.encode!(job)
 
-    expect(Verk.SortedSet, :range, [key, 1, 2], [%{ job | original_json: json }])
+    expect(SortedSet, :range, [key, 1, 2, Verk.Redis], [%{ job | original_json: json }])
 
     assert range(1, 2) == [%{ job | original_json: json }]
+    assert validate SortedSet
   end
 
   test "delete_job having job with original_json" do
@@ -43,15 +49,17 @@ defmodule Verk.RetrySetTest do
     json = Poison.encode!(job)
     job = %{ job | original_json: json }
 
-    expect(Verk.SortedSet, :delete_job, [key, json], true)
+    expect(SortedSet, :delete_job, [key, json, Verk.Redis], true)
 
     assert delete_job(job) == true
+    assert validate SortedSet
   end
 
   test "delete_job with original_json" do
     json = %Verk.Job{class: "Class", args: []} |> Poison.encode!
-    expect(Verk.SortedSet, :delete_job, [key, json], true)
+    expect(SortedSet, :delete_job, [key, json, Verk.Redis], true)
 
     assert delete_job(json) == true
+    assert validate SortedSet
   end
 end
