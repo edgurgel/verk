@@ -3,63 +3,57 @@ defmodule Verk.SortedSetTest do
   import Verk.SortedSet
 
   setup do
-    { :ok, pid } = Application.fetch_env(:verk, :redis_url)
-                    |> elem(1)
-                    |> Redix.start_link([name: Verk.Redis])
-    Redix.command!(pid, ~w(DEL retry))
-    on_exit fn ->
-      ref = Process.monitor(pid)
-      assert_receive {:DOWN, ^ref, _, _, _}
-    end
-    :ok
+    { :ok, redis } = Application.fetch_env!(:verk, :redis_url) |> Redix.start_link
+    Redix.command!(redis, ~w(DEL sorted))
+    { :ok, %{ redis: redis } }
   end
 
-  test "count" do
-    Redix.command!(Verk.Redis, ~w(ZADD retry 123 abc))
+  test "count", %{ redis: redis } do
+    Redix.command!(redis, ~w(ZADD sorted 123 abc))
 
-    assert count("retry") == 1
+    assert count("sorted", redis) == 1
   end
 
-  test "clear" do
-    Redix.command!(Verk.Redis, ~w(ZADD retry 123 abc))
+  test "clear", %{ redis: redis } do
+    Redix.command!(redis, ~w(ZADD sorted 123 abc))
 
-    assert clear("retry")
+    assert clear("sorted", redis)
 
-    assert Redix.command!(Verk.Redis, ~w(GET retry)) == nil
+    assert Redix.command!(redis, ~w(GET sorted)) == nil
   end
 
-  test "count with no items" do
-    assert count("retry") == 0
+  test "count with no items", %{ redis: redis } do
+    assert count("sorted", redis) == 0
   end
 
-  test "range" do
+  test "range", %{ redis: redis } do
     job = %Verk.Job{class: "Class", args: []}
     json = Poison.encode!(job)
-    Redix.command!(Verk.Redis, ~w(ZADD retry 123 #{json}))
+    Redix.command!(redis, ~w(ZADD sorted 123 #{json}))
 
-    assert range("retry") == [%{ job | original_json: json }]
+    assert range("sorted", redis) == [%{ job | original_json: json }]
   end
 
-  test "range with no items" do
-    assert range("retry") == []
+  test "range with no items", %{ redis: redis } do
+    assert range("sorted", redis) == []
   end
 
-  test "delete_job having job with original_json" do
+  test "delete_job having job with original_json", %{ redis: redis } do
     job = %Verk.Job{class: "Class", args: []}
     json = Poison.encode!(job)
 
-    Redix.command!(Verk.Redis, ~w(ZADD retry 123 #{json}))
+    Redix.command!(redis, ~w(ZADD sorted 123 #{json}))
 
     job = %{ job | original_json: json}
 
-    assert delete_job("retry", job) == true
+    assert delete_job("sorted", job, redis) == true
   end
 
-  test "delete_job with original_json" do
+  test "delete_job with original_json", %{ redis: redis } do
     json = %Verk.Job{class: "Class", args: []} |> Poison.encode!
 
-    Redix.command!(Verk.Redis, ~w(ZADD retry 123 #{json}))
+    Redix.command!(redis, ~w(ZADD sorted 123 #{json}))
 
-    assert delete_job("retry", json) == true
+    assert delete_job("sorted", json, redis) == true
   end
 end

@@ -8,10 +8,10 @@ defmodule Verk.ScheduleManager do
   use GenServer
   require Logger
   alias Timex.Time
-  alias Verk.RetrySet
 
   @default_poll_interval 5000
   @schedule_key "schedule"
+  @retry_key Verk.RetrySet.key
 
   @enqueue_retriable_script_sha Verk.Scripts.sha("enqueue_retriable_job")
 
@@ -44,7 +44,7 @@ defmodule Verk.ScheduleManager do
   Search for retryable jobs to be done and if removal succeeds enqueue the job
   """
   def handle_info(:fetch_retryable, state) do
-    handle_info(:fetch_retryable, state, RetrySet.key)
+    handle_info(:fetch_retryable, state, @retry_key)
   end
 
   @doc """
