@@ -5,7 +5,7 @@ defmodule Verk.ScheduleManagerTest do
   alias Verk.ScheduleManager.State
 
   setup do
-    Application.put_env(:verk, :poll_interval, 4200)
+    Application.put_env(:verk, :poll_interval, 50)
     script = Verk.Scripts.sha("enqueue_retriable_job")
     on_exit fn -> unload end
     { :ok, %{ script: script } }
@@ -18,11 +18,11 @@ defmodule Verk.ScheduleManagerTest do
 
     expect(Redix, :start_link, [redis_url], {:ok, :redis })
     expect(Verk.Scripts, :load, [:redis], :ok)
-    expect(Process, :send_after, [self, :fetch_retryable, 4200], make_ref)
 
     assert init(:args) == { :ok, state }
+    assert_receive :fetch_scheduled
 
-    assert validate [Redix, Verk.Scripts, Process]
+    assert validate [Redix, Verk.Scripts]
   end
 
   test "handle_info :fetch_retryable without jobs to retry", %{ script: script } do
@@ -30,9 +30,9 @@ defmodule Verk.ScheduleManagerTest do
     now = :now
     expect(Timex.Time, :now, [:secs], now)
     expect(Redix, :command, [:redis, ["EVALSHA", script, 1, "retry", now]], {:ok, nil})
-    expect(Process, :send_after, [self, :fetch_retryable, 4200], make_ref)
 
     assert handle_info(:fetch_retryable, state) == { :noreply, state }
+    assert_receive :fetch_retryable
 
     assert validate [Timex.Time, Redix]
   end
@@ -45,7 +45,7 @@ defmodule Verk.ScheduleManagerTest do
     expect(Redix, :command, [:redis, ["EVALSHA", script, 1, "retry", now]], {:ok, encoded_job})
 
     assert handle_info(:fetch_retryable, state) == { :noreply, state }
-    assert_receive :fetch_retryable
+    assert_receive :fetch_retryable, 5
 
     assert validate [Timex.Time, Redix]
   end
@@ -66,9 +66,9 @@ defmodule Verk.ScheduleManagerTest do
     now = :now
     expect(Timex.Time, :now, [:secs], now)
     expect(Redix, :command, [:redis, ["EVALSHA", script, 1, "schedule", now]], {:ok, nil})
-    expect(Process, :send_after, [self, :fetch_retryable, 4200], make_ref)
 
     assert handle_info(:fetch_scheduled, state) == { :noreply, state }
+    assert_receive :fetch_scheduled
 
     assert validate [Timex.Time, Redix]
   end
