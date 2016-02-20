@@ -15,7 +15,7 @@ defmodule Verk.Supervisor do
 
     schedule_manager    = worker(Verk.ScheduleManager, [], id: :schedule_manager)
     verk_event_manager  = worker(GenEvent, [[name: Verk.EventManager]])
-    queue_stats_watcher = worker(Verk.QueueStatsWatcher, [])
+    queue_stats_watcher = worker(Watcher, [Verk.EventManager, Verk.QueueStats, []])
     redis               = worker(Redix, [redis_url, [name: Verk.Redis]])
 
     children = [redis, verk_event_manager, queue_stats_watcher, schedule_manager] ++ children
