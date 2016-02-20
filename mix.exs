@@ -29,6 +29,7 @@ defmodule Verk.Mixfile do
      { :poison, "~> 1.5" },
      { :timex, "~> 1.0" },
      { :poolboy, "~> 1.5.1" },
+     { :watcher, "~> 1.0" },
      { :earmark, "~> 0.1.17", only: :docs },
      { :ex_doc, "~> 0.8.0", only: :docs },
      { :coverex, "~> 1.4.7", only: :test },
