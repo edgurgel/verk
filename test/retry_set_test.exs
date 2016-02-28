@@ -10,6 +10,18 @@ defmodule Verk.RetrySetTest do
     :ok
   end
 
+  test "add" do
+    job = %Verk.Job{ retry_count: 1 }
+    failed_at = 1
+    retry_at  = "45.0"
+    expect(Poison, :encode!, [job], :payload)
+    expect(Redix, :command, [:redis, ["ZADD", "retry", retry_at, :payload]], { :ok, 1 })
+
+    add(job, failed_at, :redis)
+
+    assert validate [Poison, Redix]
+  end
+
   test "count" do
     expect(SortedSet, :count, [key, Verk.Redis], 1)
 
