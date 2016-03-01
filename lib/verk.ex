@@ -43,18 +43,21 @@ defmodule Verk do
    * a list of `args` to perform
    * a module to perform (`class`)
    * a valid `jid`
+
+  Optionally a Redix server can be passed which defaults to `Verk.Redis`
   """
-  @spec enqueue(%Job{}) :: { :ok, binary } | { :error, term }
-  def enqueue(job = %Job{ queue: nil }), do: { :error, { :missing_queue, job } }
-  def enqueue(job = %Job{ class: nil }), do: { :error, { :missing_module, job } }
-  def enqueue(job = %Job{ args: args }) when not is_list(args), do: { :error, { :missing_args, job } }
-  def enqueue(job = %Job{ jid: nil }) do
+  @spec enqueue(%Job{}, GenServer.server) :: { :ok, binary } | { :error, term }
+  def enqueue(job, redis \\ Verk.Redis)
+  def enqueue(job = %Job{ queue: nil }, _redis), do: { :error, { :missing_queue, job } }
+  def enqueue(job = %Job{ class: nil }, _redis), do: { :error, { :missing_module, job } }
+  def enqueue(job = %Job{ args: args }, _redis) when not is_list(args), do: { :error, { :missing_args, job } }
+  def enqueue(job = %Job{ jid: nil }, redis) do
     <<part1::32, part2::32>> = :crypto.rand_bytes(8)
     jid = "#{part1}.#{part2}"
-    enqueue(%Job{ job | jid: jid })
+    enqueue(%Job{ job | jid: jid }, redis)
   end
-  def enqueue(%Job{ jid: jid, queue: queue } = job) do
-    case Redix.command(Verk.Redis, ["LPUSH", "queue:#{queue}", Poison.encode!(job)]) do
+  def enqueue(%Job{ jid: jid, queue: queue } = job, redis) do
+    case Redix.command(redis, ["LPUSH", "queue:#{queue}", Poison.encode!(job)]) do
       { :ok, _ } -> { :ok, jid }
       { :error, reason } -> { :error, reason }
     end
@@ -68,23 +71,26 @@ defmodule Verk do
    * a list of `args` to perform
    * a module to perform (`class`)
    * a valid `jid`
+
+  Optionally a Redix server can be passed which defaults to `Verk.Redis`
   """
-  @spec schedule(%Job{}, %DateTime{}) :: { :ok, binary } | { :error, term }
-  def schedule(job = %Job{ queue: nil }, %DateTime{}), do: { :error, { :missing_queue, job } }
-  def schedule(job = %Job{ class: nil }, %DateTime{}), do: { :error, { :missing_module, job } }
-  def schedule(job = %Job{ args: args }, %DateTime{}) when not is_list(args), do: { :error, { :missing_args, job } }
-  def schedule(job = %Job{ jid: nil }, perform_at = %DateTime{}) do
+  @spec schedule(%Job{}, %DateTime{}, GenServer.server) :: { :ok, binary } | { :error, term }
+  def schedule(job, datetime, redis \\ Verk.Redis)
+  def schedule(job = %Job{ queue: nil }, %DateTime{}, _redis), do: { :error, { :missing_queue, job } }
+  def schedule(job = %Job{ class: nil }, %DateTime{}, _redis), do: { :error, { :missing_module, job } }
+  def schedule(job = %Job{ args: args }, %DateTime{}, _redis) when not is_list(args), do: { :error, { :missing_args, job } }
+  def schedule(job = %Job{ jid: nil }, perform_at = %DateTime{}, redis) do
     <<part1::32, part2::32>> = :crypto.rand_bytes(8)
     jid = "#{part1}.#{part2}"
-    schedule(%Job{ job | jid: jid }, perform_at)
+    schedule(%Job{ job | jid: jid }, perform_at, redis)
   end
-  def schedule(%Job{ jid: jid } = job, %DateTime{} = perform_at) do
+  def schedule(%Job{ jid: jid } = job, %DateTime{} = perform_at, redis) do
     perform_at_secs = Date.to_secs(perform_at)
 
     if perform_at_secs < Time.now(:secs) do
-      enqueue(job)
+      enqueue(job, redis)
     else
-      case Redix.command(Verk.Redis, ["ZADD", @schedule_key, perform_at_secs, Poison.encode!(job)]) do
+      case Redix.command(redis, ["ZADD", @schedule_key, perform_at_secs, Poison.encode!(job)]) do
         { :ok, _ } -> { :ok, jid }
         { :error, reason } -> { :error, reason }
       end
