@@ -1,25 +1,38 @@
-defmodule Verk.RetrySetTest do
+defmodule Verk.DeadSetTest do
   use ExUnit.Case
   alias Verk.SortedSet
-  import Verk.RetrySet
+  import Verk.DeadSet
   import :meck
 
   setup do
-    new SortedSet
-    on_exit fn -> :meck.unload end
-    :ok
+    { :ok, redis } = Application.fetch_env!(:verk, :redis_url) |> Redix.start_link
+    Redix.command!(redis, ~w(DEL dead))
+    on_exit fn -> unload end
+    { :ok, %{ redis: redis } }
   end
 
-  test "add" do
+  test "add/3", %{ redis: redis } do
     job = %Verk.Job{ retry_count: 1 }
+    payload = Poison.encode!(job)
     failed_at = 1
-    retry_at  = "45.0"
-    expect(Poison, :encode!, [job], :payload)
-    expect(Redix, :command, [:redis, ["ZADD", "retry", retry_at, :payload]], { :ok, 1 })
 
-    add(job, failed_at, :redis)
+    assert add(job, failed_at, redis) == :ok
 
-    assert validate [Poison, Redix]
+    assert Redix.command!(redis, ["ZRANGE", key, 0, -1, "WITHSCORES"]) == [payload, to_string(failed_at)]
+  end
+
+  test "add/3 remove old jobs", %{ redis: redis } do
+    job1 = %Verk.Job{ retry_count: 1 }
+    payload1 = Poison.encode!(job1)
+    job2 = %Verk.Job{ retry_count: 2 }
+    payload2 = Poison.encode!(job2)
+    failed_at = 60 * 60 * 24 * 7
+
+    assert add(job1, failed_at + 1, redis) == :ok
+    assert add(job2, failed_at + 2, redis) == :ok
+
+    assert Redix.command!(redis, ["ZRANGE", key, 0, 2, "WITHSCORES"])
+      == [payload1, to_string(failed_at + 1), payload2, to_string(failed_at + 2)]
   end
 
   test "count" do
@@ -55,6 +68,7 @@ defmodule Verk.RetrySetTest do
     assert range(1, 2) == [%{ job | original_json: json }]
     assert validate SortedSet
   end
+
 
   test "delete_job having job with original_json" do
     job = %Verk.Job{class: "Class", args: []}

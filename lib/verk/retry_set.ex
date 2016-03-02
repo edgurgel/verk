@@ -7,7 +7,21 @@ defmodule Verk.RetrySet do
 
   @retry_key "retry"
 
+  @doc "Redis retry set key"
   def key, do: @retry_key
+
+  def add(job, failed_at, redis \\ Verk.Redis) do
+    retry_at = retry_at(failed_at, job.retry_count) |> to_string
+    case Redix.command(redis, ["ZADD", @retry_key, retry_at, Poison.encode!(job)]) do
+      { :ok, _ } -> :ok
+      error -> error
+    end
+  end
+
+  defp retry_at(failed_at, retry_count) do
+    delay = :math.pow(retry_count, 4) + 15 + (:random.uniform(30) * (retry_count + 1))
+    failed_at + delay
+  end
 
   @doc """
   Counts how many jobs are inside the retry set

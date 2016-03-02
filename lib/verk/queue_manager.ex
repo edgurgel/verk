@@ -6,9 +6,9 @@ defmodule Verk.QueueManager do
   use GenServer
   require Logger
   alias Verk.RetrySet
+  alias Verk.DeadSet
 
   @processing_key "processing"
-  @dead_key "dead"
 
   @lpop_rpush_src_dest_script_sha Verk.Scripts.sha("lpop_rpush_src_dest")
   @mrpop_lpush_src_dest_script_sha Verk.Scripts.sha("mrpop_lpush_src_dest")
@@ -111,20 +111,18 @@ defmodule Verk.QueueManager do
 
   def handle_call({ :retry, job, failed_at, exception, stacktrace }, _from, state) do
     retry_count = (job.retry_count || 0) + 1
-    job = build_retry_job(job, retry_count, failed_at, exception, stacktrace)
-    payload = Poison.encode!(job)
+    job         = build_retry_job(job, retry_count, failed_at, exception, stacktrace)
 
     if retry_count <= @max_retry do
-      retry_at = retry_at(failed_at, retry_count) |> to_string
-      case Redix.command(state.redis, ["ZADD", RetrySet.key, retry_at, payload]) do
-        { :ok, _ } -> :ok
-        error -> Logger.error("Failed to add job_id #{job.jid} to #{RetrySet.key} set. Error: #{inspect error}")
+      case RetrySet.add(job, failed_at, state.redis) do
+        :ok -> :ok
+        error -> Logger.error("Failed to add job_id #{job.jid} to the retry set. Error: #{inspect error}")
       end
     else
-      Logger.error("Max retries reached to job_id #{job.jid}, job: #{inspect job}")
-      case Redix.pipeline(state.redis, [["LPUSH", @dead_key, payload], ["LTRIM", @dead_key, 0, @max_dead - 1]]) do
+      Logger.info("Max retries reached to job_id #{job.jid}, job: #{inspect job}")
+      case DeadSet.add(job, failed_at, state.redis) do
         { :ok, _ } -> :ok
-        error -> Logger.error("Failed to add job_id #{job.jid} to #{@dead_key} list. Error: #{inspect error}")
+        error -> Logger.error("Failed to add job_id #{job.jid} to the dead set. Error: #{inspect error}")
       end
     end
     { :reply, :ok, state }
@@ -141,11 +139,6 @@ defmodule Verk.QueueManager do
       # Set the failed_at if this the first time the job failed
       %{ job | failed_at: failed_at }
     end
-  end
-
-  defp retry_at(failed_at, retry_count) do
-    delay = :math.pow(retry_count, 4) + 15 + (:random.uniform(30) * (retry_count + 1))
-    failed_at + delay
   end
 
   @doc false
