@@ -51,11 +51,7 @@ defmodule Verk do
   def enqueue(job = %Job{ queue: nil }, _redis), do: { :error, { :missing_queue, job } }
   def enqueue(job = %Job{ class: nil }, _redis), do: { :error, { :missing_module, job } }
   def enqueue(job = %Job{ args: args }, _redis) when not is_list(args), do: { :error, { :missing_args, job } }
-  def enqueue(job = %Job{ jid: nil }, redis) do
-    <<part1::32, part2::32>> = :crypto.rand_bytes(8)
-    jid = "#{part1}.#{part2}"
-    enqueue(%Job{ job | jid: jid }, redis)
-  end
+  def enqueue(job = %Job{ jid: nil }, redis), do: enqueue(%Job{ job | jid: generate_jid }, redis)
   def enqueue(%Job{ jid: jid, queue: queue } = job, redis) do
     case Redix.command(redis, ["LPUSH", "queue:#{queue}", Poison.encode!(job)]) do
       { :ok, _ } -> { :ok, jid }
@@ -80,9 +76,7 @@ defmodule Verk do
   def schedule(job = %Job{ class: nil }, %DateTime{}, _redis), do: { :error, { :missing_module, job } }
   def schedule(job = %Job{ args: args }, %DateTime{}, _redis) when not is_list(args), do: { :error, { :missing_args, job } }
   def schedule(job = %Job{ jid: nil }, perform_at = %DateTime{}, redis) do
-    <<part1::32, part2::32>> = :crypto.rand_bytes(8)
-    jid = "#{part1}.#{part2}"
-    schedule(%Job{ job | jid: jid }, perform_at, redis)
+    schedule(%Job{ job | jid: generate_jid }, perform_at, redis)
   end
   def schedule(%Job{ jid: jid } = job, %DateTime{} = perform_at, redis) do
     perform_at_secs = Date.to_secs(perform_at)
@@ -95,5 +89,10 @@ defmodule Verk do
         { :error, reason } -> { :error, reason }
       end
     end
+  end
+
+  defp generate_jid do
+    <<part1::32, part2::32>> = :crypto.rand_bytes(8)
+   "#{part1}#{part2}"
   end
 end
