@@ -29,11 +29,8 @@ Feature set:
 * Retry mechanism
 * Dynamic addition/removal of queues
 * Reliable job processing (RPOPLPUSH and Lua scripts to the rescue)
-* Error tracking
+* Error and event tracking
 
-TODO:
-* Metrics (GenEvent?)
-* JSON API (external library?)
 
 ## Installation
 
@@ -118,7 +115,9 @@ The jobs that will run on top of Verk should be idempotent as they may run more 
 
 ## Error tracking
 
-One can track when jobs start and finish or fail. Verk has an Event Manager that notify the following events:
+One can track when jobs start and finish or fail. This can be useful to build metrics around the jobs. The `QueueStats` handler does some kind of metrics using these events: https://github.com/edgurgel/verk/blob/master/lib/verk/queue_stats.ex
+
+Verk has an Event Manager that notify the following events:
 
 * `Verk.Events.JobStarted`
 * `Verk.Events.JobFinished`
@@ -161,6 +160,12 @@ GenEvent.add_mon_handler(Verk.EventManager, TrackingErrorHandler, [])
 ```
 
 More info about `GenEvent.add_mon_handler/3` [here](http://elixir-lang.org/docs/v1.1/elixir/GenEvent.html#add_mon_handler/3).
+
+## Dashboard ?
+
+Check [Verk Web](https://github.com/edgurgel/verk_web)!
+
+![](http://i.imgur.com/AclG57m.png)
 
 ## Sponsorship
 
