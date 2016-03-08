@@ -13,6 +13,11 @@ defmodule Verk.DeadSet do
   @doc "Redis dead set key"
   def key, do: @dead_key
 
+  @doc """
+  Adds a `job` to the dead set ordering by `timestamp`
+
+  Optionally a redis connection can be specified
+  """
   def add(job, timestamp, redis \\ Verk.Redis) do
     case Redix.pipeline(redis, [["ZADD", @dead_key, timestamp, Poison.encode!(job)],
                                 ["ZREMRANGEBYSCORE", @dead_key, "-inf", timestamp - @timeout],

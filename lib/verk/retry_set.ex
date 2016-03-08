@@ -10,6 +10,11 @@ defmodule Verk.RetrySet do
   @doc "Redis retry set key"
   def key, do: @retry_key
 
+  @doc """
+  Adds a `job` to the retry set ordering by `timestamp`
+
+  Optionally a redis connection can be specified
+  """
   def add(job, failed_at, redis \\ Verk.Redis) do
     retry_at = retry_at(failed_at, job.retry_count) |> to_string
     case Redix.command(redis, ["ZADD", @retry_key, retry_at, Poison.encode!(job)]) do
