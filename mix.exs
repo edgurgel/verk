@@ -25,7 +25,7 @@ defmodule Verk.Mixfile do
   end
 
   defp deps do
-    [{ :redix, "~> 0.3.3" },
+    [{ :redix, "~> 0.3" },
      { :poison, "~> 1.5" },
      { :timex, "~> 1.0" },
      { :poolboy, "~> 1.5.1" },
