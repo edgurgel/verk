@@ -176,6 +176,34 @@ defmodule Verk.WorkersManagerTest do
     assert validate [:poolboy, Verk.Log, Verk.QueueManager]
   end
 
+  test "handle info DOWN coming from dead worker with reason and no stacktrace", %{ monitors: monitors } do
+    ref = make_ref
+    worker = self
+    pool_name = "pool_name"
+    job = "job"
+    queue_manager_name = "queue_manager_name"
+    reason = :reason
+    exception = RuntimeError.exception(inspect(reason))
+
+    :ets.insert(monitors, { worker, "job_id", job, ref, "start_time" })
+
+    state = %State{ monitors: monitors, pool_name: pool_name, queue_manager_name: queue_manager_name }
+
+    expect(:poolboy, :checkin, [pool_name, worker], true)
+    expect(Verk.Log, :fail, [job, "start_time", worker], :ok)
+    expect(Verk.QueueManager, :retry, [queue_manager_name, job, exception, []], :ok)
+    expect(Verk.QueueManager, :ack, [queue_manager_name, job], :ok)
+
+    assert handle_info({ :DOWN, ref, :_, worker, reason }, state) == { :noreply, state, 0 }
+
+    assert :ets.lookup(monitors, worker) == []
+    assert_receive %Verk.Events.JobFailed{ job: ^job, failed_at: _,
+                                           stacktrace: [],
+                                           exception: ^exception }
+
+    assert validate [:poolboy, Verk.Log, Verk.QueueManager]
+  end
+
   test "handle info DOWN coming from dead worker with normal reason" do
     assert handle_info({ :DOWN, :_, :_, :normal }, :state) == { :noreply, :state, 0 }
   end

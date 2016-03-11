@@ -89,6 +89,16 @@ defmodule Verk.WorkersManager do
   def handle_info({ :DOWN, _mref, _worker, :normal }, state), do: { :noreply, state, 0 }
 
   def handle_info({ :DOWN, mref, _, worker, { reason, stack } }, state) do
+    handle_down!(mref, worker, reason, stack, state)
+    { :noreply, state, 0 }
+  end
+
+  def handle_info({ :DOWN, mref, _, worker, reason }, state) do
+    handle_down!(mref, worker, reason, [], state)
+    { :noreply, state, 0 }
+  end
+
+  defp handle_down!(mref, worker, reason, stack, state) do
     Logger.debug "Worker got down, reason: #{inspect reason}, #{inspect([mref, worker])}"
     case :ets.match(state.monitors, {worker, :'_', :'$1', mref, :'$2'}) do
       [[job, start_time]] ->
@@ -96,7 +106,6 @@ defmodule Verk.WorkersManager do
         fail(job, start_time, worker, mref, state.monitors, state.queue_manager_name, exception, stack)
       error -> Logger.warn("Worker got down but it was not found, error: #{inspect error}")
     end
-    { :noreply, state, 0 }
   end
 
   defp start_job(job = %Verk.Job{ jid: job_id, class: module, args: args }, state) do
