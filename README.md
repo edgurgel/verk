@@ -143,7 +143,7 @@ defmodule TrackingErrorHandler do
   use GenEvent
 
   def handle_event(%Verk.Events.JobFailed{job: job, failed_at: failed_at, stacktrace: trace}, state) do
-    MyTrackingExceptionSystem.track(stacktrace: trace, name: job.module)
+    MyTrackingExceptionSystem.track(stacktrace: trace, name: job.class)
     { :ok, state }
   end
   def handle_event(_, state) do
