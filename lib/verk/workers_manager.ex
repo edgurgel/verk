@@ -74,7 +74,7 @@ defmodule Verk.WorkersManager do
     if free_workers != 0 do
       case Verk.QueueManager.dequeue(state.queue_manager_name, free_workers) do
         jobs when is_list(jobs) ->
-          for job <- jobs, do: start_job(job, state)
+          for job <- jobs, do: Verk.Job.decode!(job) |> start_job(state)
         reason ->
           Logger.error("Failed to fetch a job. Reason: #{inspect reason}")
       end

@@ -117,7 +117,8 @@ defmodule Verk.WorkersManagerTest do
                     pool_size: 1, queue_manager_name: queue_manager_name }
     job = %Verk.Job{ class: module, args: args, jid: job_id }
 
-    expect(Verk.QueueManager, :dequeue, [queue_manager_name, 1], [job])
+    expect(Verk.QueueManager, :dequeue, [queue_manager_name, 1], [:encoded_job])
+    expect(Verk.Job, :decode!, [:encoded_job], job)
     expect(:poolboy, :checkout, [pool_name, false], worker)
     expect(Verk.Worker, :perform_async, [worker, worker, module, args, job_id], :ok)
 
