@@ -10,11 +10,14 @@ defmodule Verk.QueueManager do
 
   @processing_key "processing"
 
+  @external_resource "priv/lpop_rpush_src_dest.lua"
+  @external_resource "priv/mrpop_lpush_src_dest.lua"
   @lpop_rpush_src_dest_script_sha Verk.Scripts.sha("lpop_rpush_src_dest")
   @mrpop_lpush_src_dest_script_sha Verk.Scripts.sha("mrpop_lpush_src_dest")
 
   @max_retry 25
   @max_dead 100
+  @max_jobs 100
 
   defmodule State do
     defstruct [:queue_name, :redis, :node_id]
@@ -95,11 +98,11 @@ defmodule Verk.QueueManager do
   end
 
   def handle_call({ :dequeue, n }, _from, state) do
-    case Redix.command(state.redis, ["EVALSHA", @mrpop_lpush_src_dest_script_sha, 2,  "queue:#{state.queue_name}", inprogress(state.queue_name, state.node_id), n]) do
+    case Redix.command(state.redis, ["EVALSHA", @mrpop_lpush_src_dest_script_sha, 2,  "queue:#{state.queue_name}",
+                                     inprogress(state.queue_name, state.node_id), min(@max_jobs, n)]) do
       { :ok, [] } ->
         { :reply, [], state }
       { :ok, jobs } ->
-        jobs = for job <- jobs, do: Verk.Job.decode!(job)
         { :reply, jobs, state }
       { :error, %Redix.Error{message: message} } ->
         Logger.error("Failed to fetch jobs: #{message}")

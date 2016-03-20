@@ -7,6 +7,8 @@ defmodule Verk.QueueManagerTest do
   alias Verk.RetrySet
   alias Verk.DeadSet
 
+  @mrpop_script Verk.Scripts.sha("mrpop_lpush_src_dest")
+
   setup do
     on_exit fn -> unload end
     :ok
@@ -52,8 +54,7 @@ defmodule Verk.QueueManagerTest do
   end
 
   test "call dequeue with an empty queue" do
-    script = Verk.Scripts.sha("mrpop_lpush_src_dest")
-    expect(Redix, :command, [:redis, ["EVALSHA", script, 2, "queue:test_queue", "inprogress:test_queue:test_node", 3]], { :ok, [] })
+    expect(Redix, :command, [:redis, ["EVALSHA", @mrpop_script, 2, "queue:test_queue", "inprogress:test_queue:test_node", 3]], { :ok, [] })
 
     state = %State{ queue_name: "test_queue", redis: :redis, node_id: "test_node" }
 
@@ -63,14 +64,21 @@ defmodule Verk.QueueManagerTest do
   end
 
   test "call dequeue with a non empty queue" do
-    script = Verk.Scripts.sha("mrpop_lpush_src_dest")
-    expect(Redix, :command, [:redis, ["EVALSHA", script, 2, "queue:test_queue", "inprogress:test_queue:test_node", 3]], { :ok, ["job"] })
-    expect(Verk.Job, :decode!, ["job"], :decoded_job)
+    expect(Redix, :command, [:redis, ["EVALSHA", @mrpop_script, 2, "queue:test_queue", "inprogress:test_queue:test_node", 3]], { :ok, ["job"] })
 
     state = %State{ queue_name: "test_queue", redis: :redis, node_id: "test_node" }
 
-    assert handle_call({ :dequeue, 3 }, :from, state) == { :reply, [:decoded_job], state }
-    assert validate [Redix, Verk.Job]
+    assert handle_call({ :dequeue, 3 }, :from, state) == { :reply, ["job"], state }
+    assert validate [Redix]
+  end
+
+  test "call dequeue with a non empty queue and more than max_jobs" do
+    expect(Redix, :command, [:redis, ["EVALSHA", @mrpop_script, 2, "queue:test_queue", "inprogress:test_queue:test_node", 100]], { :ok, ["job"] })
+
+    state = %State{ queue_name: "test_queue", redis: :redis, node_id: "test_node" }
+
+    assert handle_call({ :dequeue, 500 }, :from, state) == { :reply, ["job"], state }
+    assert validate [Redix]
   end
 
   test "call dequeue and redis failed" do
