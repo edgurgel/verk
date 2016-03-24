@@ -86,7 +86,7 @@ defmodule Verk.WorkersManager do
 
   # The worker died normally after finishing the job. Message :done will come soon
   # or already came. This case here is just to discard the message if it comes with :normal
-  def handle_info({ :DOWN, _mref, _worker, :normal }, state), do: { :noreply, state, 0 }
+  def handle_info({ :DOWN, _mref, _, _worker, :normal }, state), do: { :noreply, state, 0 }
 
   def handle_info({ :DOWN, mref, _, worker, { reason, stack } }, state) do
     handle_down!(mref, worker, reason, stack, state)
