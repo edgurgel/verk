@@ -6,43 +6,55 @@ defmodule Verk.QueueStats do
     * Amount of finished jobs
     * Amount of failed jobs
 
-  The saved tuples are of this form:
-  { queue_name, running_jobs_counter, finished_jobs_counter, failed_jobs_counter }
+  It will persist to redis from time to time
   """
   use GenEvent
+  require Logger
+  alias Verk.QueueStatsCounters
 
-  @table :queue_stats
+  @persist_interval 10_000
 
   @doc """
   Lists the queues and their stats
   """
+  @spec all :: Map.t
   def all do
-    for { queue, running, finished, failed } <- :ets.tab2list(@table) do
+    for { queue, running, finished, failed } <- QueueStatsCounters.all, is_binary(queue) do
       %{ queue: queue, running_counter: running, finished_counter: finished, failed_counter: failed }
     end
   end
 
   @doc false
   def init(_) do
-    :ets.new(@table, [:ordered_set, :named_table, read_concurrency: true, keypos: 1])
+    QueueStatsCounters.init
+    Process.send_after(self, :persist_stats, @persist_interval)
     { :ok, nil }
   end
 
   @doc false
   def handle_event(%Verk.Events.JobStarted{ job: job }, state) do
-    :ets.update_counter(@table, job.queue, { 2, 1 }, default_tuple(job.queue))
+    QueueStatsCounters.register(:started, job.queue)
     { :ok, state }
   end
 
   def handle_event(%Verk.Events.JobFinished{ job: job }, state) do
-    :ets.update_counter(@table, job.queue, [{ 3, 1 }, { 2, -1 }], default_tuple(job.queue))
+    QueueStatsCounters.register(:finished, job.queue)
     { :ok, state }
   end
 
   def handle_event(%Verk.Events.JobFailed{ job: job }, state) do
-    :ets.update_counter(@table, job.queue, [{ 4, 1 }, { 2, -1 }], default_tuple(job.queue))
+    QueueStatsCounters.register(:failed, job.queue)
     { :ok, state }
   end
 
-  defp default_tuple(queue), do: { queue, 0, 0, 0 }
+  @doc false
+  def handle_info(:persist_stats, state) do
+    case QueueStatsCounters.persist do
+      :ok -> :ok
+      {:error, reason} ->
+        Logger.error("QueueStats failed to persist stats to Redis. Reason: #{inspect reason}")
+    end
+    Process.send_after(self, :persist_stats, @persist_interval)
+    { :ok, state }
+  end
 end
