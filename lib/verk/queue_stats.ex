@@ -10,39 +10,36 @@ defmodule Verk.QueueStats do
   { queue_name, running_jobs_counter, finished_jobs_counter, failed_jobs_counter }
   """
   use GenEvent
+  alias Verk.QueueStatsCounters
 
-  @table :queue_stats
-
-  @doc """
-  Lists the queues and their stats
-  """
-  def all do
-    for { queue, running, finished, failed } <- :ets.tab2list(@table) do
-      %{ queue: queue, running_counter: running, finished_counter: finished, failed_counter: failed }
-    end
-  end
+  @persist_interval 10_000
 
   @doc false
   def init(_) do
-    :ets.new(@table, [:ordered_set, :named_table, read_concurrency: true, keypos: 1])
+    QueueStatsCounters.init
+    Process.send_after(self(), :persist_stats, @persist_interval)
     { :ok, nil }
   end
 
   @doc false
   def handle_event(%Verk.Events.JobStarted{ job: job }, state) do
-    :ets.update_counter(@table, job.queue, { 2, 1 }, default_tuple(job.queue))
+    QueueStatsCounters.register(:started, job.queue)
     { :ok, state }
   end
 
   def handle_event(%Verk.Events.JobFinished{ job: job }, state) do
-    :ets.update_counter(@table, job.queue, [{ 3, 1 }, { 2, -1 }], default_tuple(job.queue))
+    QueueStatsCounters.register(:finished, job.queue)
     { :ok, state }
   end
 
   def handle_event(%Verk.Events.JobFailed{ job: job }, state) do
-    :ets.update_counter(@table, job.queue, [{ 4, 1 }, { 2, -1 }], default_tuple(job.queue))
+    QueueStatsCounters.register(:failed, job.queue)
     { :ok, state }
   end
 
-  defp default_tuple(queue), do: { queue, 0, 0, 0 }
+  @doc false
+  def handle_info(:persist_stats, state) do
+    QueueStatsCounters.persist
+    {:noreply, state}
+  end
 end
