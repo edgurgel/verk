@@ -4,7 +4,7 @@ defmodule Verk.QueueStatsCounters do
   each queue.
   """
 
-  @counters :queue_stats
+  @counters_table :queue_stats
   @ets_options [:ordered_set, :named_table, read_concurrency: true, keypos: 1]
 
   @doc """
@@ -12,60 +12,74 @@ defmodule Verk.QueueStatsCounters do
   """
   @spec init :: :ok
   def init do
-    :ets.new(@counters, @ets_options)
+    :ets.new(@counters_table, @ets_options)
     :ok
+  end
+
+  @doc """
+  It outputs the current stats about each queue and `total`
+  """
+  def all do
+    :ets.select(@counters_table, [{ { :"$1", :"$2", :"$3", :"$4", :_, :_ }, [],
+                           [{ { :"$1", :"$2", :"$3", :"$4" } }] }])
   end
 
   @doc """
   Updates the counters according to the event that happened.
   """
   @spec register(:started | :finished | :failed, binary) :: integer
-  def register(:started, queue), do: update_counters(queue, { 2, 1 })
-  def register(:finished, queue), do: update_counters(queue, [{ 3, 1 }, { 2, -1 }])
-  def register(:failed, queue), do: update_counters(queue, [{ 4, 1 }, { 2, -1 }])
+  def register(:started, queue) do
+    update = { 2, 1 }
+    update_counters(queue, update)
+    update_counters(:total, update)
+  end
+  def register(:finished, queue) do
+    updates = [{ 3, 1 }, { 2, -1 }]
+    update_counters(queue, updates)
+    update_counters(:total, updates)
+  end
+  def register(:failed, queue) do
+    updates = [{ 4, 1 }, { 2, -1 }]
+    update_counters(queue, updates)
+    update_counters(:total, updates)
+  end
 
   @doc """
   Saves processed and failed total counts to Redis.
   """
-  @spec persist :: {:ok, [Redix.Protocol.redis_value]} | {:error, atom}
+  @spec persist :: :ok | { :error, term }
   def persist do
-    {total_processed, total_failed} = Enum.reduce stats, {0, 0}, fn {queue, processed, failed}, {accum_processed, accum_failed} ->
-      redis_commands = [
-        incrby(queue, :processed, processed),
-        incrby(queue, :failed, failed)
-      ]
-      case Redix.pipeline(Verk.Redis, redis_commands) do
-        {:ok, [%Redix.Error{}, %Redix.Error{}]} ->
-          {accum_processed, accum_failed}
-        {:ok, [_, %Redix.Error{}]} ->
-          update_counters(queue, { 3, -processed })
-          {accum_processed + processed, accum_failed}
-        {:ok, [%Redix.Error{}, _]} ->
-          update_counters(queue, { 4, -failed })
-          {accum_processed, accum_failed + failed}
-        {:ok, [_, _]} ->
-          update_counters(queue, [{ 3, -processed }, { 4, -failed }])
-          {accum_processed + processed, accum_failed + failed}
-        _error ->
-          {accum_processed, accum_failed}
-      end
+    cmds = Enum.reduce(counters, [], fn { queue, _started, processed, failed, last_processed, last_failed }, commands ->
+      delta_processed = processed - last_processed
+      delta_failed    = failed - last_failed
+      :ets.update_counter(@counters_table, queue, [{ 5, delta_processed },
+                                             { 6, delta_failed }])
+
+      [incrby(queue, :processed, delta_processed) | [incrby(queue, :failed, delta_failed) | commands]]
+    end)
+    Enum.reject(cmds, &(&1 == nil)) |> flush_to_redis!
+  end
+
+  defp flush_to_redis!([]), do: :ok
+  defp flush_to_redis!(cmds) do
+    case Redix.pipeline(Verk.Redis, cmds) do
+      { :ok, _ } -> :ok
+      { :error, reason } -> { :error, reason }
     end
-
-    redis_commands = [
-      incrby(:total, :processed, total_processed),
-      incrby(:total, :failed, total_failed)
-    ]
-    Redix.pipeline(Verk.Redis, redis_commands)
   end
 
+  defp counters, do: :ets.tab2list(@counters_table)
+
+  # started, finished, failed, last_started, last_failed
   defp update_counters(queue, operations) do
-    :ets.update_counter(@counters, queue, operations, { queue, 0, 0, 0 })
+    :ets.update_counter(@counters_table, queue, operations, { queue, 0, 0, 0, 0, 0 })
   end
 
-  defp stats do
-    :ets.select(@counters, [{{:"$1", :_, :"$2", :"$3"}, [], [{{:"$1", :"$2", :"$3"}}]}])
+  defp incrby(_, _, 0), do: nil
+  defp incrby(:total, attribute, increment) do
+    ["INCRBY", "stat:#{attribute}", increment]
   end
-
-  defp incrby(:total, attribute, increment), do: ["INCRBY", "stat:#{attribute}", increment]
-  defp incrby(queue, attribute, increment), do: ["INCRBY", "stat:#{attribute}:#{queue}", increment]
+  defp incrby(queue, attribute, increment) do
+    ["INCRBY", "stat:#{attribute}:#{queue}", increment]
+  end
 end

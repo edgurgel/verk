@@ -6,10 +6,10 @@ defmodule Verk.QueueStats do
     * Amount of finished jobs
     * Amount of failed jobs
 
-  The saved tuples are of this form:
-  { queue_name, running_jobs_counter, finished_jobs_counter, failed_jobs_counter }
+  It will persist to redis from time to time
   """
   use GenEvent
+  require Logger
   alias Verk.QueueStatsCounters
 
   @persist_interval 10_000
@@ -17,7 +17,7 @@ defmodule Verk.QueueStats do
   @doc false
   def init(_) do
     QueueStatsCounters.init
-    Process.send_after(self(), :persist_stats, @persist_interval)
+    Process.send_after(self, :persist_stats, @persist_interval)
     { :ok, nil }
   end
 
@@ -39,7 +39,12 @@ defmodule Verk.QueueStats do
 
   @doc false
   def handle_info(:persist_stats, state) do
-    QueueStatsCounters.persist
-    {:noreply, state}
+    case QueueStatsCounters.persist do
+      :ok -> :ok
+      {:error, reason} ->
+        Logger.error("QueueStats failed to persist stats to Redis. Reason: #{inspect reason}")
+    end
+    Process.send_after(self, :persist_stats, @persist_interval)
+    { :ok, state }
   end
 end
