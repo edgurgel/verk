@@ -14,6 +14,16 @@ defmodule Verk.QueueStats do
 
   @persist_interval 10_000
 
+  @doc """
+  Lists the queues and their stats
+  """
+  @spec all :: Map.t
+  def all do
+    for { queue, running, finished, failed } <- QueueStatsCounters.all, is_binary(queue) do
+      %{ queue: queue, running_counter: running, finished_counter: finished, failed_counter: failed }
+    end
+  end
+
   @doc false
   def init(_) do
     QueueStatsCounters.init

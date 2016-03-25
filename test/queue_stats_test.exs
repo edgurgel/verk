@@ -16,6 +16,19 @@ defmodule Verk.QueueStatsTest do
     :ok
   end
 
+  test "all" do
+    init([]) # create table
+
+    handle_event(%Verk.Events.JobStarted{ job: %Verk.Job{ queue: "queue_1" } }, :state)
+    handle_event(%Verk.Events.JobStarted{ job: %Verk.Job{ queue: "queue_1" } }, :state)
+    handle_event(%Verk.Events.JobStarted{ job: %Verk.Job{ queue: "queue_2" } }, :state)
+    handle_event(%Verk.Events.JobFinished{ job: %Verk.Job{ queue: "queue_1" } }, :state)
+    handle_event(%Verk.Events.JobFailed{ job: %Verk.Job{ queue: "queue_1" } }, :state)
+
+    assert all == [%{ queue: "queue_1", running_counter: 0, finished_counter: 1, failed_counter: 1 },
+                   %{ queue: "queue_2", running_counter: 1, finished_counter: 0, failed_counter: 0 } ]
+  end
+
   test "init creates an ETS table" do
     assert :ets.info(@table) == :undefined
 
