@@ -81,7 +81,7 @@ defmodule Verk do
   def schedule(%Job{ jid: jid } = job, %DateTime{} = perform_at, redis) do
     perform_at_secs = Date.to_secs(perform_at)
 
-    if perform_at_secs < Time.now(:secs) do
+    if perform_at_secs < Time.now(:seconds) do
       enqueue(job, redis)
     else
       case Redix.command(redis, ["ZADD", @schedule_key, perform_at_secs, Poison.encode!(job)]) do

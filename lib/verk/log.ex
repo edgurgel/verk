@@ -17,6 +17,6 @@ defmodule Verk.Log do
   end
 
   defp elapsed(start_time) do
-    start_time |> Date.diff(Date.now, :secs)
+    start_time |> Date.diff(Date.now, :seconds)
   end
 end
