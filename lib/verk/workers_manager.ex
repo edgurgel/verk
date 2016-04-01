@@ -46,6 +46,16 @@ defmodule Verk.WorkersManager do
     end
   end
 
+  @process_info [:current_stacktrace, :initial_call, :reductions, :status]
+  @spec inspect_worker(binary | atom, binary) :: { :ok, Map.t } | { :error, :not_found }
+  def inspect_worker(queue, job_id) do
+    case :ets.match(name(queue), { :'$1', job_id, :'$2', :_, :'$3' }) do
+      [] -> { :error, :not_found }
+      [[pid, job, started_at]] ->
+        { :ok, %{ process: pid, job: job, started_at: started_at, info: Process.info(pid, @process_info) } }
+    end
+  end
+
   @doc """
   Create a table to monitor workers saving data about the assigned queue/pool
   """
