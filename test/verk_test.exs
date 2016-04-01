@@ -115,8 +115,9 @@ defmodule VerkTest do
   end
 
   test "schedule a job with a jid, a queue and a perform_in" do
-    now = Timex.Date.now
-    perform_at = Timex.Date.shift(now, days: 1)
+    Tzdata.App.start(nil, nil)
+    now = Timex.DateTime.now
+    perform_at = Timex.DateTime.shift(now, days: 1)
     job = %Verk.Job{ queue: "test_queue", jid: "job_id", class: "TestWorker", args: [] }
     encoded_job = "encoded_job"
     expect(Poison, :encode!, [job], encoded_job)
@@ -129,8 +130,9 @@ defmodule VerkTest do
   end
 
   test "schedule a job with a jid, a queue and a perform_in passing a redis connection" do
-    now = Timex.Date.now
-    perform_at = Timex.Date.shift(now, days: 1)
+    Tzdata.App.start(nil, nil)
+    now = Timex.DateTime.now
+    perform_at = Timex.DateTime.shift(now, days: 1)
     job = %Verk.Job{ queue: "test_queue", jid: "job_id", class: "TestWorker", args: [] }
     encoded_job = "encoded_job"
     expect(Poison, :encode!, [job], encoded_job)

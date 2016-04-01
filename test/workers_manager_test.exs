@@ -130,6 +130,7 @@ defmodule Verk.WorkersManagerTest do
   end
 
   test "cast done having the worker registered", %{ monitors: monitors } do
+    Tzdata.App.start(nil, nil)
     queue_manager_name = "queue_manager_name"
     pool_name = "pool_name"
     state = %State{ monitors: monitors, pool_name: pool_name, queue_manager_name: queue_manager_name }
