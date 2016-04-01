@@ -47,6 +47,9 @@ defmodule Verk.WorkersManager do
   end
 
   @process_info [:current_stacktrace, :initial_call, :reductions, :status]
+  @doc """
+  List information about the process that is currently running a `job_id`
+  """
   @spec inspect_worker(binary | atom, binary) :: { :ok, Map.t } | { :error, :not_found }
   def inspect_worker(queue, job_id) do
     case :ets.match(name(queue), { :'$1', job_id, :'$2', :_, :'$3' }) do
