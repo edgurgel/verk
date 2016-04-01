@@ -55,6 +55,24 @@ defmodule Verk.WorkersManagerTest do
     assert running_jobs("queue_name") == []
   end
 
+  test "inspect_worker with no matching job_id" do
+    inspect_worker("queue_name", "job_id") == { :error, :not_found }
+  end
+
+  test "inspect_worker with matching job_id", %{ monitors: monitors } do
+    row = { self, "job_id", "job data", make_ref, "start_time" }
+    :ets.insert(monitors, row)
+
+    { :ok, result } = inspect_worker("queue_name", "job_id")
+
+    assert result[:job] == "job data"
+    assert result[:process] == self
+    assert result[:started_at] == "start_time"
+
+    expected = [:current_stacktrace, :initial_call, :reductions, :status]
+    assert Enum.all?(expected, &Keyword.has_key?(result[:info], &1))
+  end
+
   test "init" do
     name = :workers_manager
     queue_name = "queue_name"
