@@ -115,7 +115,6 @@ defmodule VerkTest do
   end
 
   test "schedule a job with a jid, a queue and a perform_in" do
-    Tzdata.App.start(nil, nil)
     now = Timex.DateTime.now
     perform_at = Timex.DateTime.shift(now, days: 1)
     job = %Verk.Job{ queue: "test_queue", jid: "job_id", class: "TestWorker", args: [] }
@@ -130,7 +129,6 @@ defmodule VerkTest do
   end
 
   test "schedule a job with a jid, a queue and a perform_in passing a redis connection" do
-    Tzdata.App.start(nil, nil)
     now = Timex.DateTime.now
     perform_at = Timex.DateTime.shift(now, days: 1)
     job = %Verk.Job{ queue: "test_queue", jid: "job_id", class: "TestWorker", args: [] }
