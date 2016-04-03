@@ -26,9 +26,10 @@ defmodule Verk.Worker do
     try do
       apply(String.to_atom("Elixir.#{module}"), :perform, args)
       GenServer.cast(manager, { :done, self, job_id })
+      { :stop, :normal, state }
     rescue
       exception -> GenServer.cast(manager, { :failed, self, job_id, exception, System.stacktrace })
+      { :stop, :failed, state }
     end
-    { :stop, :normal, state }
   end
 end
