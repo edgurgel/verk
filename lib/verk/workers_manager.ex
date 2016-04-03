@@ -46,7 +46,7 @@ defmodule Verk.WorkersManager do
     end
   end
 
-  @process_info [:current_stacktrace, :initial_call, :reductions, :status]
+  @process_info_keys [:current_stacktrace, :initial_call, :reductions, :status]
   @doc """
   List information about the process that is currently running a `job_id`
   """
@@ -55,7 +55,12 @@ defmodule Verk.WorkersManager do
     case :ets.match(name(queue), { :'$1', job_id, :'$2', :_, :'$3' }) do
       [] -> { :error, :not_found }
       [[pid, job, started_at]] ->
-        { :ok, %{ process: pid, job: job, started_at: started_at, info: Process.info(pid, @process_info) } }
+        info = Process.info(pid, @process_info_keys)
+        if info do
+          { :ok, %{ process: pid, job: job, started_at: started_at, info: info } }
+        else
+          { :error, :not_found }
+        end
     end
   end
 

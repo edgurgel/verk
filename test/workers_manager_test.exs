@@ -73,6 +73,14 @@ defmodule Verk.WorkersManagerTest do
     assert Enum.all?(expected, &Keyword.has_key?(result[:info], &1))
   end
 
+  test "inspect_worker with matching job_id but process is gone", %{ monitors: monitors } do
+    pid = :erlang.list_to_pid('<3.57.1>')
+    row = { pid, "job_id", "job data", make_ref, "start_time" }
+    :ets.insert(monitors, row)
+
+    assert inspect_worker("queue_name", "job_id") == { :error, :not_found }
+  end
+
   test "init" do
     name = :workers_manager
     queue_name = "queue_name"
