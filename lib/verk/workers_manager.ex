@@ -97,9 +97,24 @@ defmodule Verk.WorkersManager do
     end
   end
 
-  # The worker died normally after finishing the job. Message :done will come soon
-  # or already came. This case here is just to discard the message if it comes with :normal
-  def handle_info({ :DOWN, _mref, _, _worker, :normal }, state), do: { :noreply, state, 0 }
+  # Possible reasons to receive a :DOWN message:
+  #   * :normal - The worker finished the job but :done message did not arrive
+  #   * :failed - The worker failed the job but :failed message did not arrive
+  #   * {reason, stack } - The worker crashed and it has a stacktrace
+  #   * reason - The worker crashed and it doesn't have have a stacktrace
+  def handle_info({ :DOWN, mref, _, worker, :normal }, state) do
+    case :ets.lookup(state.monitors, worker) do
+      [{ ^worker, _job_id, job, ^mref, start_time}] ->
+        succeed(job, start_time, worker, mref, state.monitors, state.queue_manager_name)
+      _ -> Logger.warn "Worker finished but such worker was not monitored #{inspect(worker)}"
+    end
+    { :noreply, state, 0 }
+  end
+
+  def handle_info({ :DOWN, mref, _, worker, :failed }, state) do
+    handle_down!(mref, worker, :failed, [], state)
+    { :noreply, state, 0 }
+  end
 
   def handle_info({ :DOWN, mref, _, worker, { reason, stack } }, state) do
     handle_down!(mref, worker, reason, stack, state)
@@ -113,12 +128,47 @@ defmodule Verk.WorkersManager do
 
   defp handle_down!(mref, worker, reason, stack, state) do
     Logger.debug "Worker got down, reason: #{inspect reason}, #{inspect([mref, worker])}"
-    case :ets.match(state.monitors, {worker, :'_', :'$1', mref, :'$2'}) do
-      [[job, start_time]] ->
+    case :ets.lookup(state.monitors, worker) do
+      [{ ^worker, _job_id, job, ^mref, start_time}] ->
         exception = RuntimeError.exception(inspect(reason))
         fail(job, start_time, worker, mref, state.monitors, state.queue_manager_name, exception, stack)
-      error -> Logger.warn("Worker got down but it was not found, error: #{inspect error}")
+      error -> Logger.warn "Worker got down but it was not found, error: #{inspect error}"
     end
+  end
+
+  @doc false
+  def handle_cast({ :done, worker, job_id }, state) do
+    case :ets.lookup(state.monitors, worker) do
+      [{ ^worker, ^job_id, job, mref, start_time}] ->
+        succeed(job, start_time, worker, mref, state.monitors, state.queue_manager_name)
+      _ -> Logger.warn "#{job_id} finished but no worker was monitored"
+    end
+    { :noreply, state, 0 }
+  end
+
+  def handle_cast({ :failed, worker, job_id, exception, stacktrace }, state) do
+    Logger.debug "Job failed reason: #{inspect exception}"
+    case :ets.lookup(state.monitors, worker) do
+      [{ ^worker, ^job_id, job, mref, start_time}] ->
+        fail(job, start_time, worker, mref, state.monitors, state.queue_manager_name, exception, stacktrace)
+      _ -> Logger.warn "#{job_id} failed but no worker was monitored"
+    end
+    { :noreply, state, 0 }
+  end
+
+  defp succeed(job, start_time, worker, mref, monitors, queue_manager_name) do
+    Verk.QueueManager.ack(queue_manager_name, job)
+    Verk.Log.done(job, start_time, worker)
+    demonitor!(monitors, worker, mref)
+    notify!(%Events.JobFinished{ job: job, finished_at: Timex.Date.now })
+  end
+
+  defp fail(job, start_time, worker, mref, monitors, queue_manager_name, exception, stacktrace) do
+    Verk.Log.fail(job, start_time, worker)
+    demonitor!(monitors, worker, mref)
+    :ok = Verk.QueueManager.retry(queue_manager_name, job, exception, stacktrace)
+    :ok = Verk.QueueManager.ack(queue_manager_name, job)
+    notify!(%Events.JobFailed{ job: job, failed_at: Timex.Date.now, exception: exception, stacktrace: stacktrace })
   end
 
   defp start_job(job = %Verk.Job{ jid: job_id, class: module, args: args }, state) do
@@ -140,39 +190,6 @@ defmodule Verk.WorkersManager do
     mref = Process.monitor(worker)
     now = Timex.Date.now
     true = :ets.insert(monitors, { worker, job_id, job, mref, now })
-  end
-
-  @doc false
-  def handle_cast({ :done, worker, job_id }, state) do
-    case :ets.lookup(state.monitors, worker) do
-      [{ ^worker, ^job_id, job, mref, start_time}] ->
-        Verk.QueueManager.ack(state.queue_manager_name, job)
-        Verk.Log.done(job, start_time, worker)
-        true = Process.demonitor(mref, [:flush])
-        true = :ets.delete(state.monitors, worker)
-        :poolboy.checkin(state.pool_name, worker)
-        notify!(%Events.JobFinished{ job: job, finished_at: Timex.Date.now })
-      _ -> Logger.error "#{job_id} finished but no worker was monitored"
-    end
-    { :noreply, state, 0 }
-  end
-
-  def handle_cast({ :failed, worker, job_id, exception, stacktrace }, state) do
-    Logger.debug "Job failed reason: #{inspect exception}"
-    case :ets.lookup(state.monitors, worker) do
-      [{ ^worker, ^job_id, job, mref, start_time}] ->
-        fail(job, start_time, worker, mref, state.monitors, state.queue_manager_name, exception, stacktrace)
-      _ -> Logger.error "#{job_id} failed but no worker was monitored"
-    end
-    { :noreply, state, 0 }
-  end
-
-  defp fail(job, start_time, worker, mref, monitors, queue_manager_name, exception, stacktrace) do
-    Verk.Log.fail(job, start_time, worker)
-    demonitor!(monitors, worker, mref)
-    :ok = Verk.QueueManager.retry(queue_manager_name, job, exception, stacktrace)
-    :ok = Verk.QueueManager.ack(queue_manager_name, job)
-    notify!(%Events.JobFailed{ job: job, failed_at: Timex.Date.now, exception: exception, stacktrace: stacktrace })
   end
 
   @doc false
