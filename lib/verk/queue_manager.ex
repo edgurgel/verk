@@ -52,7 +52,7 @@ defmodule Verk.QueueManager do
   """
   def retry(queue_manager, job, exception, stacktrace, timeout \\ 5000) do
     try do
-      GenServer.call(queue_manager, { :retry, job, Timex.Time.now(:secs), exception, stacktrace }, timeout)
+      GenServer.call(queue_manager, { :retry, job, Timex.Time.now(:seconds), exception, stacktrace }, timeout)
     catch
       :exit, { :timeout, _ } -> :timeout
     end

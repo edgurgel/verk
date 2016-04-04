@@ -55,7 +55,7 @@ defmodule Verk.ScheduleManager do
   end
 
   defp handle_info(fetch_message, state, queue) do
-    case Redix.command(state.redis, ["EVALSHA", @enqueue_retriable_script_sha, 1, queue, Time.now(:secs)]) do
+    case Redix.command(state.redis, ["EVALSHA", @enqueue_retriable_script_sha, 1, queue, Time.now(:seconds)]) do
       { :ok, nil } ->
         schedule_fetch!(fetch_message)
         { :noreply, state }
