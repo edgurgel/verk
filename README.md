@@ -74,7 +74,7 @@ Verk.enqueue(%Verk.Job{queue: :default, class: "ExampleWorker", args: [1,2]})
 This job can also be scheduled using `Verk.schedule/2`:
 
  ```elixir
- perform_at = Timex.Date.shift(Timex.Date.now, secs: 30)
+ perform_at = Timex.shift(Timex.DateTime.now, seconds: 30)
  Verk.schedule(%Verk.Job{queue: :default, class: "ExampleWorker", args: [1,2]}, perform_at)
  ```
 
