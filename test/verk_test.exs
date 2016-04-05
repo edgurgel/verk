@@ -120,7 +120,7 @@ defmodule VerkTest do
     job = %Verk.Job{ queue: "test_queue", jid: "job_id", class: "TestWorker", args: [] }
     encoded_job = "encoded_job"
     expect(Poison, :encode!, [job], encoded_job)
-    perform_at_secs = Timex.Date.to_secs(perform_at)
+    perform_at_secs = Timex.DateTime.to_seconds(perform_at)
     expect(Redix, :command, [Verk.Redis, ["ZADD", "schedule", perform_at_secs, encoded_job]], { :ok, :_ })
 
     assert schedule(job, perform_at) == { :ok, "job_id" }
@@ -134,7 +134,7 @@ defmodule VerkTest do
     job = %Verk.Job{ queue: "test_queue", jid: "job_id", class: "TestWorker", args: [] }
     encoded_job = "encoded_job"
     expect(Poison, :encode!, [job], encoded_job)
-    perform_at_secs = Timex.Date.to_secs(perform_at)
+    perform_at_secs = Timex.DateTime.to_seconds(perform_at)
     expect(Redix, :command, [:my_redis, ["ZADD", "schedule", perform_at_secs, encoded_job]], { :ok, :_ })
 
     assert schedule(job, perform_at, :my_redis) == { :ok, "job_id" }

@@ -166,7 +166,7 @@ defmodule Verk.WorkersManagerTest do
 
     expect(Verk.QueueManager, :ack, [queue_manager_name, job], :ok)
 
-    :ets.insert(monitors, { worker, job_id, job, make_ref, Timex.Date.now })
+    :ets.insert(monitors, { worker, job_id, job, make_ref, Timex.DateTime.now })
     assert handle_cast({ :done, worker, job_id }, state) == { :noreply, state, 0 }
 
     assert :ets.lookup(state.monitors, worker) == []
@@ -240,7 +240,7 @@ defmodule Verk.WorkersManagerTest do
 
     expect(Verk.QueueManager, :ack, [queue_manager_name, job], :ok)
 
-    :ets.insert(monitors, { worker, job_id, job, ref, Timex.Date.now })
+    :ets.insert(monitors, { worker, job_id, job, ref, Timex.DateTime.now })
     assert handle_info({ :DOWN, ref, :_, worker, :normal }, state) == { :noreply, state, 0 }
 
     assert :ets.lookup(state.monitors, worker) == []
