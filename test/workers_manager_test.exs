@@ -91,11 +91,13 @@ defmodule Verk.WorkersManagerTest do
     state = %State{ queue_name: queue_name, queue_manager_name: queue_manager_name,
                     pool_name: pool_name, pool_size: pool_size,
                     monitors: :workers_manager }
+    expect(Verk.QueueStats, :reset_started, [queue_name], :ok)
 
     assert init([name, queue_name, queue_manager_name, pool_name, pool_size])
       == { :ok, state }
 
     assert_received :enqueue_inprogress
+    assert validate Verk.QueueStats
   end
 
   test "handle info enqueue_inprogress" do
