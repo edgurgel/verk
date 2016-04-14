@@ -25,6 +25,16 @@ defmodule Verk.QueueStatsCounters do
   end
 
   @doc """
+  It Resets the started counter of a `queue`
+  """
+  @spec reset_started(binary) :: :ok
+  def reset_started(queue) do
+    unless :ets.update_element(@counters_table, queue, { 2, 0 }) do
+      true = :ets.insert_new(@counters_table, new_element(queue))
+    end
+  end
+
+  @doc """
   Updates the counters according to the event that happened.
   """
   @spec register(:started | :finished | :failed, binary) :: integer
@@ -72,8 +82,10 @@ defmodule Verk.QueueStatsCounters do
 
   # started, finished, failed, last_started, last_failed
   defp update_counters(queue, operations) do
-    :ets.update_counter(@counters_table, queue, operations, { queue, 0, 0, 0, 0, 0 })
+    :ets.update_counter(@counters_table, queue, operations, new_element(queue))
   end
+
+  defp new_element(queue), do: { queue, 0, 0, 0, 0, 0 }
 
   defp incrby(_, _, 0), do: nil
   defp incrby(:total, attribute, increment) do
