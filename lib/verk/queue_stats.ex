@@ -24,6 +24,14 @@ defmodule Verk.QueueStats do
     end
   end
 
+  @doc """
+  Requests to reset started counter for a `queue`
+  """
+  @spec reset_started(binary) :: :ok
+  def reset_started(queue) do
+    GenEvent.call(Verk.EventManager, Verk.QueueStats, { :reset_started, to_string(queue) })
+  end
+
   @doc false
   def init(_) do
     QueueStatsCounters.init
@@ -45,6 +53,12 @@ defmodule Verk.QueueStats do
   def handle_event(%Verk.Events.JobFailed{ job: job }, state) do
     QueueStatsCounters.register(:failed, job.queue)
     { :ok, state }
+  end
+
+  @doc false
+  def handle_call({ :reset_started, queue }, state) do
+    QueueStatsCounters.reset_started(queue)
+    { :ok, :ok, state }
   end
 
   @doc false

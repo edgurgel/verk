@@ -75,9 +75,11 @@ defmodule Verk.WorkersManager do
                     pool_size: size,
                     monitors: monitors }
 
-    send self, :enqueue_inprogress
-
     Logger.info "Workers Manager started for queue #{queue_name}"
+
+    send self, :enqueue_inprogress
+    Verk.QueueStats.reset_started(queue_name)
+
     { :ok, state }
   end
 

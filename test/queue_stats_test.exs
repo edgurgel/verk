@@ -29,6 +29,21 @@ defmodule Verk.QueueStatsTest do
                    %{ queue: "queue_2", running_counter: 1, finished_counter: 0, failed_counter: 0 } ]
   end
 
+  test "handle_call reset_started with no element" do
+    init([]) # create table
+
+    assert handle_call({ :reset_started, "queue" }, :state) == { :ok, :ok, :state }
+    assert :ets.tab2list(@table) == [{ "queue", 0, 0, 0, 0, 0 }]
+  end
+
+  test "handle_call reset_started with existing element" do
+    init([]) # create table
+    :ets.insert_new(@table, { "queue", 1, 2, 3, 4, 5 })
+
+    assert handle_call({ :reset_started, "queue" }, :state) == { :ok, :ok, :state }
+    assert :ets.tab2list(@table) == [{ "queue", 0, 2, 3, 4, 5 }]
+  end
+
   test "init creates an ETS table" do
     assert :ets.info(@table) == :undefined
 
