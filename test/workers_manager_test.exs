@@ -149,7 +149,7 @@ defmodule Verk.WorkersManagerTest do
     expect(Verk.QueueManager, :dequeue, [queue_manager_name, 1], [:encoded_job])
     expect(Verk.Job, :decode!, [:encoded_job], job)
     expect(:poolboy, :checkout, [pool_name, false], worker)
-    expect(Verk.Worker, :perform_async, [worker, worker, module, args, job_id], :ok)
+    expect(Verk.Worker, :perform_async, [worker, worker, job], :ok)
 
     assert handle_info(:timeout, state) == { :noreply, state, 1000 }
     assert match?([{^worker, ^job_id, ^job, _, _}], :ets.lookup(monitors, worker))

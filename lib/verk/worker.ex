@@ -13,22 +13,22 @@ defmodule Verk.Worker do
   @doc """
   Ask the worker to perform the job
   """
-  @spec perform_async(pid, pid, atom, list(term), binary) :: :ok
-  def perform_async(worker, manager, module, args, job_id) do
-    GenServer.cast(worker, { :perform, module, args, job_id, manager })
+  @spec perform_async(pid, pid, %Verk.Job{}) :: :ok
+  def perform_async(worker, manager, job) do
+    GenServer.cast(worker, { :perform, job, manager })
   end
 
   @doc false
   def init(_args \\ []), do: { :ok, nil }
 
   @doc false
-  def handle_cast({ :perform, module, args, job_id, manager }, state) do
+  def handle_cast({ :perform, job, manager }, state) do
     try do
-      apply(String.to_atom("Elixir.#{module}"), :perform, args)
-      GenServer.cast(manager, { :done, self, job_id })
+      apply(String.to_atom("Elixir.#{job.class}"), :perform, job.args)
+      GenServer.cast(manager, { :done, self, job.jid })
       { :stop, :normal, state }
     rescue
-      exception -> GenServer.cast(manager, { :failed, self, job_id, exception, System.stacktrace })
+      exception -> GenServer.cast(manager, { :failed, self, job.jid, exception, System.stacktrace })
       { :stop, :failed, state }
     end
   end
