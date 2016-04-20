@@ -5,6 +5,14 @@ defmodule Verk.Worker do
   use GenServer
   require Logger
 
+  @process_dict_key :verk_current_job
+
+  @doc """
+  Get the current job that the worker is running
+  """
+  @spec current_job :: %Verk.Job{}
+  def current_job, do: :erlang.get(@process_dict_key)
+
   @doc false
   def start_link(args \\ []) do
     GenServer.start_link(__MODULE__, args)
@@ -24,6 +32,7 @@ defmodule Verk.Worker do
   @doc false
   def handle_cast({ :perform, job, manager }, state) do
     try do
+      :erlang.put(@process_dict_key, job)
       apply(String.to_atom("Elixir.#{job.class}"), :perform, job.args)
       GenServer.cast(manager, { :done, self, job.jid })
       { :stop, :normal, state }

@@ -4,6 +4,12 @@ defmodule TestWorker do
   end
 end
 
+defmodule TestWorkerCurrentJob do
+  def perform(pid) do
+    send pid, Verk.Worker.current_job
+  end
+end
+
 defmodule FailWorker do
   def perform(argument) do
      raise ArgumentError, message: "invalid argument #{argument}"
@@ -37,5 +43,20 @@ defmodule Verk.WorkerTest do
     assert perform_async(worker, :manager, :job)
 
     assert_receive {:"$gen_cast", {:perform, :job, :manager}}
+  end
+
+  test "cast perform accessing the job" do
+    worker = self
+    job = %Verk.Job{jid: "job_id", class: "TestWorkerCurrentJob", args: [worker]}
+    assert handle_cast({ :perform, job, worker }, :state) == { :stop, :normal, :state }
+
+    assert_receive job
+    assert_receive {:"$gen_cast", {:done, ^worker, "job_id"}}
+  end
+
+  test "current_job" do
+    :erlang.put(:verk_current_job, :job)
+
+    assert current_job == :job
   end
 end
