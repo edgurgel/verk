@@ -57,7 +57,7 @@ defmodule Verk.WorkersManagerTest do
   end
 
   test "inspect_worker with no matching job_id" do
-    inspect_worker("queue_name", "job_id") == { :error, :not_found }
+    assert inspect_worker("queue_name", "job_id") == { :error, :not_found }
   end
 
   test "inspect_worker with matching job_id", %{ monitors: monitors } do
