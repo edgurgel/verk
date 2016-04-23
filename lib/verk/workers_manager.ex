@@ -12,6 +12,7 @@ defmodule Verk.WorkersManager do
   @default_timeout 1000
 
   defmodule State do
+    @moduledoc false
     defstruct [:queue_name, :pool_name, :queue_manager_name, :pool_size, :monitors]
   end
 

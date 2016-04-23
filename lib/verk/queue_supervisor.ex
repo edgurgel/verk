@@ -1,4 +1,10 @@
 defmodule Verk.Queue.Supervisor do
+  @moduledoc """
+  Supervisor definition for a queue. It consists of:
+  * A `Verk.QueueManager`
+  * A poolboy pool of workers
+  * A `Verk.WorkersManager`
+  """
   use Supervisor
   alias Verk.WorkersManager
   alias Verk.QueueManager

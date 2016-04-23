@@ -16,6 +16,7 @@ defmodule Verk.ScheduleManager do
   @enqueue_retriable_script_sha Verk.Scripts.sha("enqueue_retriable_job")
 
   defmodule State do
+    @moduledoc false
     defstruct [:redis]
   end
 

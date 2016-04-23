@@ -1,4 +1,8 @@
 defmodule Verk.Log do
+  @moduledoc """
+  Helper module to log when a job starts, fails or finishes.
+  """
+
   require Logger
   import Logger
   alias Verk.Job

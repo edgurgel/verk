@@ -1,4 +1,6 @@
 defmodule Verk.PoisonVersion do
+  @moduledoc false
+
   defmacro __using__(_) do
     quote do
       def poison_version do

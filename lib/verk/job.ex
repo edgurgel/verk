@@ -1,4 +1,8 @@
 defmodule Verk.Job do
+  @moduledoc """
+  The Job struct
+  """
+
   use Verk.PoisonVersion
   @keys [error_message: nil, failed_at: nil, retry_count: 0, queue: nil, class: nil, args: [],
          jid: nil, finished_at: nil, enqueued_at: nil, retried_at: nil, error_backtrace: nil]

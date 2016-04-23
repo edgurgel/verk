@@ -20,6 +20,7 @@ defmodule Verk.QueueManager do
   @max_jobs 100
 
   defmodule State do
+    @moduledoc false
     defstruct [:queue_name, :redis, :node_id]
   end
 

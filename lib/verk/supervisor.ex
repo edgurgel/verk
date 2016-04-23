@@ -1,4 +1,12 @@
 defmodule Verk.Supervisor do
+  @moduledoc """
+  Supervisor definition for Verk application. It consists of:
+  * `Verk.ScheduleManager`
+  * GenEvent manager named `Verk.EventManager`
+  * Watcher of the handler `Verk.QueueStats`
+  * Redis connectionn named `Verk.Redis`
+  * A `Verk.Queue.Supervisor` per queue
+  """
   use Supervisor
 
   @doc false
