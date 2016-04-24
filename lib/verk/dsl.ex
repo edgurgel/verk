@@ -1,4 +1,6 @@
 defmodule Verk.Dsl do
+  @moduledoc false
+
   @doc """
   Creates bang version of given function
   """
