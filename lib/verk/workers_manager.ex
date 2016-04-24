@@ -179,12 +179,12 @@ defmodule Verk.WorkersManager do
     notify!(%Events.JobFailed{ job: job, failed_at: Timex.DateTime.now, exception: exception, stacktrace: stacktrace })
   end
 
-  defp start_job(job = %Verk.Job{ jid: job_id, class: module, args: args }, state) do
+  defp start_job(job, state) do
     case :poolboy.checkout(state.pool_name, false) do
       worker when is_pid(worker)->
         monitor!(state.monitors, worker, job)
         Verk.Log.start(job, worker)
-        ask_to_perform(worker, job_id, module, args)
+        Verk.Worker.perform_async(worker, self, job)
         notify!(%Events.JobStarted{ job: job, started_at: Timex.DateTime.now })
     end
   end
@@ -212,9 +212,5 @@ defmodule Verk.WorkersManager do
 
   defp free_workers(monitors, size) do
     size - :ets.info(monitors, :size)
-  end
-
-  defp ask_to_perform(worker, job_id, module, args) do
-    Verk.Worker.perform_async(worker, self, module, args, job_id)
   end
 end

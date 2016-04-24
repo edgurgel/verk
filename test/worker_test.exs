@@ -4,6 +4,12 @@ defmodule TestWorker do
   end
 end
 
+defmodule TestWorkerCurrentJob do
+  def perform(pid) do
+    send pid, Verk.Worker.current_job
+  end
+end
+
 defmodule FailWorker do
   def perform(argument) do
      raise ArgumentError, message: "invalid argument #{argument}"
@@ -16,7 +22,8 @@ defmodule Verk.WorkerTest do
 
   test "cast perform runs the specified module with the args succeding" do
     worker = self
-    assert handle_cast({ :perform, "TestWorker", [worker], "job_id", worker }, :state) == { :stop, :normal, :state }
+    job = %Verk.Job{jid: "job_id", class: "TestWorker", args: [worker]}
+    assert handle_cast({ :perform, job, worker }, :state) == { :stop, :normal, :state }
 
     assert_receive :perform_executed
     assert_receive {:"$gen_cast", {:done, ^worker, "job_id"}}
@@ -24,16 +31,32 @@ defmodule Verk.WorkerTest do
 
   test "cast perform runs the specified module with the args failing" do
     worker = self
+    job = %Verk.Job{jid: "job_id", class: "FailWorker", args: ["arg1"]}
     exception = ArgumentError.exception("invalid argument arg1")
-    assert handle_cast({ :perform, "FailWorker", ["arg1"], "job_id", worker }, :state) == { :stop, :failed, :state }
+    assert handle_cast({ :perform, job, worker }, :state) == { :stop, :failed, :state }
 
     assert_receive { :"$gen_cast", { :failed, ^worker, "job_id", ^exception, _ } }
   end
 
   test "perform_async cast message to worker to perform the job" do
     worker = self
-    assert perform_async(worker, :manager, :module, :args, :job_id)
+    assert perform_async(worker, :manager, :job)
 
-    assert_receive {:"$gen_cast", {:perform, :module, :args, :job_id, :manager}}
+    assert_receive {:"$gen_cast", {:perform, :job, :manager}}
+  end
+
+  test "cast perform accessing the job" do
+    worker = self
+    job = %Verk.Job{jid: "job_id", class: "TestWorkerCurrentJob", args: [worker]}
+    assert handle_cast({ :perform, job, worker }, :state) == { :stop, :normal, :state }
+
+    assert_receive job
+    assert_receive {:"$gen_cast", {:done, ^worker, "job_id"}}
+  end
+
+  test "current_job" do
+    :erlang.put(:verk_current_job, :job)
+
+    assert current_job == :job
   end
 end
