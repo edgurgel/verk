@@ -18,10 +18,10 @@ defmodule Verk.RetrySet do
   """
   @spec add(%Job{}, integer,  GenServer.server) :: :ok | {:error, Redix.Error.t}
   def add(job, failed_at, redis \\ Verk.Redis) do
-    retry_at = retry_at(failed_at, job.retry_count) |> to_string
-    case Redix.command(redis, ["ZADD", @retry_key, retry_at, Poison.encode!(job)]) do
+    retry_at = calculate_retry_at(failed_at, job.retry_count)
+    case Redix.command(redis, ["ZADD", @retry_key, to_string(retry_at), Poison.encode!(job)]) do
       {:ok, _} -> :ok
-      {:error, error}-> {:error, error}
+      {:error, error} -> {:error, error}
     end
   end
 
@@ -35,7 +35,7 @@ defmodule Verk.RetrySet do
     bangify(add(job, failed_at, redis))
   end
 
-  defp retry_at(failed_at, retry_count) do
+  defp calculate_retry_at(failed_at, retry_count) do
     delay = :math.pow(retry_count, 4) + 15 + (:random.uniform(30) * (retry_count + 1))
     failed_at + delay
   end
@@ -85,7 +85,7 @@ defmodule Verk.RetrySet do
   """
   @spec delete_job(%Job{} | String.t, GenServer.server) :: :ok | {:error, RuntimeError.t | Redix.Error.t}
   def delete_job(original_json, redis \\ Verk.Redis)
-  def delete_job(%Job{ original_json: original_json }, redis) do
+  def delete_job(%Job{original_json: original_json}, redis) do
     delete_job(original_json, redis)
   end
   def delete_job(original_json, redis), do: SortedSet.delete_job(@retry_key, original_json, redis)
@@ -95,7 +95,7 @@ defmodule Verk.RetrySet do
   """
   @spec delete_job!(%Job{} | String.t, GenServer.server) :: nil
   def delete_job!(original_json, redis \\ Verk.Redis)
-  def delete_job!(%Job{ original_json: original_json }, redis) do
+  def delete_job!(%Job{original_json: original_json}, redis) do
     delete_job!(original_json, redis)
   end
   def delete_job!(original_json, redis), do: SortedSet.delete_job!(@retry_key, original_json, redis)

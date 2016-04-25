@@ -9,7 +9,7 @@ defmodule Verk.Stats do
   @spec total(GenServer.server) :: Map.t
   def total(redis \\ Verk.Redis) do
     [processed, failed] = Redix.command!(redis, ~w(MGET stat:processed stat:failed))
-    %{ processed: to_int(processed), failed: to_int(failed) }
+    %{processed: to_int(processed), failed: to_int(failed)}
   end
 
   defp to_int(nil), do: 0

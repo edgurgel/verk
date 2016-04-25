@@ -64,7 +64,7 @@ defmodule Verk.Queue do
   Deletes the job from the queue
   """
   @spec delete_job(binary, %Job{} | binary) :: :ok | {:error, RuntimeError.t | Redix.Error.t}
-  def delete_job(queue, %Job{ original_json: original_json }) do
+  def delete_job(queue, %Job{original_json: original_json}) do
     delete_job(queue, original_json)
   end
 
@@ -80,7 +80,7 @@ defmodule Verk.Queue do
   Delete job from the queue, raising if there's an error
   """
   @spec delete_job!(binary, %Job{} | binary) :: nil
-  def delete_job!(queue, %Job{ original_json: original_json }) do
+  def delete_job!(queue, %Job{original_json: original_json}) do
     delete_job!(queue, original_json)
   end
 
