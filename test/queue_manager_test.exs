@@ -122,7 +122,7 @@ defmodule Verk.QueueManagerTest do
     failed_at = 100
 
     job = %Job{ retry_count: 1, failed_at: failed_at, error_backtrace: "\n", error_message: "reasons" }
-    expect(RetrySet, :add, [job, failed_at, :redis], "payload")
+    expect(RetrySet, :add!, [job, failed_at, :redis], "payload")
 
     state = %State{ redis: :redis }
     job = %Job{ retry_count: 0 }
@@ -137,7 +137,7 @@ defmodule Verk.QueueManagerTest do
     failed_at = 100
 
     job = %Job{ retry_count: 1, failed_at: failed_at, error_backtrace: "\n", error_message: "reasons" }
-    expect(RetrySet, :add, [job, failed_at, :redis], :ok)
+    expect(RetrySet, :add!, [job, failed_at, :redis], :ok)
 
     state = %State{ redis: :redis }
     job = %Job{ retry_count: nil }
@@ -152,7 +152,7 @@ defmodule Verk.QueueManagerTest do
     failed_at = 100
 
     job = %Job{ retry_count: 2, retried_at: failed_at, error_backtrace: "\n", error_message: "reasons" }
-    expect(RetrySet, :add, [job, failed_at, :redis], :ok)
+    expect(RetrySet, :add!, [job, failed_at, :redis], :ok)
 
     state = %State{ redis: :redis }
     job = %Job{ retry_count: 1 }
@@ -167,13 +167,15 @@ defmodule Verk.QueueManagerTest do
     failed_at = 100
 
     job = %Job{ retry_count: 1, failed_at: failed_at, error_backtrace: "\n", error_message: "reasons" }
-    expect(RetrySet, :add, [job, failed_at, :redis], :error)
+    expect(RetrySet, :add!, fn ^job, ^failed_at, :redis -> exception(:error, %Redix.Error{message: "fail"}) end)
 
     state = %State{ redis: :redis }
     job = %Job{ retry_count: 0 }
     exception = RuntimeError.exception("reasons")
 
-    assert handle_call({ :retry, job, failed_at, exception, [] }, :from, state) == { :reply, :ok, state }
+    assert_raise Redix.Error, fn ->
+      handle_call({ :retry, job, failed_at, exception, [] }, :from, state) == { :reply, :ok, state }
+    end
 
     assert validate RetrySet
   end
@@ -181,13 +183,29 @@ defmodule Verk.QueueManagerTest do
   test "call retry on a job failing too many times" do
     failed_at = 100
     job = %Job{ retry_count: 26, error_backtrace: "\n", retried_at: failed_at, error_message: "reasons" }
-    expect(DeadSet, :add, [job, failed_at, :redis], :ok)
+    expect(DeadSet, :add!, [job, failed_at, :redis], :ok)
 
     state = %State{ redis: :redis }
     job = %Job{ retry_count: 25 }
     exception = RuntimeError.exception("reasons")
 
     assert handle_call({ :retry, job, failed_at, exception, [] }, :from, state) == { :reply, :ok, state }
+
+    assert validate DeadSet
+  end
+
+  test "call retry on a job failing too many times and failing to add!" do
+    failed_at = 100
+    job = %Job{ retry_count: 26, error_backtrace: "\n", retried_at: failed_at, error_message: "reasons" }
+    expect(DeadSet, :add!, fn ^job, ^failed_at, :redis -> exception(:error, %Redix.Error{message: "fail"}) end)
+
+    state = %State{ redis: :redis }
+    job = %Job{ retry_count: 25 }
+    exception = RuntimeError.exception("reasons")
+
+    assert_raise Redix.Error, fn ->
+      handle_call({ :retry, job, failed_at, exception, [] }, :from, state) == { :reply, :ok, state }
+    end
 
     assert validate DeadSet
   end
