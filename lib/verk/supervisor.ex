@@ -17,9 +17,9 @@ defmodule Verk.Supervisor do
   @doc false
   def init(_) do
     queues = Application.get_env(:verk, :queues, [])
-    children = for { queue, size } <- queues, do: queue_child(queue, size)
+    children = for {queue, size} <- queues, do: queue_child(queue, size)
 
-    { :ok, redis_url } = Application.fetch_env(:verk, :redis_url)
+    {:ok, redis_url} = Application.fetch_env(:verk, :redis_url)
 
     schedule_manager    = worker(Verk.ScheduleManager, [], id: :schedule_manager)
     verk_event_manager  = worker(GenEvent, [[name: Verk.EventManager]])
@@ -37,10 +37,10 @@ defmodule Verk.Supervisor do
 
   @doc false
   def stop_child(queue) when is_atom(queue) do
-    supervisor_name = supervisor_name(queue)
-    case Supervisor.terminate_child(__MODULE__, supervisor_name) do
-      :ok -> Supervisor.delete_child(__MODULE__, supervisor_name)
-      error = { :error, :not_found } -> error
+    name = supervisor_name(queue)
+    case Supervisor.terminate_child(__MODULE__, name) do
+      :ok -> Supervisor.delete_child(__MODULE__, name)
+      error = {:error, :not_found} -> error
     end
   end
 

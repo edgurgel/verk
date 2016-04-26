@@ -23,22 +23,22 @@ defmodule Verk.Worker do
   """
   @spec perform_async(pid, pid, %Verk.Job{}) :: :ok
   def perform_async(worker, manager, job) do
-    GenServer.cast(worker, { :perform, job, manager })
+    GenServer.cast(worker, {:perform, job, manager})
   end
 
   @doc false
-  def init(_args \\ []), do: { :ok, nil }
+  def init(_args \\ []), do: {:ok, nil}
 
   @doc false
-  def handle_cast({ :perform, job, manager }, state) do
+  def handle_cast({:perform, job, manager}, state) do
     try do
       :erlang.put(@process_dict_key, job)
       apply(String.to_atom("Elixir.#{job.class}"), :perform, job.args)
-      GenServer.cast(manager, { :done, self, job.jid })
-      { :stop, :normal, state }
+      GenServer.cast(manager, {:done, self, job.jid})
+      {:stop, :normal, state}
     rescue
-      exception -> GenServer.cast(manager, { :failed, self, job.jid, exception, System.stacktrace })
-      { :stop, :failed, state }
+      exception -> GenServer.cast(manager, {:failed, self, job.jid, exception, System.stacktrace})
+      {:stop, :failed, state}
     end
   end
 end

@@ -7,7 +7,7 @@ defmodule Verk.PoisonVersion do
         unquote(Verk.PoisonVersion.runtime_poison_version)
       end
 
-      def is_before_poison_2 do
+      def before_poison_2? do
         unquote(Verk.PoisonVersion.runtime_poison_version) |> Version.match?("<2.0.0")
       end
     end
@@ -17,7 +17,7 @@ defmodule Verk.PoisonVersion do
     Mix.Project.config
     |> Keyword.get(:deps)
     |> Mix.Dep.loaded
-    |> Enum.find(fn(%{app: app})-> app == :poison end)
+    |> Enum.find(fn(%{app: app}) -> app == :poison end)
     |> Map.get(:status)
     |> elem(1)
   end

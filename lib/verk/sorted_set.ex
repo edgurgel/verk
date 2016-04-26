@@ -65,7 +65,7 @@ defmodule Verk.SortedSet do
   Deletes the job from the sorted set
   """
   @spec delete_job(String.t, %Job{} | String.t, GenServer.server) :: :ok | {:error, RuntimeError.t | Redix.Error.t}
-  def delete_job(key, %Job{ original_json: original_json }, redis) do
+  def delete_job(key, %Job{original_json: original_json}, redis) do
     delete_job(key, original_json, redis)
   end
 
@@ -81,7 +81,7 @@ defmodule Verk.SortedSet do
   Deletes the job from the sorted set, raising if there's an error
   """
   @spec delete_job!(String.t, %Job{} | String.t, GenServer.server) :: nil
-  def delete_job!(key, %Job{ original_json: original_json }, redis) do
+  def delete_job!(key, %Job{original_json: original_json}, redis) do
     delete_job!(key, original_json, redis)
   end
 

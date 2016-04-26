@@ -24,8 +24,8 @@ defmodule Verk.DeadSet do
     case Redix.pipeline(redis, [["ZADD", @dead_key, timestamp, Poison.encode!(job)],
                                 ["ZREMRANGEBYSCORE", @dead_key, "-inf", timestamp - @timeout],
                                 ["ZREMRANGEBYRANK", @dead_key, 0, -@max_jobs]]) do
-      { :ok, _ } -> :ok
-      {:error, error}-> {:error, error}
+      {:ok, _} -> :ok
+      {:error, error} -> {:error, error}
     end
   end
 
@@ -84,7 +84,7 @@ defmodule Verk.DeadSet do
   """
   @spec delete_job(%Job{} | String.t, GenServer.server) :: :ok | {:error, RuntimeError.t | Redix.Error.t}
   def delete_job(original_json, redis \\ Verk.Redis)
-  def delete_job(%Job{ original_json: original_json }, redis) do
+  def delete_job(%Job{original_json: original_json}, redis) do
     delete_job(original_json, redis)
   end
   def delete_job(original_json, redis), do: SortedSet.delete_job(@dead_key, original_json, redis)
@@ -94,7 +94,7 @@ defmodule Verk.DeadSet do
   """
   @spec delete_job!(%Job{} | String.t, GenServer.server) :: nil
   def delete_job!(original_json, redis \\ Verk.Redis)
-  def delete_job!(%Job{ original_json: original_json }, redis) do
+  def delete_job!(%Job{original_json: original_json}, redis) do
     delete_job!(original_json, redis)
   end
   def delete_job!(original_json, redis), do: SortedSet.delete_job!(@dead_key, original_json, redis)

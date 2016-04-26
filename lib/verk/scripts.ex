@@ -16,7 +16,8 @@ defmodule Verk.Scripts do
 
   @spec sha(binary) :: binary
   def sha(script_name) do
-    script = Path.join(:code.priv_dir(:verk), "#{script_name}.lua") |> File.read!
-    :crypto.hash(:sha, script) |> Base.encode16(case: :lower)
+    script = Path.join(:code.priv_dir(:verk), "#{script_name}.lua")
+    hash_sha = :crypto.hash(:sha, File.read!(script))
+    Base.encode16(hash_sha, case: :lower)
   end
 end
