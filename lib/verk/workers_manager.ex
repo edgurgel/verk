@@ -12,11 +12,9 @@ defmodule Verk.WorkersManager do
   alias Verk.QueueManager
   alias Verk.Log
 
-  @default_timeout 1000
-
   defmodule State do
     @moduledoc false
-    defstruct [:queue_name, :pool_name, :queue_manager_name, :pool_size, :monitors]
+    defstruct [:queue_name, :pool_name, :queue_manager_name, :pool_size, :monitors, :timeout]
   end
 
   @doc """
@@ -28,8 +26,8 @@ defmodule Verk.WorkersManager do
   end
 
   @doc false
-  def start_link(workers_manager_name, queue_name, queue_manager_name, pool_name, pool_size) do
-    gen_server_args = [workers_manager_name, queue_name, queue_manager_name, pool_name, pool_size]
+  def start_link(workers_manager_name, queue_name, queue_manager_name, pool_name, pool_size, timeout) do
+    gen_server_args = [workers_manager_name, queue_name, queue_manager_name, pool_name, pool_size, timeout]
     GenServer.start_link(__MODULE__, gen_server_args, name: workers_manager_name)
   end
 
@@ -73,13 +71,14 @@ defmodule Verk.WorkersManager do
   @doc """
   Create a table to monitor workers saving data about the assigned queue/pool
   """
-  def init([workers_manager_name, queue_name, queue_manager_name, pool_name, size]) do
+  def init([workers_manager_name, queue_name, queue_manager_name, pool_name, size, timeout]) do
     monitors = :ets.new(workers_manager_name, [:named_table, read_concurrency: true])
     state = %State{queue_name: queue_name,
                   queue_manager_name: queue_manager_name,
                   pool_name: pool_name,
                   pool_size: size,
-                  monitors: monitors}
+                  monitors: monitors,
+                  timeout: timeout}
 
     Logger.info "Workers Manager started for queue #{queue_name}"
 
@@ -104,7 +103,7 @@ defmodule Verk.WorkersManager do
         reason ->
           Logger.error("Failed to fetch a job. Reason: #{inspect reason}")
       end
-      {:noreply, state, @default_timeout}
+      {:noreply, state, state.timeout}
     else
       {:noreply, state}
     end
