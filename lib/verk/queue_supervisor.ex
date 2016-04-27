@@ -9,8 +9,6 @@ defmodule Verk.Queue.Supervisor do
   alias Verk.WorkersManager
   alias Verk.QueueManager
 
-  @default_workers_manager_timeout 1000
-
   @doc false
   def start_link(name, size) do
     supervisor_name = String.to_atom("#{name}.supervisor")
@@ -22,12 +20,9 @@ defmodule Verk.Queue.Supervisor do
     pool_name = String.to_atom("#{name}.pool")
     workers_manager = WorkersManager.name(name)
     queue_manager = QueueManager.name(name)
-    workers_manager_timeout = Application.get_env(:verk, :workers_manager_timeout, @default_workers_manager_timeout)
-    workers_manager_args = [workers_manager, name, queue_manager, pool_name, size, workers_manager_timeout]
-
     children = [worker(QueueManager, [queue_manager, name], id: queue_manager),
                 poolboy_spec(pool_name, size),
-                worker(WorkersManager, workers_manager_args, id: workers_manager)]
+                worker(WorkersManager, [workers_manager, name, queue_manager, pool_name, size], id: workers_manager)]
 
     supervise(children, strategy: :one_for_one)
   end
