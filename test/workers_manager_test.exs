@@ -88,9 +88,10 @@ defmodule Verk.WorkersManagerTest do
     queue_manager_name = "queue_manager_name"
     pool_name = "pool_name"
     pool_size = "size"
+    timeout = Application.get_env(:verk, :workers_manager_timeout)
     state = %State{ queue_name: queue_name, queue_manager_name: queue_manager_name,
                     pool_name: pool_name, pool_size: pool_size,
-                    monitors: :workers_manager }
+                    monitors: :workers_manager, timeout: timeout }
     expect(Verk.QueueStats, :reset_started, [queue_name], :ok)
 
     assert init([name, queue_name, queue_manager_name, pool_name, pool_size])
@@ -125,12 +126,13 @@ defmodule Verk.WorkersManagerTest do
 
   test "handle info timeout with free workers and no jobs", %{ monitors: monitors } do
     queue_manager_name = :queue_manager_name
+    timeout = 1000
     state = %State{ monitors: monitors, pool_name: "pool_name",
-                    pool_size: 1, queue_manager_name: queue_manager_name }
+                    pool_size: 1, queue_manager_name: queue_manager_name, timeout: timeout }
 
     expect(Verk.QueueManager, :dequeue, [queue_manager_name, 1], [])
 
-    assert handle_info(:timeout, state) == { :noreply, state, 1000 }
+    assert handle_info(:timeout, state) == { :noreply, state, state.timeout }
 
     assert validate Verk.QueueManager
   end
@@ -138,12 +140,13 @@ defmodule Verk.WorkersManagerTest do
   test "handle info timeout with free workers and jobs to be done", %{ monitors: monitors } do
     queue_manager_name = :queue_manager_name
     pool_name = :pool_name
+    timeout = 1000
     worker = self
     module = :module
     args = [:arg1, :arg2]
     job_id = "job_id"
     state = %State{ monitors: monitors, pool_name: pool_name,
-                    pool_size: 1, queue_manager_name: queue_manager_name }
+                    pool_size: 1, queue_manager_name: queue_manager_name, timeout: timeout }
     job = %Verk.Job{ class: module, args: args, jid: job_id }
 
     expect(Verk.QueueManager, :dequeue, [queue_manager_name, 1], [:encoded_job])
@@ -151,7 +154,7 @@ defmodule Verk.WorkersManagerTest do
     expect(:poolboy, :checkout, [pool_name, false], worker)
     expect(Verk.Worker, :perform_async, [worker, worker, job], :ok)
 
-    assert handle_info(:timeout, state) == { :noreply, state, 1000 }
+    assert handle_info(:timeout, state) == { :noreply, state, state.timeout }
     assert match?([{^worker, ^job_id, ^job, _, _}], :ets.lookup(monitors, worker))
     assert_receive %Verk.Events.JobStarted{ job: ^job, started_at: _ }
 

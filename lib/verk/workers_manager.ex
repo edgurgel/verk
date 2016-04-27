@@ -16,7 +16,7 @@ defmodule Verk.WorkersManager do
 
   defmodule State do
     @moduledoc false
-    defstruct [:queue_name, :pool_name, :queue_manager_name, :pool_size, :monitors]
+    defstruct [:queue_name, :pool_name, :queue_manager_name, :pool_size, :monitors, :timeout]
   end
 
   @doc """
@@ -75,11 +75,13 @@ defmodule Verk.WorkersManager do
   """
   def init([workers_manager_name, queue_name, queue_manager_name, pool_name, size]) do
     monitors = :ets.new(workers_manager_name, [:named_table, read_concurrency: true])
+    timeout = Application.get_env(:verk, :workers_manager_timeout, @default_timeout)
     state = %State{queue_name: queue_name,
                   queue_manager_name: queue_manager_name,
                   pool_name: pool_name,
                   pool_size: size,
-                  monitors: monitors}
+                  monitors: monitors,
+                  timeout: timeout}
 
     Logger.info "Workers Manager started for queue #{queue_name}"
 
@@ -104,7 +106,7 @@ defmodule Verk.WorkersManager do
         reason ->
           Logger.error("Failed to fetch a job. Reason: #{inspect reason}")
       end
-      {:noreply, state, @default_timeout}
+      {:noreply, state, state.timeout}
     else
       {:noreply, state}
     end
