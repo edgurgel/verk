@@ -125,7 +125,7 @@ defmodule Verk.WorkersManagerTest do
   end
 
   test "handle info timeout with free workers and no jobs", %{ monitors: monitors } do
-    :random.seed(1000)
+    :rand.seed(:exs64, {1,2,3})
     queue_manager_name = :queue_manager_name
     timeout = 1000
     state = %State{ monitors: monitors, pool_name: "pool_name",
@@ -133,13 +133,13 @@ defmodule Verk.WorkersManagerTest do
 
     expect(Verk.QueueManager, :dequeue, [queue_manager_name, 1], [])
 
-    assert handle_info(:timeout, state) == { :noreply, state, 1692 }
+    assert handle_info(:timeout, state) == { :noreply, state, 1350 }
 
     assert validate Verk.QueueManager
   end
 
   test "handle info timeout with free workers and jobs to be done", %{ monitors: monitors } do
-    :random.seed(1000)
+    :rand.seed(:exs64, {1,2,3})
     queue_manager_name = :queue_manager_name
     pool_name = :pool_name
     timeout = 1000
@@ -156,7 +156,7 @@ defmodule Verk.WorkersManagerTest do
     expect(:poolboy, :checkout, [pool_name, false], worker)
     expect(Verk.Worker, :perform_async, [worker, worker, job], :ok)
 
-    assert handle_info(:timeout, state) == { :noreply, state, 1692 }
+    assert handle_info(:timeout, state) == { :noreply, state, 1350 }
     assert match?([{^worker, ^job_id, ^job, _, _}], :ets.lookup(monitors, worker))
     assert_receive %Verk.Events.JobStarted{ job: ^job, started_at: _ }
 

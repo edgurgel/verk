@@ -222,6 +222,6 @@ defmodule Verk.WorkersManager do
   end
 
   defp random_timeout(timeout) do
-    round(timeout + (:random.uniform * timeout))
+    round(timeout + (:rand.uniform * timeout))
   end
 end
