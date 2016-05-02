@@ -106,7 +106,7 @@ defmodule Verk.WorkersManager do
         reason ->
           Logger.error("Failed to fetch a job. Reason: #{inspect reason}")
       end
-      {:noreply, state, state.timeout}
+      {:noreply, state, random_timeout(state.timeout)}
     else
       {:noreply, state}
     end
@@ -219,5 +219,9 @@ defmodule Verk.WorkersManager do
 
   defp free_workers(monitors, size) do
     size - :ets.info(monitors, :size)
+  end
+
+  defp random_timeout(timeout) do
+    round(timeout + (:rand.uniform * timeout))
   end
 end
