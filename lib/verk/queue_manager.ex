@@ -131,7 +131,7 @@ defmodule Verk.QueueManager do
   end
 
   defp build_retry_job(job, retry_count, failed_at, exception, stacktrace) do
-    job = %{job | error_backtrace: Exception.format_stacktrace(stacktrace),
+    job = %{job | error_backtrace: format_stacktrace(stacktrace),
                   error_message: Exception.message(exception),
                   retry_count: retry_count}
     if retry_count > 1 do
@@ -155,4 +155,7 @@ defmodule Verk.QueueManager do
   defp inprogress(queue_name, node_id) do
     "inprogress:#{queue_name}:#{node_id}"
   end
+
+  defp format_stacktrace(stacktrace) when is_list(stacktrace), do: Exception.format_stacktrace(stacktrace)
+  defp format_stacktrace(stacktrace), do: inspect(stacktrace)
 end
