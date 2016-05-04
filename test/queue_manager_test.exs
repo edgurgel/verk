@@ -209,4 +209,20 @@ defmodule Verk.QueueManagerTest do
 
     assert validate DeadSet
   end
+
+  test "call retry on a job with non-enum stacktrace" do
+    failed_at = 100
+
+    stacktrace = {GenServer, :call, [:process, "1"]}
+    job = %Job{ retry_count: 1, failed_at: failed_at, error_backtrace: inspect(stacktrace), error_message: "reasons" }
+    expect(RetrySet, :add!, [job, failed_at, :redis], "payload")
+
+    state = %State{ redis: :redis }
+    job = %Job{ retry_count: 0 }
+    exception = RuntimeError.exception("reasons")
+
+    assert handle_call({ :retry, job, failed_at, exception, stacktrace}, :from, state) == { :reply, :ok, state }
+
+    assert validate RetrySet
+  end
 end
