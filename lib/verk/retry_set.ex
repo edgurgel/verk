@@ -55,13 +55,13 @@ defmodule Verk.RetrySet do
   @doc """
   Clears the retry set
   """
-  @spec clear(GenServer.server) :: :ok | {:error, RuntimeError.t | Redix.Error.t}
+  @spec clear(GenServer.server) :: {:ok, boolean} | {:error, Redix.Error.t}
   def clear(redis \\ Verk.Redis), do: SortedSet.clear(@retry_key, redis)
 
   @doc """
   Clears the retry set, raising if there's an error
   """
-  @spec clear!(GenServer.server) :: nil
+  @spec clear!(GenServer.server) :: boolean
   def clear!(redis \\ Verk.Redis), do: SortedSet.clear!(@retry_key, redis)
 
   @doc """
@@ -83,7 +83,7 @@ defmodule Verk.RetrySet do
   @doc """
   Delete the job from the retry set
   """
-  @spec delete_job(%Job{} | String.t, GenServer.server) :: :ok | {:error, RuntimeError.t | Redix.Error.t}
+  @spec delete_job(%Job{} | String.t, GenServer.server) :: {:ok, boolean}| {:error, Redix.Error.t}
   def delete_job(original_json, redis \\ Verk.Redis)
   def delete_job(%Job{original_json: original_json}, redis) do
     delete_job(original_json, redis)
@@ -93,7 +93,7 @@ defmodule Verk.RetrySet do
   @doc """
   Delete the job from the retry set, raising if there's an error
   """
-  @spec delete_job!(%Job{} | String.t, GenServer.server) :: nil
+  @spec delete_job!(%Job{} | String.t, GenServer.server) :: boolean
   def delete_job!(original_json, redis \\ Verk.Redis)
   def delete_job!(%Job{original_json: original_json}, redis) do
     delete_job!(original_json, redis)

@@ -25,11 +25,11 @@ defmodule Verk.SortedSet do
   @doc """
   Clears the sorted set
   """
-  @spec clear(String.t, GenServer.server) :: :ok | {:error, RuntimeError.t | Redix.Error.t}
+  @spec clear(String.t, GenServer.server) :: {:ok, boolean} | {:error, Redix.Error.t}
   def clear(key, redis) do
     case Redix.command(redis, ["DEL", key]) do
-      {:ok, 0} -> {:error, %RuntimeError{message: ~s(Key "#{key}" not found.)}}
-      {:ok, 1} -> :ok
+      {:ok, 0} -> {:ok, false}
+      {:ok, 1} -> {:ok, true}
       {:error, error} -> {:error, error}
     end
   end
@@ -37,7 +37,7 @@ defmodule Verk.SortedSet do
   @doc """
   Clears the sorted set, raising if there's an error
   """
-  @spec clear!(String.t, GenServer.server) :: nil
+  @spec clear!(String.t, GenServer.server) :: boolean
   def clear!(key, redis) do
     bangify(clear(key, redis))
   end
@@ -64,15 +64,15 @@ defmodule Verk.SortedSet do
   @doc """
   Deletes the job from the sorted set
   """
-  @spec delete_job(String.t, %Job{} | String.t, GenServer.server) :: :ok | {:error, RuntimeError.t | Redix.Error.t}
+  @spec delete_job(String.t, %Job{} | String.t, GenServer.server) :: {:ok, boolean} | {:error, Redix.Error.t}
   def delete_job(key, %Job{original_json: original_json}, redis) do
     delete_job(key, original_json, redis)
   end
 
   def delete_job(key, original_json, redis) do
     case Redix.command(redis, ["ZREM", key, original_json]) do
-      {:ok, 0} -> {:error, %RuntimeError{message: ~s(Key "#{key}" not found.)}}
-      {:ok, 1} -> :ok
+      {:ok, 0} -> {:ok, false}
+      {:ok, 1} -> {:ok, true}
       {:error, error} -> {:error, error}
     end
   end
@@ -80,7 +80,7 @@ defmodule Verk.SortedSet do
   @doc """
   Deletes the job from the sorted set, raising if there's an error
   """
-  @spec delete_job!(String.t, %Job{} | String.t, GenServer.server) :: nil
+  @spec delete_job!(String.t, %Job{} | String.t, GenServer.server) :: boolean
   def delete_job!(key, %Job{original_json: original_json}, redis) do
     delete_job!(key, original_json, redis)
   end

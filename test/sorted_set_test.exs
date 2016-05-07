@@ -23,17 +23,20 @@ defmodule Verk.SortedSetTest do
   end
 
   test "clear", %{ redis: redis } do
-    assert clear("sorted", redis) == {:error, %RuntimeError{message: ~s(Key "sorted" not found.)}}
+    assert clear("sorted", redis) == {:ok, false}
 
     Redix.command!(redis, ~w(ZADD sorted 123 abc))
-    assert clear("sorted", redis) == :ok
+    assert clear("sorted", redis) == {:ok, true}
 
     assert Redix.command!(redis, ~w(GET sorted)) == nil
   end
 
   test "clear!", %{ redis: redis } do
+    assert clear!("sorted", redis) == false
+
     Redix.command!(redis, ~w(ZADD sorted 123 abc))
-    assert clear!("sorted", redis) == nil
+
+    assert clear!("sorted", redis) == true
 
     assert Redix.command!(redis, ~w(GET sorted)) == nil
   end
@@ -54,39 +57,47 @@ defmodule Verk.SortedSetTest do
     assert range!("sorted", redis) == []
   end
 
-  test "delete_job having job with original_json", %{ redis: redis } do
+  test "delete_job with job", %{ redis: redis } do
     job = %Verk.Job{class: "Class", args: []}
     json = Poison.encode!(job)
     job = %{ job | original_json: json}
 
-    assert delete_job("sorted", job, redis) == {:error, %RuntimeError{message: ~s(Key "sorted" not found.)}}
+    assert delete_job("sorted", job, redis) == {:ok, false}
 
     Redix.command!(redis, ~w(ZADD sorted 123 #{json}))
-    assert delete_job("sorted", job, redis) == :ok
+
+    assert delete_job("sorted", job, redis) == {:ok, true}
   end
 
-  test "delete_job! having job with original_json", %{ redis: redis } do
+  test "delete_job! with job", %{ redis: redis } do
     job = %Verk.Job{class: "Class", args: []}
     json = Poison.encode!(job)
     job = %{ job | original_json: json}
 
+    assert delete_job!("sorted", job, redis) == false
+
     Redix.command!(redis, ~w(ZADD sorted 123 #{json}))
-    assert delete_job!("sorted", job, redis) == nil
+
+    assert delete_job!("sorted", job, redis) == true
   end
 
   test "delete_job with original_json", %{ redis: redis } do
     json = %Verk.Job{class: "Class", args: []} |> Poison.encode!
 
-    assert delete_job("sorted", json, redis) == {:error, %RuntimeError{message: ~s(Key "sorted" not found.)}}
+    assert delete_job("sorted", json, redis) == {:ok, false}
 
     Redix.command!(redis, ~w(ZADD sorted 123 #{json}))
-    assert delete_job("sorted", json, redis) == :ok
+
+    assert delete_job("sorted", json, redis) == {:ok, true}
   end
 
   test "delete_job! with original_json", %{ redis: redis } do
     json = %Verk.Job{class: "Class", args: []} |> Poison.encode!
 
+    assert delete_job!("sorted", json, redis) == false
+
     Redix.command!(redis, ~w(ZADD sorted 123 #{json}))
-    assert delete_job!("sorted", json, redis) == nil
+
+    assert delete_job!("sorted", json, redis) == true
   end
 end

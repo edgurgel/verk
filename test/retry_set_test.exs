@@ -49,16 +49,16 @@ defmodule Verk.RetrySetTest do
   end
 
   test "clear" do
-    expect(SortedSet, :clear, [key, Verk.Redis], :ok)
+    expect(SortedSet, :clear, [key, Verk.Redis], {:ok, false})
 
-    assert clear == :ok
+    assert clear == {:ok, false}
     assert validate SortedSet
   end
 
   test "clear!" do
-    expect(SortedSet, :clear!, [key, Verk.Redis], nil)
+    expect(SortedSet, :clear!, [key, Verk.Redis], true)
 
-    assert clear! == nil
+    assert clear! == true
     assert validate SortedSet
   end
 
@@ -105,9 +105,9 @@ defmodule Verk.RetrySetTest do
 
   test "delete_job with original_json" do
     json = %Verk.Job{class: "Class", args: []} |> Poison.encode!
-    expect(SortedSet, :delete_job, [key, json, Verk.Redis], :ok)
+    expect(SortedSet, :delete_job, [key, json, Verk.Redis], {:ok, true})
 
-    assert delete_job(json) == :ok
+    assert delete_job(json) == {:ok, true}
     assert validate SortedSet
   end
 
@@ -116,17 +116,17 @@ defmodule Verk.RetrySetTest do
     json = Poison.encode!(job)
     job = %{ job | original_json: json }
 
-    expect(SortedSet, :delete_job!, [key, json, Verk.Redis], nil)
+    expect(SortedSet, :delete_job!, [key, json, Verk.Redis], true)
 
-    assert delete_job!(job) == nil
+    assert delete_job!(job) == true
     assert validate SortedSet
   end
 
   test "delete_job! with original_json" do
     json = %Verk.Job{class: "Class", args: []} |> Poison.encode!
-    expect(SortedSet, :delete_job!, [key, json, Verk.Redis], :nil)
+    expect(SortedSet, :delete_job!, [key, json, Verk.Redis], true)
 
-    assert delete_job!(json) == nil
+    assert delete_job!(json) == true
     assert validate SortedSet
   end
 end
