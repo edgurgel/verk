@@ -24,6 +24,10 @@ defmodule Verk.SortedSet do
 
   @doc """
   Clears the sorted set
+
+  It will return `{:ok, true}` if the sorted set was cleared and `{:ok, false}` otherwise
+
+  An error tuple may be returned if Redis failed
   """
   @spec clear(String.t, GenServer.server) :: {:ok, boolean} | {:error, Redix.Error.t}
   def clear(key, redis) do
@@ -36,6 +40,8 @@ defmodule Verk.SortedSet do
 
   @doc """
   Clears the sorted set, raising if there's an error
+
+  It will return `true` if the sorted set was cleared and `false` otherwise
   """
   @spec clear!(String.t, GenServer.server) :: boolean
   def clear!(key, redis) do
@@ -63,6 +69,11 @@ defmodule Verk.SortedSet do
 
   @doc """
   Deletes the job from the sorted set
+
+  It returns `{:ok, true}` if the job was found and deleted
+  Otherwise it returns `{:ok, false}``
+
+  An error tuple may be returned if Redis failed
   """
   @spec delete_job(String.t, %Job{} | String.t, GenServer.server) :: {:ok, boolean} | {:error, Redix.Error.t}
   def delete_job(key, %Job{original_json: original_json}, redis) do
@@ -79,6 +90,9 @@ defmodule Verk.SortedSet do
 
   @doc """
   Deletes the job from the sorted set, raising if there's an error
+
+  It returns `true` if the job was found and delete
+  Otherwise it returns `false`
   """
   @spec delete_job!(String.t, %Job{} | String.t, GenServer.server) :: boolean
   def delete_job!(key, %Job{original_json: original_json}, redis) do

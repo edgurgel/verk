@@ -54,12 +54,18 @@ defmodule Verk.RetrySet do
 
   @doc """
   Clears the retry set
+
+  It will return `{:ok, true}` if the retry set was cleared and `{:ok, false}` otherwise
+
+  An error tuple may be returned if Redis failed
   """
   @spec clear(GenServer.server) :: {:ok, boolean} | {:error, Redix.Error.t}
   def clear(redis \\ Verk.Redis), do: SortedSet.clear(@retry_key, redis)
 
   @doc """
   Clears the retry set, raising if there's an error
+
+  It will return `true` if the retry set was cleared and `false` otherwise
   """
   @spec clear!(GenServer.server) :: boolean
   def clear!(redis \\ Verk.Redis), do: SortedSet.clear!(@retry_key, redis)
@@ -82,6 +88,11 @@ defmodule Verk.RetrySet do
 
   @doc """
   Delete the job from the retry set
+
+  It returns `{:ok, true}` if the job was found and deleted
+  Otherwise it returns `{:ok, false}``
+
+  An error tuple may be returned if Redis failed
   """
   @spec delete_job(%Job{} | String.t, GenServer.server) :: {:ok, boolean}| {:error, Redix.Error.t}
   def delete_job(original_json, redis \\ Verk.Redis)
@@ -92,6 +103,9 @@ defmodule Verk.RetrySet do
 
   @doc """
   Delete the job from the retry set, raising if there's an error
+
+  It returns `true` if the job was found and delete
+  Otherwise it returns `false`
   """
   @spec delete_job!(%Job{} | String.t, GenServer.server) :: boolean
   def delete_job!(original_json, redis \\ Verk.Redis)
