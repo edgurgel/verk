@@ -23,20 +23,26 @@ defmodule Verk.Queue do
 
   @doc """
   Clears the `queue`
+
+  It will return `{:ok, true}` if the `queue` was cleared and `{:ok, false}` otherwise
+
+  An error tuple may be returned if Redis failed
   """
-  @spec clear(binary) :: :ok | {:error, RuntimeError.t | Redix.Error.t}
+  @spec clear(binary) :: {:ok, boolean} | {:error, Redix.Error.t}
   def clear(queue) do
     case Redix.command(Verk.Redis, ["DEL", queue_name(queue)]) do
-      {:ok, 0} -> {:error, %RuntimeError{message: ~s(Queue "#{queue}" not found.)}}
-      {:ok, 1} -> :ok
+      {:ok, 0} -> {:ok, false}
+      {:ok, 1} -> {:ok, true}
       {:error, error} -> {:error, error}
     end
   end
 
   @doc """
   Clears the `queue`, raising if there's an error
+
+  It will return `true` if the `queue` was cleared and `false` otherwise
   """
-  @spec clear!(binary) :: nil
+  @spec clear!(binary) :: boolean
   def clear!(queue) do
     bangify(clear(queue))
   end
@@ -61,25 +67,35 @@ defmodule Verk.Queue do
   end
 
   @doc """
-  Deletes the job from the queue
+  Deletes the job from the `queue`
+
+  It returns `{:ok, true}` if the job was found and deleted
+  Otherwise it returns `{:ok, false}``
+
+  An error tuple may be returned if Redis failed
   """
-  @spec delete_job(binary, %Job{} | binary) :: :ok | {:error, RuntimeError.t | Redix.Error.t}
+  @spec delete_job(binary, %Job{} | binary) :: {:ok, boolean} | {:error, Redix.Error.t}
   def delete_job(queue, %Job{original_json: original_json}) do
     delete_job(queue, original_json)
   end
 
   def delete_job(queue, original_json) do
     case Redix.command(Verk.Redis, ["LREM", queue_name(queue), 1, original_json]) do
-      {:ok, 0} -> {:error, %RuntimeError{message: ~s(Job not found in queue "#{queue}".)}}
-      {:ok, 1} -> :ok
+      {:ok, 0} -> {:ok, false}
+      {:ok, 1} -> {:ok, true}
       {:error, error} -> {:error, error}
     end
   end
 
   @doc """
-  Delete job from the queue, raising if there's an error
+  Delete job from the `queue`, raising if there's an error
+
+  It returns `true` if the job was found and delete
+  Otherwise it returns `false`
+
+  An error will be raised if Redis failed
   """
-  @spec delete_job!(binary, %Job{} | binary) :: nil
+  @spec delete_job!(binary, %Job{} | binary) :: boolean
   def delete_job!(queue, %Job{original_json: original_json}) do
     delete_job!(queue, original_json)
   end

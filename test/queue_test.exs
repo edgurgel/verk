@@ -34,17 +34,21 @@ defmodule Verk.QueueTest do
   end
 
   test "clear" do
-    assert clear(@queue) == {:error, %RuntimeError{message: ~s(Queue "#{@queue}" not found.)}}
+    assert clear(@queue) == {:ok, false}
 
     Redix.command!(Verk.Redis, ~w(LPUSH #{@queue_key} 1 2 3))
-    assert clear(@queue) == :ok
+
+    assert clear(@queue) == {:ok, true}
 
     assert Redix.command!(Verk.Redis, ~w(GET #{@queue_key})) == nil
   end
 
   test "clear!" do
+    assert clear!(@queue) == false
+
     Redix.command!(Verk.Redis, ~w(LPUSH #{@queue_key} 1 2 3))
-    assert clear!(@queue) == nil
+
+    assert clear!(@queue) == true
 
     assert Redix.command!(Verk.Redis, ~w(GET #{@queue_key})) == nil
   end
@@ -69,39 +73,45 @@ defmodule Verk.QueueTest do
     job = %Verk.Job{class: "Class", args: []}
     json = Poison.encode!(job)
 
+    assert delete_job(@queue, job) == {:ok, false}
+
     Redix.command!(Verk.Redis, ~w(LPUSH #{@queue_key} #{json}))
 
     job = %{ job | original_json: json}
 
-    assert delete_job(@queue, job) == :ok
+    assert delete_job(@queue, job) == {:ok, true}
   end
 
   test "delete_job! having job with original_json" do
     job = %Verk.Job{class: "Class", args: []}
     json = Poison.encode!(job)
 
+    assert delete_job!(@queue, job) == false
+
     Redix.command!(Verk.Redis, ~w(LPUSH #{@queue_key} #{json}))
 
     job = %{ job | original_json: json}
 
-    assert delete_job!(@queue, job) == nil
+    assert delete_job!(@queue, job) == true
   end
 
   test "delete_job with original_json" do
     json = %Verk.Job{class: "Class", args: []} |> Poison.encode!
 
-    assert delete_job(@queue, json) == {:error, %RuntimeError{message: ~s(Job not found in queue "#{@queue}".)}}
+    assert delete_job(@queue, json) == {:ok, false}
 
     Redix.command!(Verk.Redis, ~w(LPUSH #{@queue_key} #{json}))
 
-    assert delete_job(@queue, json) == :ok
+    assert delete_job(@queue, json) == {:ok, true}
   end
 
   test "delete_job! with original_json" do
     json = %Verk.Job{class: "Class", args: []} |> Poison.encode!
 
+    assert delete_job!(@queue, json) == false
+
     Redix.command!(Verk.Redis, ~w(LPUSH #{@queue_key} #{json}))
 
-    assert delete_job!(@queue, json) == nil
+    assert delete_job!(@queue, json) == true
   end
 end
