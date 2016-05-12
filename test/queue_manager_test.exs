@@ -225,4 +225,22 @@ defmodule Verk.QueueManagerTest do
 
     assert validate RetrySet
   end
+
+  test "limit stacktrace size" do
+    failed_at = 100
+
+    stacktrace = Enum.map(1..7, fn(x) -> {:mod, :fun, x, [file: "src/file.erl", line: x]} end)
+    stacktrace_snippet = Enum.slice(stacktrace, 0..4)
+
+    job = %Job{ retry_count: 1, failed_at: failed_at, error_backtrace: Exception.format_stacktrace(stacktrace_snippet), error_message: "reasons" }
+    expect(RetrySet, :add!, [job, failed_at, :redis], "payload")
+
+    state = %State{ redis: :redis }
+    job = %Job{ retry_count: 0 }
+    exception = RuntimeError.exception("reasons")
+
+    assert handle_call({ :retry, job, failed_at, exception, stacktrace}, :from, state) == { :reply, :ok, state }
+
+    assert validate RetrySet
+  end
 end

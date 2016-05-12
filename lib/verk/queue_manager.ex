@@ -9,6 +9,7 @@ defmodule Verk.QueueManager do
   alias Verk.DeadSet
 
   @processing_key "processing"
+  @default_stacktrace_size 5
 
   @external_resource "priv/lpop_rpush_src_dest.lua"
   @external_resource "priv/mrpop_lpush_src_dest.lua"
@@ -156,6 +157,10 @@ defmodule Verk.QueueManager do
     "inprogress:#{queue_name}:#{node_id}"
   end
 
-  defp format_stacktrace(stacktrace) when is_list(stacktrace), do: Exception.format_stacktrace(stacktrace)
+  defp format_stacktrace(stacktrace) when is_list(stacktrace) do
+    stacktrace_limit = Application.get_env(:verk, :failed_job_stacktrace_size, @default_stacktrace_size)
+    Exception.format_stacktrace(Enum.slice(stacktrace, 0..(stacktrace_limit - 1)))
+  end
+
   defp format_stacktrace(stacktrace), do: inspect(stacktrace)
 end
