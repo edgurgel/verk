@@ -8,15 +8,11 @@ defmodule Verk do
 
   It has an API that provides information about the queues
   """
-  use Application
   alias Verk.Job
   alias Timex.Time
   alias Timex.DateTime
 
   @schedule_key "schedule"
-
-  @doc false
-  def start(_type, _args), do: Verk.Supervisor.start_link
 
   @doc """
   Add a new `queue` with a pool of size `size` of workers
