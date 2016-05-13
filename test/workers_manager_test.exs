@@ -113,12 +113,14 @@ defmodule Verk.WorkersManagerTest do
   end
 
   test "handle info timeout with no free workers", %{ monitors: monitors } do
+    pool_name = "pool_name"
     new Verk.QueueManager
-    state = %State{ monitors: monitors, pool_name: "pool_name", pool_size: 1 }
+    state = %State{ monitors: monitors, pool_name: pool_name, pool_size: 1 }
 
     row = { self, "job_id", "job", make_ref, "start_time" }
     :ets.insert(monitors, row)
 
+    expect(:poolboy, :status, ["pool_name"], {nil, 0, nil, nil})
     assert handle_info(:timeout, state) == { :noreply, state }
 
     assert validate Verk.QueueManager
@@ -128,9 +130,11 @@ defmodule Verk.WorkersManagerTest do
     :rand.seed(:exs64, {1,2,3})
     queue_manager_name = :queue_manager_name
     timeout = 1000
-    state = %State{ monitors: monitors, pool_name: "pool_name",
+    pool_name = "pool_name"
+    state = %State{ monitors: monitors, pool_name: pool_name,
                     pool_size: 1, queue_manager_name: queue_manager_name, timeout: timeout }
 
+    expect(:poolboy, :status, ["pool_name"], {nil, 1, nil, nil})
     expect(Verk.QueueManager, :dequeue, [queue_manager_name, 1], [])
 
     assert handle_info(:timeout, state) == { :noreply, state, 1350 }
@@ -153,6 +157,7 @@ defmodule Verk.WorkersManagerTest do
 
     expect(Verk.QueueManager, :dequeue, [queue_manager_name, 1], [:encoded_job])
     expect(Verk.Job, :decode!, [:encoded_job], job)
+    expect(:poolboy, :status, [pool_name], {nil, 1, nil, nil})
     expect(:poolboy, :checkout, [pool_name, false], worker)
     expect(Verk.Worker, :perform_async, [worker, worker, job], :ok)
 
