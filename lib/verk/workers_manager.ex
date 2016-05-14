@@ -193,8 +193,6 @@ defmodule Verk.WorkersManager do
         Log.start(job, worker)
         Verk.Worker.perform_async(worker, self, job)
         notify!(%Events.JobStarted{job: job, started_at: Timex.DateTime.now})
-      :full ->
-        Verk.enqueue(job)
     end
   end
 
