@@ -98,7 +98,7 @@ defmodule Verk.WorkersManager do
   end
 
   def handle_info(:timeout, state) do
-    workers = free_workers(state.monitors, state.pool_size)
+    workers = free_workers(state.pool_name)
     if workers != 0 do
       case QueueManager.dequeue(state.queue_manager_name, workers) do
         jobs when is_list(jobs) ->
@@ -217,8 +217,10 @@ defmodule Verk.WorkersManager do
     :ok = GenEvent.ack_notify(Verk.EventManager, event)
   end
 
-  defp free_workers(monitors, size) do
-    size - :ets.info(monitors, :size)
+  defp free_workers(pool_name) do
+    {_, free, _, _} = :poolboy.status(pool_name)
+
+    free
   end
 
   defp random_timeout(timeout) do
