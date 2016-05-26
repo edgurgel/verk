@@ -20,8 +20,7 @@ defmodule Verk.Mixfile do
 
   def application do
     [applications: [:logger, :poison, :tzdata, :timex, :redix, :poolboy, :watcher],
-     env: [node_id: "1", redis_url: "redis://127.0.0.1:6379"],
-     mod: {Verk, []}]
+     env: [node_id: "1", redis_url: "redis://127.0.0.1:6379"]]
   end
 
   defp deps do
