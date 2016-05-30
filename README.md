@@ -37,7 +37,7 @@ First, add Verk to your `mix.exs` dependencies:
 
 ```elixir
 def deps do
-  [{:verk, "~> 0.11"}]
+  [{:verk, "~> 0.12"}]
 end
 ```
 
