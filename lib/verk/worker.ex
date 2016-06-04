@@ -33,7 +33,7 @@ defmodule Verk.Worker do
   def handle_cast({:perform, job, manager}, state) do
     try do
       :erlang.put(@process_dict_key, job)
-      apply(String.to_existing_atom("Elixir.#{job.class}"), :perform, job.args)
+      [job.class] |> Module.safe_concat |> apply(:perform, job.args)
       GenServer.cast(manager, {:done, self, job.jid})
       {:stop, :normal, state}
     rescue
