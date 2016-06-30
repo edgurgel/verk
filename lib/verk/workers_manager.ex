@@ -143,6 +143,7 @@ defmodule Verk.WorkersManager do
 
   defp handle_down!(mref, worker, reason, stack, state) do
     Logger.debug "Worker got down, reason: #{inspect reason}, #{inspect([mref, worker])}"
+    :ok = :poolboy.checkin(state.pool_name, worker)
     case :ets.lookup(state.monitors, worker) do
       [{^worker, _job_id, job, ^mref, start_time}] ->
         exception = RuntimeError.exception(inspect(reason))
@@ -153,6 +154,7 @@ defmodule Verk.WorkersManager do
 
   @doc false
   def handle_cast({:done, worker, job_id}, state) do
+    :ok = :poolboy.checkin(state.pool_name, worker)
     case :ets.lookup(state.monitors, worker) do
       [{^worker, ^job_id, job, mref, start_time}] ->
         succeed(job, start_time, worker, mref, state.monitors, state.queue_manager_name)
@@ -163,6 +165,7 @@ defmodule Verk.WorkersManager do
 
   def handle_cast({:failed, worker, job_id, exception, stacktrace}, state) do
     Logger.debug "Job failed reason: #{inspect exception}"
+    :ok = :poolboy.checkin(state.pool_name, worker)
     case :ets.lookup(state.monitors, worker) do
       [{^worker, ^job_id, job, mref, start_time}] ->
         fail(job, start_time, worker, mref, state.monitors, state.queue_manager_name, exception, stacktrace)
