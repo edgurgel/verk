@@ -53,8 +53,9 @@ defmodule Verk.QueueManager do
   Add job to be retried in the assigned queue
   """
   def retry(queue_manager, job, exception, stacktrace, timeout \\ 5000) do
+    now = Timex.now |> Timex.to_unix
     try do
-      GenServer.call(queue_manager, {:retry, job, Timex.Time.now(:seconds), exception, stacktrace}, timeout)
+      GenServer.call(queue_manager, {:retry, job, now, exception, stacktrace}, timeout)
     catch
       :exit, {:timeout, _} -> :timeout
     end

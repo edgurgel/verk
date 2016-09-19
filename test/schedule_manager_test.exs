@@ -11,6 +11,15 @@ defmodule Verk.ScheduleManagerTest do
     { :ok, %{ script: script } }
   end
 
+  def start_redis do
+    { :ok, redis_url } = Application.fetch_env(:verk, :redis_url)
+    redis_url
+    |> IO.inspect
+    {:ok, redis} = Redix.start_link(redis_url, name: :redis)
+    assert Process.alive?(redis)
+    redis
+  end
+
   test "init load scripts and schedule fetch" do
     state = %State{ redis: :redis }
 
@@ -28,72 +37,67 @@ defmodule Verk.ScheduleManagerTest do
   test "handle_info :fetch_retryable without jobs to retry", %{ script: script } do
     state = %State{ redis: :redis }
     now = :now
-    expect(Timex.Time, :now, [:seconds], now)
     expect(Redix, :command, [:redis, ["EVALSHA", script, 1, "retry", now]], {:ok, nil})
 
     assert handle_info(:fetch_retryable, state) == { :noreply, state }
     assert_receive :fetch_retryable
 
-    assert validate [Timex.Time, Redix]
+    assert validate [ Redix]
   end
 
-  test "handle_info :fetch_retryable with jobs to retry", %{ script: script } do
+  test "handle_info :fetch_retryable with jobs to retry", %{ script: script  } do
     state = %State{ redis: :redis }
-    now = :now
+    now = Timex.now
+    expect(Timex, :now, [], now)
     encoded_job = "encoded_job"
-    expect(Timex.Time, :now, [:seconds], now)
-    expect(Redix, :command, [:redis, ["EVALSHA", script, 1, "retry", now]], {:ok, encoded_job})
+    expect(Redix, :command, [:redis, ["EVALSHA", script, 1, "retry", now], state], {:ok, encoded_job})
 
     assert handle_info(:fetch_retryable, state) == { :noreply, state }
     assert_receive :fetch_retryable, 5
 
-    assert validate [Timex.Time, Redix]
+    assert validate [ Redix]
   end
 
   test "handle_info :fetch_retryable with jobs to retry and redis failed to apply the script", %{ script: script } do
     state = %State{ redis: :redis }
     now = :now
-    expect(Timex.Time, :now, [:seconds], now)
     expect(Redix, :command, [:redis, ["EVALSHA", script, 1, "retry", now]], {:error, %Redix.Error{message: "a message"}})
 
     assert handle_info(:fetch_retryable, state) == { :stop, :redis_failed, state }
 
-    assert validate [Timex.Time, Redix]
+    assert validate [ Redix]
   end
 
   test "handle_info :fetch_scheduled without jobs to run", %{ script: script } do
     state = %State{ redis: :redis }
     now = :now
-    expect(Timex.Time, :now, [:seconds], now)
     expect(Redix, :command, [:redis, ["EVALSHA", script, 1, "schedule", now]], {:ok, nil})
 
     assert handle_info(:fetch_scheduled, state) == { :noreply, state }
     assert_receive :fetch_scheduled
 
-    assert validate [Timex.Time, Redix]
+    assert validate [ Redix]
   end
 
   test "handle_info :fetch_scheduled with jobs to run", %{ script: script } do
     state = %State{ redis: :redis }
     now = :now
     encoded_job = "encoded_job"
-    expect(Timex.Time, :now, [:seconds], now)
     expect(Redix, :command, [:redis, ["EVALSHA", script, 1, "schedule", now]], {:ok, encoded_job})
 
     assert handle_info(:fetch_scheduled, state) == { :noreply, state }
     assert_receive :fetch_scheduled
 
-    assert validate [Timex.Time, Redix]
+    assert validate [ Redix]
   end
 
   test "handle_info :fetch_scheduled with jobs to run and redis failed to apply the script", %{ script: script } do
     state = %State{ redis: :redis }
     now = :now
-    expect(Timex.Time, :now, [:seconds], now)
     expect(Redix, :command, [:redis, ["EVALSHA", script, 1, "schedule", now]], {:error, %Redix.Error{message: "a message"}})
 
     assert handle_info(:fetch_scheduled, state) == { :stop, :redis_failed, state }
 
-    assert validate [Timex.Time, Redix]
+    assert validate [ Redix]
   end
 end

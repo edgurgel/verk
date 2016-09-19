@@ -115,12 +115,12 @@ defmodule VerkTest do
   end
 
   test "schedule a job with a jid, a queue and a perform_in" do
-    now = Timex.DateTime.now
-    perform_at = Timex.DateTime.shift(now, days: 1)
+    now = Timex.now
+    perform_at = Timex.shift(now, days: 1)
     job = %Verk.Job{ queue: "test_queue", jid: "job_id", class: "TestWorker", args: [] }
     encoded_job = "encoded_job"
     expect(Poison, :encode!, [job], encoded_job)
-    perform_at_secs = Timex.DateTime.to_seconds(perform_at)
+    perform_at_secs = Timex.to_unix(perform_at)
     expect(Redix, :command, [Verk.Redis, ["ZADD", "schedule", perform_at_secs, encoded_job]], { :ok, :_ })
 
     assert schedule(job, perform_at) == { :ok, "job_id" }
@@ -129,12 +129,12 @@ defmodule VerkTest do
   end
 
   test "schedule a job with a jid, a queue and a perform_in passing a redis connection" do
-    now = Timex.DateTime.now
-    perform_at = Timex.DateTime.shift(now, days: 1)
+    now = Timex.now
+    perform_at = Timex.shift(now, days: 1)
     job = %Verk.Job{ queue: "test_queue", jid: "job_id", class: "TestWorker", args: [] }
     encoded_job = "encoded_job"
     expect(Poison, :encode!, [job], encoded_job)
-    perform_at_secs = Timex.DateTime.to_seconds(perform_at)
+    perform_at_secs = Timex.to_unix(perform_at)
     expect(Redix, :command, [:my_redis, ["ZADD", "schedule", perform_at_secs, encoded_job]], { :ok, :_ })
 
     assert schedule(job, perform_at, :my_redis) == { :ok, "job_id" }

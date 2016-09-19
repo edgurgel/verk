@@ -6,7 +6,6 @@ defmodule Verk.Log do
   require Logger
   import Logger
   alias Verk.Job
-  alias Timex.DateTime
 
   def start(%Job{jid: job_id, class: module}, process_id) do
     info("#{module} #{job_id} start", process_id: inspect(process_id))
@@ -21,14 +20,13 @@ defmodule Verk.Log do
   end
 
   defp elapsed_time(start_time) do
-    now = DateTime.now
-    seconds_diff = start_time |> Timex.diff(now, :seconds)
+    duration = Timex.diff(Timex.now, start_time, :duration)
 
-    if seconds_diff == 0 do
-      milliseconds_diff = now.millisecond - start_time.millisecond
-      "#{milliseconds_diff} ms"
+    if Timex.Duration.to_seconds(duration) == 0 do
+      milliseconds_diff = Timex.Duration.to_milliseconds(duration)
+      "#{trunc(milliseconds_diff)} ms"
     else
-      "#{seconds_diff} s"
+      "#{trunc(Timex.Duration.to_seconds(duration))} s"
     end
   end
 end

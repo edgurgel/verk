@@ -5,7 +5,7 @@ defmodule Verk.LogTest do
   test "logs done with time in milliseconds" do
     worker = self
     job = %Verk.Job{}
-    start_time = Timex.DateTime.now
+    start_time = Timex.now
 
     assert capture_log(fn ->
       Verk.Log.done(job, start_time, worker)
@@ -15,7 +15,7 @@ defmodule Verk.LogTest do
   test "logs done with time in seconds" do
     worker = self
     job = %Verk.Job{}
-    start_time = Timex.DateTime.now
+    start_time = Timex.now
     |> Timex.shift(seconds: -2)
 
     assert capture_log(fn ->
@@ -26,7 +26,7 @@ defmodule Verk.LogTest do
   test "logs fail with time in milliseconds" do
     worker = self
     job = %Verk.Job{}
-    start_time = Timex.DateTime.now
+    start_time = Timex.now
 
     assert capture_log(fn ->
       Verk.Log.fail(job, start_time, worker)
@@ -36,7 +36,7 @@ defmodule Verk.LogTest do
   test "logs fail with time in seconds" do
     worker = self
     job = %Verk.Job{}
-    start_time = Timex.DateTime.now
+    start_time = Timex.now
     |> Timex.shift(seconds: -2)
 
     assert capture_log(fn ->
