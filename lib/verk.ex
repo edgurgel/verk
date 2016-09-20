@@ -9,7 +9,7 @@ defmodule Verk do
   It has an API that provides information about the queues
   """
   alias Verk.Job
-  alias Timex.Time
+  alias Verk.Time
 
   @schedule_key "schedule"
 
@@ -73,8 +73,8 @@ defmodule Verk do
     schedule(%Job{job | jid: generate_jid}, perform_at, redis)
   end
   def schedule(%Job{jid: jid} = job, %DateTime{} = perform_at, redis) do
-    perform_at_secs = Timex.to_unix(perform_at)
-    if Timex.compare(perform_at, Timex.now) < 0 do
+    perform_at_secs = DateTime.to_unix(perform_at)
+    if Time.after?(perform_at, Time.now) do
       #past time to do the job
       enqueue(job, redis)
     else

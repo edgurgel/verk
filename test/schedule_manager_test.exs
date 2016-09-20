@@ -3,21 +3,13 @@ defmodule Verk.ScheduleManagerTest do
   import Verk.ScheduleManager
   import :meck
   alias Verk.ScheduleManager.State
+  alias Verk.Time
 
   setup do
     Application.put_env(:verk, :poll_interval, 50)
     script = Verk.Scripts.sha("enqueue_retriable_job")
     on_exit fn -> unload end
     { :ok, %{ script: script } }
-  end
-
-  def start_redis do
-    { :ok, redis_url } = Application.fetch_env(:verk, :redis_url)
-    redis_url
-    |> IO.inspect
-    {:ok, redis} = Redix.start_link(redis_url, name: :redis)
-    assert Process.alive?(redis)
-    redis
   end
 
   test "init load scripts and schedule fetch" do
@@ -47,8 +39,8 @@ defmodule Verk.ScheduleManagerTest do
 
   test "handle_info :fetch_retryable with jobs to retry", %{ script: script  } do
     state = %State{ redis: :redis }
-    now = Timex.now
-    expect(Timex, :now, [], now)
+    now = Time.now
+    expect(Time, :now, [], now)
     encoded_job = "encoded_job"
     expect(Redix, :command, [:redis, ["EVALSHA", script, 1, "retry", now], state], {:ok, encoded_job})
 
