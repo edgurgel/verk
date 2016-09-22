@@ -21,7 +21,7 @@ defmodule Verk.Log do
   end
 
   defp elapsed_time(start_time) do
-    now=Time.now
+    now = Time.now
     if  Time.diff(start_time, now, :seconds) == 0 do
       milliseconds_diff = Time.diff(start_time, now, :milliseconds)
       "#{trunc(milliseconds_diff)} ms"

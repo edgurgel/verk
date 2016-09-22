@@ -5,7 +5,7 @@ defmodule Verk.QueueManager do
 
   use GenServer
   require Logger
-  alias Verk.{DeadSet, RetrySet, Time }
+  alias Verk.{DeadSet, RetrySet, Time}
 
   @processing_key "processing"
   @default_stacktrace_size 5

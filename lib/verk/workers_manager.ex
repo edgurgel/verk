@@ -7,7 +7,7 @@ defmodule Verk.WorkersManager do
 
   use GenServer
   require Logger
-  alias Verk.{ Events, Job, QueueManager, Log, Time}
+  alias Verk.{Events, Job, QueueManager, Log, Time}
 
   @default_timeout 1000
 
