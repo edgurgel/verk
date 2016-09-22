@@ -28,8 +28,9 @@ defmodule Verk.ScheduleManagerTest do
 
   test "handle_info :fetch_retryable without jobs to retry", %{ script: script } do
     state = %State{ redis: :redis }
-    now = :now
-    expect(Redix, :command, [:redis, ["EVALSHA", script, 1, "retry", now]], {:ok, nil})
+    now = Time.now
+    expect(Time, :now, [], now)
+    expect(Redix, :command, [:redis, ["EVALSHA", script, 1, "retry", DateTime.to_unix(now)]], {:ok, nil})
 
     assert handle_info(:fetch_retryable, state) == { :noreply, state }
     assert_receive :fetch_retryable
@@ -42,18 +43,19 @@ defmodule Verk.ScheduleManagerTest do
     now = Time.now
     expect(Time, :now, [], now)
     encoded_job = "encoded_job"
-    expect(Redix, :command, [:redis, ["EVALSHA", script, 1, "retry", now], state], {:ok, encoded_job})
+    expect(Redix, :command, [:redis, ["EVALSHA", script, 1, "retry", now |> DateTime.to_unix]], {:ok, encoded_job})
 
     assert handle_info(:fetch_retryable, state) == { :noreply, state }
     assert_receive :fetch_retryable, 5
 
-    assert validate [ Redix]
+    assert validate [Time, Redix]
   end
 
   test "handle_info :fetch_retryable with jobs to retry and redis failed to apply the script", %{ script: script } do
     state = %State{ redis: :redis }
-    now = :now
-    expect(Redix, :command, [:redis, ["EVALSHA", script, 1, "retry", now]], {:error, %Redix.Error{message: "a message"}})
+    now = Time.now
+    expect(Time, :now, [], now)
+    expect(Redix, :command, [:redis, ["EVALSHA", script, 1, "retry", DateTime.to_unix(now)]], {:error, %Redix.Error{message: "a message"}})
 
     assert handle_info(:fetch_retryable, state) == { :stop, :redis_failed, state }
 
@@ -62,8 +64,9 @@ defmodule Verk.ScheduleManagerTest do
 
   test "handle_info :fetch_scheduled without jobs to run", %{ script: script } do
     state = %State{ redis: :redis }
-    now = :now
-    expect(Redix, :command, [:redis, ["EVALSHA", script, 1, "schedule", now]], {:ok, nil})
+    now = Time.now
+    expect(Time, :now, [], now)
+    expect(Redix, :command, [:redis, ["EVALSHA", script, 1, "schedule", DateTime.to_unix(now)]], {:ok, nil})
 
     assert handle_info(:fetch_scheduled, state) == { :noreply, state }
     assert_receive :fetch_scheduled
@@ -73,9 +76,10 @@ defmodule Verk.ScheduleManagerTest do
 
   test "handle_info :fetch_scheduled with jobs to run", %{ script: script } do
     state = %State{ redis: :redis }
-    now = :now
+    now = Time.now
     encoded_job = "encoded_job"
-    expect(Redix, :command, [:redis, ["EVALSHA", script, 1, "schedule", now]], {:ok, encoded_job})
+    expect(Time, :now, [], now)
+    expect(Redix, :command, [:redis, ["EVALSHA", script, 1, "schedule", DateTime.to_unix(now)]], {:ok, encoded_job})
 
     assert handle_info(:fetch_scheduled, state) == { :noreply, state }
     assert_receive :fetch_scheduled
@@ -85,8 +89,9 @@ defmodule Verk.ScheduleManagerTest do
 
   test "handle_info :fetch_scheduled with jobs to run and redis failed to apply the script", %{ script: script } do
     state = %State{ redis: :redis }
-    now = :now
-    expect(Redix, :command, [:redis, ["EVALSHA", script, 1, "schedule", now]], {:error, %Redix.Error{message: "a message"}})
+    now = Time.now
+    expect(Time, :now, [], now)
+    expect(Redix, :command, [:redis, ["EVALSHA", script, 1, "schedule", DateTime.to_unix(now)]], {:error, %Redix.Error{message: "a message"}})
 
     assert handle_info(:fetch_scheduled, state) == { :stop, :redis_failed, state }
 
