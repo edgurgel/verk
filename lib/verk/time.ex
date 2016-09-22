@@ -23,7 +23,9 @@ defmodule Verk.Time do
   end
 
   @doc """
-  Returns the number of indicated units that separate the two timestamps. A positive result indicates that `datetime2` occurred after `datetime1`.
+  Returns the number of indicated units that separate the two timestamps.
+
+  A positive result indicates that `datetime2` occurred after `datetime1`.
   """
   @spec diff(DAteTime.t, DateTime.t, System.time_unit) :: integer
   def diff(%DateTime{} = datetime1, %DateTime{} = datetime2, units \\ :seconds) do
