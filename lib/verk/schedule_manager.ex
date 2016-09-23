@@ -7,7 +7,7 @@ defmodule Verk.ScheduleManager do
 
   use GenServer
   require Logger
-  alias Timex.Time
+  alias Verk.Time
 
   @default_poll_interval 5000
   @schedule_key "schedule"
@@ -56,7 +56,8 @@ defmodule Verk.ScheduleManager do
   end
 
   defp handle_info(fetch_message, state, queue) do
-    case Redix.command(state.redis, ["EVALSHA", @enqueue_retriable_script_sha, 1, queue, Time.now(:seconds)]) do
+    now = Time.now |> DateTime.to_unix(:seconds)
+    case Redix.command(state.redis, ["EVALSHA", @enqueue_retriable_script_sha, 1, queue, now]) do
       {:ok, nil} ->
         schedule_fetch!(fetch_message)
         {:noreply, state}

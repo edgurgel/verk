@@ -7,10 +7,7 @@ defmodule Verk.WorkersManager do
 
   use GenServer
   require Logger
-  alias Verk.Events
-  alias Verk.Job
-  alias Verk.QueueManager
-  alias Verk.Log
+  alias Verk.{Events, Job, QueueManager, Log, Time}
 
   @default_timeout 1000
 
@@ -37,7 +34,7 @@ defmodule Verk.WorkersManager do
   List running jobs
 
   Example:
-      [%{process: #PID<0.186.0>, job: %Verk.Job{...}, started_at: %Timex.DateTime{...}} ]
+      [%{process: #PID<0.186.0>, job: %Verk.Job{...}, started_at: %DateTime{...}} ]
   """
   @spec running_jobs(binary | atom) :: Map.t
   def running_jobs(queue, limit \\ 100) do
@@ -178,7 +175,7 @@ defmodule Verk.WorkersManager do
     QueueManager.ack(queue_manager_name, job)
     Log.done(job, start_time, worker)
     demonitor!(monitors, worker, mref)
-    notify!(%Events.JobFinished{job: job, finished_at: Timex.DateTime.now})
+    notify!(%Events.JobFinished{job: job, finished_at: Time.now})
   end
 
   defp fail(job, start_time, worker, mref, monitors, queue_manager_name, exception, stacktrace) do
@@ -186,7 +183,7 @@ defmodule Verk.WorkersManager do
     demonitor!(monitors, worker, mref)
     :ok = QueueManager.retry(queue_manager_name, job, exception, stacktrace)
     :ok = QueueManager.ack(queue_manager_name, job)
-    notify!(%Events.JobFailed{job: job, failed_at: Timex.DateTime.now, exception: exception, stacktrace: stacktrace})
+    notify!(%Events.JobFailed{job: job, failed_at: Time.now, exception: exception, stacktrace: stacktrace})
   end
 
   defp start_job(job, state) do
@@ -195,7 +192,7 @@ defmodule Verk.WorkersManager do
         monitor!(state.monitors, worker, job)
         Log.start(job, worker)
         Verk.Worker.perform_async(worker, self, job)
-        notify!(%Events.JobStarted{job: job, started_at: Timex.DateTime.now})
+        notify!(%Events.JobStarted{job: job, started_at: Time.now})
     end
   end
 
@@ -206,7 +203,7 @@ defmodule Verk.WorkersManager do
 
   defp monitor!(monitors, worker, job = %Job{jid: job_id}) do
     mref = Process.monitor(worker)
-    now = Timex.DateTime.now
+    now = Time.now
     true = :ets.insert(monitors, {worker, job_id, job, mref, now})
   end
 

@@ -5,8 +5,7 @@ defmodule Verk.QueueManager do
 
   use GenServer
   require Logger
-  alias Verk.RetrySet
-  alias Verk.DeadSet
+  alias Verk.{DeadSet, RetrySet, Time}
 
   @processing_key "processing"
   @default_stacktrace_size 5
@@ -53,8 +52,9 @@ defmodule Verk.QueueManager do
   Add job to be retried in the assigned queue
   """
   def retry(queue_manager, job, exception, stacktrace, timeout \\ 5000) do
+    now = Time.now |> DateTime.to_unix
     try do
-      GenServer.call(queue_manager, {:retry, job, Timex.Time.now(:seconds), exception, stacktrace}, timeout)
+      GenServer.call(queue_manager, {:retry, job, now, exception, stacktrace}, timeout)
     catch
       :exit, {:timeout, _} -> :timeout
     end
