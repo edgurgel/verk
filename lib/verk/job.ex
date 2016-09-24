@@ -3,7 +3,6 @@ defmodule Verk.Job do
   The Job struct
   """
 
-  use Verk.PoisonVersion
   @keys [error_message: nil, failed_at: nil, retry_count: 0, queue: nil, class: nil, args: [],
          jid: nil, finished_at: nil, enqueued_at: nil, retried_at: nil, error_backtrace: nil]
 
@@ -15,10 +14,7 @@ defmodule Verk.Job do
   """
   @spec decode!(binary) :: %__MODULE__{}
   def decode!(payload) do
-    job = decode!(payload, before_poison_2?)
+    job = Poison.decode!(payload, as: %__MODULE__{})
     %Verk.Job{job | original_json: payload}
   end
-
-  def decode!(payload, true),  do: Poison.decode!(payload, as: __MODULE__)
-  def decode!(payload, false), do: Poison.decode!(payload, as: %__MODULE__{})
 end

@@ -24,14 +24,14 @@ defmodule Verk.Mixfile do
   end
 
   defp deps do
-    [{ :redix, "~> 0.3" },
-     { :poison, "~> 1.5 or ~> 2.0"},
+    [{ :redix, "~> 0.4" },
+     { :poison, "~> 2.0"},
      { :poolboy, "~> 1.5.1" },
      { :watcher, "~> 1.0" },
-     { :credo, "~> 0.3", only: [:dev, :test] },
-     { :earmark, "~> 0.1.17", only: :docs },
-     { :ex_doc, "~> 0.8.0", only: :docs },
-     { :coverex, "~> 1.4.7", only: :test },
+     { :credo, "~> 0.4", only: [:dev, :test] },
+     { :earmark, "~> 1.0", only: :docs },
+     { :ex_doc, "~> 0.13", only: :docs },
+     { :coverex, "~> 1.4", only: :test },
      { :meck, "~> 0.8", only: :test }]
   end
 
