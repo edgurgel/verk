@@ -29,8 +29,8 @@ defmodule Verk.Mixfile do
      { :poolboy, "~> 1.5.1" },
      { :watcher, "~> 1.0" },
      { :credo, "~> 0.4", only: [:dev, :test] },
-     { :earmark, "~> 1.0", only: :docs },
-     { :ex_doc, "~> 0.13", only: :docs },
+     { :earmark, "~> 1.0", only: :dev },
+     { :ex_doc, "~> 0.13", only: :dev },
      { :coverex, "~> 1.4", only: :test },
      { :meck, "~> 0.8", only: :test }]
   end
