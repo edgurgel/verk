@@ -70,7 +70,7 @@ defmodule Verk.Queue do
   Deletes the job from the `queue`
 
   It returns `{:ok, true}` if the job was found and deleted
-  Otherwise it returns `{:ok, false}``
+  Otherwise it returns `{:ok, false}`
 
   An error tuple may be returned if Redis failed
   """
