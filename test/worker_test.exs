@@ -68,7 +68,7 @@ defmodule Verk.WorkerTest do
     job = %Verk.Job{jid: "job_id", class: "TestWorkerCurrentJob", args: [worker]}
     assert handle_cast({ :perform, job, worker }, :state) == { :stop, :normal, :state }
 
-    assert_receive job
+    assert_receive ^job
     assert_receive {:"$gen_cast", {:done, ^worker, "job_id"}}
   end
 
