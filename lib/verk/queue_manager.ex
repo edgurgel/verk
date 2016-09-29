@@ -5,7 +5,7 @@ defmodule Verk.QueueManager do
 
   use GenServer
   require Logger
-  alias Verk.{DeadSet, RetrySet, Time}
+  alias Verk.{DeadSet, RetrySet, Time, Job}
 
   @processing_key "processing"
   @default_stacktrace_size 5
@@ -15,7 +15,6 @@ defmodule Verk.QueueManager do
   @lpop_rpush_src_dest_script_sha Verk.Scripts.sha("lpop_rpush_src_dest")
   @mrpop_lpush_src_dest_script_sha Verk.Scripts.sha("mrpop_lpush_src_dest")
 
-  @max_retry 25
   @max_dead 100
   @max_jobs 100
 
@@ -122,7 +121,7 @@ defmodule Verk.QueueManager do
     retry_count = (job.retry_count || 0) + 1
     job         = build_retry_job(job, retry_count, failed_at, exception, stacktrace)
 
-    if retry_count <= @max_retry do
+    if retry_count <= (job.max_retry_count || Job.default_max_retry_count()) do
       RetrySet.add!(job, failed_at, state.redis)
     else
       Logger.info("Max retries reached to job_id #{job.jid}, job: #{inspect job}")

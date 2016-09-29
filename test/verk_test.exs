@@ -118,6 +118,13 @@ defmodule VerkTest do
     assert enqueue(job) == { :error, { :missing_module, job } }
   end
 
+  test "enqueue a job with non-integer max_retry_count" do
+    job = %Verk.Job{ queue: "queue", jid: "job_id", class: "TestWorker",
+      args: 123, max_retry_count: "30" }
+
+    assert enqueue(job) == { :error, { :missing_args, job } }
+  end
+
   test "schedule a job with a jid, a queue and a perform_in" do
     now = Time.now
     perform_at = Time.shift(now, 100)
