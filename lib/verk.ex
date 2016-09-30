@@ -49,7 +49,7 @@ defmodule Verk do
     job = %Job{job | max_retry_count: Job.default_max_retry_count()}
     enqueue(job, redis)
   end
-  def enqueue(job = %Job{max_retry_count: count}, _redis) when not is_integer(count), do: {:error, {:missing_args, job}}
+  def enqueue(job = %Job{max_retry_count: count}, _redis) when not is_integer(count), do: {:error, {:invalid_max_retry_count, job}}
   def enqueue(job = %Job{jid: nil}, redis), do: enqueue(%Job{job | jid: generate_jid}, redis)
   def enqueue(%Job{jid: jid, queue: queue} = job, redis) do
     case Redix.command(redis, ["LPUSH", "queue:#{queue}", Poison.encode!(job)]) do

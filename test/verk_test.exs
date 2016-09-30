@@ -120,9 +120,9 @@ defmodule VerkTest do
 
   test "enqueue a job with non-integer max_retry_count" do
     job = %Verk.Job{ queue: "queue", jid: "job_id", class: "TestWorker",
-      args: 123, max_retry_count: "30" }
+      args: [123], max_retry_count: "30" }
 
-    assert enqueue(job) == { :error, { :missing_args, job } }
+    assert enqueue(job) == { :error, { :invalid_max_retry_count, job } }
   end
 
   test "schedule a job with a jid, a queue and a perform_in" do
