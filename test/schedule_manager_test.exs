@@ -2,8 +2,7 @@ defmodule Verk.ScheduleManagerTest do
   use ExUnit.Case
   import Verk.ScheduleManager
   import :meck
-  alias Verk.ScheduleManager.State
-  alias Verk.Time
+  alias Verk.{ScheduleManager.State, Time}
 
   setup do
     Application.put_env(:verk, :poll_interval, 50)

@@ -3,8 +3,7 @@ defmodule Verk.RetrySet do
   This module interacts with jobs in the retry set
   """
   import Verk.Dsl
-  alias Verk.SortedSet
-  alias Verk.Job
+  alias Verk.{SortedSet, Job}
 
   @retry_key "retry"
 

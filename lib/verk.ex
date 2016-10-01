@@ -8,8 +8,7 @@ defmodule Verk do
 
   It has an API that provides information about the queues
   """
-  alias Verk.Job
-  alias Verk.Time
+  alias Verk.{Job, Time}
 
   @schedule_key "schedule"
 

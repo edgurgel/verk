@@ -5,8 +5,7 @@ defmodule Verk.Log do
 
   require Logger
   import Logger
-  alias Verk.Job
-  alias Verk.Time
+  alias Verk.{Job, Time}
 
   def start(%Job{jid: job_id, class: module}, process_id) do
     info("#{module} #{job_id} start", process_id: inspect(process_id))

@@ -3,8 +3,7 @@ defmodule Verk.DeadSet do
   This module interacts with jobs in the dead set
   """
   import Verk.Dsl
-  alias Verk.SortedSet
-  alias Verk.Job
+  alias Verk.{SortedSet, Job}
 
   @max_jobs 100
   @timeout 60 * 60 * 24 * 7 # a week

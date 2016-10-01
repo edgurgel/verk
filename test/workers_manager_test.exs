@@ -2,8 +2,7 @@ defmodule Verk.WorkersManagerTest do
   use ExUnit.Case
   import :meck
   import Verk.WorkersManager
-  alias Verk.Time
-  alias Verk.WorkersManager.State
+  alias Verk.{Time, WorkersManager.State}
 
   defmodule TestHandler do
     use GenEvent

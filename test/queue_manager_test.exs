@@ -2,10 +2,7 @@ defmodule Verk.QueueManagerTest do
   use ExUnit.Case
   import Verk.QueueManager
   import :meck
-  alias Verk.QueueManager.State
-  alias Verk.Job
-  alias Verk.RetrySet
-  alias Verk.DeadSet
+  alias Verk.{QueueManager.State, Job, RetrySet, DeadSet}
 
   @mrpop_script Verk.Scripts.sha("mrpop_lpush_src_dest")
 
