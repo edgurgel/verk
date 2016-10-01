@@ -53,7 +53,8 @@ defmodule VerkTest do
   end
 
   test "enqueue a job with a jid and a queue passing redis connection" do
-    job = %Verk.Job{ queue: "test_queue", jid: "job_id", class: "TestWorker", args: [] }
+    job = %Verk.Job{ queue: "test_queue", jid: "job_id", class: "TestWorker",
+      args: [], max_retry_count: 1 }
     encoded_job = "encoded_job"
     expect(Poison, :encode!, [job], encoded_job)
     expect(Redix, :command, [Verk.Redis, ["LPUSH", "queue:test_queue", encoded_job]], { :ok, :_ })
@@ -64,7 +65,8 @@ defmodule VerkTest do
   end
 
   test "enqueue a job with a jid and a queue passing no redis connection" do
-    job = %Verk.Job{ queue: "test_queue", jid: "job_id", class: "TestWorker", args: [] }
+    job = %Verk.Job{ queue: "test_queue", jid: "job_id", class: "TestWorker",
+      args: [], max_retry_count: 1 }
     encoded_job = "encoded_job"
     expect(Poison, :encode!, [job], encoded_job)
     expect(Redix, :command, [Verk.Redis, ["LPUSH", "queue:test_queue", encoded_job]], { :ok, :_ })
@@ -75,7 +77,8 @@ defmodule VerkTest do
   end
 
   test "enqueue a job with a jid and a queue" do
-    job = %Verk.Job{ queue: "test_queue", jid: "job_id", class: "TestWorker", args: [] }
+    job = %Verk.Job{ queue: "test_queue", jid: "job_id", class: "TestWorker",
+      args: [], max_retry_count: 1 }
     encoded_job = "encoded_job"
     expect(Poison, :encode!, [job], encoded_job)
     expect(Redix, :command, [Verk.Redis, ["LPUSH", "queue:test_queue", encoded_job]], { :ok, :_ })
@@ -113,6 +116,13 @@ defmodule VerkTest do
     job = %Verk.Job{ queue: "queue", jid: "job_id", args: [123], class: nil }
 
     assert enqueue(job) == { :error, { :missing_module, job } }
+  end
+
+  test "enqueue a job with non-integer max_retry_count" do
+    job = %Verk.Job{ queue: "queue", jid: "job_id", class: "TestWorker",
+      args: [123], max_retry_count: "30" }
+
+    assert enqueue(job) == { :error, { :invalid_max_retry_count, job } }
   end
 
   test "schedule a job with a jid, a queue and a perform_in" do

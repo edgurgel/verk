@@ -82,7 +82,7 @@ end
 This job can be enqueued using `Verk.enqueue/1`:
 
 ```elixir
-Verk.enqueue(%Verk.Job{queue: :default, class: "ExampleWorker", args: [1,2]})
+Verk.enqueue(%Verk.Job{queue: :default, class: "ExampleWorker", args: [1,2], max_retry_count: 5})
 ```
 
 This job can also be scheduled using `Verk.schedule/2`:
@@ -100,6 +100,7 @@ The queue `default` will have a maximum of 25 jobs being processed at a time and
 
 ```elixir
 config :verk, queues: [default: 25, priority: 10],
+              max_retry_count: 10,
               poll_interval: 5000,
               node_id: "1",
               redis_url: "redis://127.0.0.1:6379"

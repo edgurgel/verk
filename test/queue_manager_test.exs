@@ -149,14 +149,15 @@ defmodule Verk.QueueManagerTest do
     assert validate RetrySet
   end
 
-  test "call retry on a job with retry_count greater than 0" do
+  test "call retry on a job with retry_count less than max_retry_count" do
     failed_at = 100
 
-    job = %Job{ retry_count: 2, retried_at: failed_at, error_backtrace: "\n", error_message: "reasons" }
+    job = %Job{ retry_count: 2, retried_at: failed_at, error_backtrace: "\n",
+      error_message: "reasons", max_retry_count: 4}
     expect(RetrySet, :add!, [job, failed_at, :redis], :ok)
 
     state = %State{ redis: :redis }
-    job = %Job{ retry_count: 1 }
+    job = %Job{ retry_count: 1, max_retry_count: 4 }
     exception = RuntimeError.exception("reasons")
 
     assert handle_call({ :retry, job, failed_at, exception, [] }, :from, state) == { :reply, :ok, state }
@@ -181,13 +182,14 @@ defmodule Verk.QueueManagerTest do
     assert validate RetrySet
   end
 
-  test "call retry on a job failing too many times" do
+  test "call retry on a job with nil max_retry_count and retry_count greater than default" do
     failed_at = 100
-    job = %Job{ retry_count: 26, error_backtrace: "\n", retried_at: failed_at, error_message: "reasons" }
+    job = %Job{ retry_count: Job.default_max_retry_count() + 1, max_retry_count: nil,
+      error_backtrace: "\n", retried_at: failed_at, error_message: "reasons" }
     expect(DeadSet, :add!, [job, failed_at, :redis], :ok)
 
     state = %State{ redis: :redis }
-    job = %Job{ retry_count: 25 }
+    job = %Job{ retry_count: Job.default_max_retry_count(), max_retry_count: nil}
     exception = RuntimeError.exception("reasons")
 
     assert handle_call({ :retry, job, failed_at, exception, [] }, :from, state) == { :reply, :ok, state }
@@ -201,7 +203,7 @@ defmodule Verk.QueueManagerTest do
     expect(DeadSet, :add!, fn ^job, ^failed_at, :redis -> exception(:error, %Redix.Error{message: "fail"}) end)
 
     state = %State{ redis: :redis }
-    job = %Job{ retry_count: 25 }
+    job = %Job{ retry_count: Job.default_max_retry_count() }
     exception = RuntimeError.exception("reasons")
 
     assert_raise Redix.Error, fn ->
