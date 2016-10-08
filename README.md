@@ -26,7 +26,7 @@ The image below is an overview of Verk's supervision tree running with a queue n
 
 Feature set:
 
-* Retry mechanism
+* Retry mechanism with exponential backoff
 * Dynamic addition/removal of queues
 * Reliable job processing (RPOPLPUSH and Lua scripts to the rescue)
 * Error and event tracking
