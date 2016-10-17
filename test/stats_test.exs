@@ -10,13 +10,15 @@ defmodule Verk.StatsTest do
     { :ok, redis: redis }
   end
 
-  test "total with no data", %{ redis: redis } do
-    assert total(redis) == %{ processed: 0, failed: 0 }
-  end
+  describe "total/1" do
+    test "with no data", %{ redis: redis } do
+      assert total(redis) == %{ processed: 0, failed: 0 }
+    end
 
-  test "total with data", %{ redis: redis } do
-    Redix.command!(redis, ~w(MSET stat:processed 25 stat:failed 32))
+    test "with data", %{ redis: redis } do
+      Redix.command!(redis, ~w(MSET stat:processed 25 stat:failed 32))
 
-    assert total(redis) == %{ processed: 25, failed: 32 }
+      assert total(redis) == %{ processed: 25, failed: 32 }
+    end
   end
 end

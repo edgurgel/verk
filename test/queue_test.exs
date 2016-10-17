@@ -17,101 +17,130 @@ defmodule Verk.QueueTest do
     :ok
   end
 
-  test "count empty queue" do
-    assert count(@queue) == {:ok, 0}
+  describe "count/1" do
+    test "empty queue" do
+      assert count(@queue) == {:ok, 0}
+    end
+
+    test "non-empty queue" do
+      Redix.command!(Verk.Redis, ~w(LPUSH #{@queue_key} 1 2 3))
+
+      assert count(@queue) == {:ok, 3}
+    end
   end
 
-  test "count" do
-    Redix.command!(Verk.Redis, ~w(LPUSH #{@queue_key} 1 2 3))
+  describe "count!/1" do
+    test "non-empty queue" do
+      Redix.command!(Verk.Redis, ~w(LPUSH #{@queue_key} 1 2 3))
 
-    assert count(@queue) == {:ok, 3}
+      assert count!(@queue) == 3
+    end
+
+    test "empty queue" do
+      assert count!(@queue) == 0
+    end
   end
 
-  test "count!" do
-    Redix.command!(Verk.Redis, ~w(LPUSH #{@queue_key} 1 2 3))
+  describe "clear/1" do
+    test "clear queue" do
+      assert clear(@queue) == {:ok, false}
 
-    assert count!(@queue) == 3
+      Redix.command!(Verk.Redis, ~w(LPUSH #{@queue_key} 1 2 3))
+
+      assert clear(@queue) == {:ok, true}
+
+      assert Redix.command!(Verk.Redis, ~w(GET #{@queue_key})) == nil
+    end
   end
 
-  test "clear" do
-    assert clear(@queue) == {:ok, false}
+  describe "clear!/1" do
+    test "clear!" do
+      assert clear!(@queue) == false
 
-    Redix.command!(Verk.Redis, ~w(LPUSH #{@queue_key} 1 2 3))
+      Redix.command!(Verk.Redis, ~w(LPUSH #{@queue_key} 1 2 3))
 
-    assert clear(@queue) == {:ok, true}
+      assert clear!(@queue) == true
 
-    assert Redix.command!(Verk.Redis, ~w(GET #{@queue_key})) == nil
+      assert Redix.command!(Verk.Redis, ~w(GET #{@queue_key})) == nil
+    end
   end
 
-  test "clear!" do
-    assert clear!(@queue) == false
+  describe "range/1" do
+    test "with items" do
+      job = %Verk.Job{class: "Class", args: []}
+      json = Poison.encode!(job)
+      Redix.command!(Verk.Redis, ~w(LPUSH #{@queue_key} #{json}))
 
-    Redix.command!(Verk.Redis, ~w(LPUSH #{@queue_key} 1 2 3))
+      assert range(@queue) == {:ok, [%{ job | original_json: json }]}
+    end
 
-    assert clear!(@queue) == true
-
-    assert Redix.command!(Verk.Redis, ~w(GET #{@queue_key})) == nil
+    test "with no items" do
+      assert range(@queue) == {:ok, []}
+    end
   end
 
-  test "range" do
-    job = %Verk.Job{class: "Class", args: []}
-    json = Poison.encode!(job)
-    Redix.command!(Verk.Redis, ~w(LPUSH #{@queue_key} #{json}))
 
-    assert range(@queue) == {:ok, [%{ job | original_json: json }]}
+  describe "range!/1" do
+    test "with items" do
+      job = %Verk.Job{class: "Class", args: []}
+      json = Poison.encode!(job)
+      Redix.command!(Verk.Redis, ~w(LPUSH #{@queue_key} #{json}))
+
+      assert range!(@queue) == [%{ job | original_json: json }]
+    end
+
+    test "with no items" do
+      assert range!(@queue) == []
+    end
   end
 
-  test "range with no items" do
-    assert range(@queue) == {:ok, []}
+  describe "delete_job/2" do
+    test "no job inside the queue" do
+      assert delete_job(@queue, %Verk.Job{}) == {:ok, false}
+    end
+
+    test "job with original_json" do
+      job = %Verk.Job{class: "Class", args: []}
+      json = Poison.encode!(job)
+
+      Redix.command!(Verk.Redis, ~w(LPUSH #{@queue_key} #{json}))
+
+      job = %{ job | original_json: json}
+
+      assert delete_job(@queue, job) == {:ok, true}
+    end
+
+    test "job with no original_json" do
+      json = %Verk.Job{class: "Class", args: []} |> Poison.encode!
+
+      Redix.command!(Verk.Redis, ~w(LPUSH #{@queue_key} #{json}))
+
+      assert delete_job(@queue, json) == {:ok, true}
+    end
   end
 
-  test "range!" do
-    assert range!(@queue) == []
-  end
+  describe "delete_job!/2" do
+    test "no job inside the queue" do
+      assert delete_job!(@queue, %Verk.Job{}) == false
+    end
 
-  test "delete_job having job with original_json" do
-    job = %Verk.Job{class: "Class", args: []}
-    json = Poison.encode!(job)
+    test "job with original_json" do
+      job = %Verk.Job{class: "Class", args: []}
+      json = Poison.encode!(job)
 
-    assert delete_job(@queue, job) == {:ok, false}
+      Redix.command!(Verk.Redis, ~w(LPUSH #{@queue_key} #{json}))
 
-    Redix.command!(Verk.Redis, ~w(LPUSH #{@queue_key} #{json}))
+      job = %{ job | original_json: json}
 
-    job = %{ job | original_json: json}
+      assert delete_job!(@queue, job) == true
+    end
 
-    assert delete_job(@queue, job) == {:ok, true}
-  end
+    test "job with no original_json" do
+      json = %Verk.Job{class: "Class", args: []} |> Poison.encode!
 
-  test "delete_job! having job with original_json" do
-    job = %Verk.Job{class: "Class", args: []}
-    json = Poison.encode!(job)
+      Redix.command!(Verk.Redis, ~w(LPUSH #{@queue_key} #{json}))
 
-    assert delete_job!(@queue, job) == false
-
-    Redix.command!(Verk.Redis, ~w(LPUSH #{@queue_key} #{json}))
-
-    job = %{ job | original_json: json}
-
-    assert delete_job!(@queue, job) == true
-  end
-
-  test "delete_job with original_json" do
-    json = %Verk.Job{class: "Class", args: []} |> Poison.encode!
-
-    assert delete_job(@queue, json) == {:ok, false}
-
-    Redix.command!(Verk.Redis, ~w(LPUSH #{@queue_key} #{json}))
-
-    assert delete_job(@queue, json) == {:ok, true}
-  end
-
-  test "delete_job! with original_json" do
-    json = %Verk.Job{class: "Class", args: []} |> Poison.encode!
-
-    assert delete_job!(@queue, json) == false
-
-    Redix.command!(Verk.Redis, ~w(LPUSH #{@queue_key} #{json}))
-
-    assert delete_job!(@queue, json) == true
+      assert delete_job!(@queue, json) == true
+    end
   end
 end

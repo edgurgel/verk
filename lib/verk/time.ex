@@ -41,5 +41,4 @@ defmodule Verk.Time do
   def after?(datetime1, datetime2) do
     diff(datetime1, datetime2) < 0
   end
-
 end

@@ -9,17 +9,18 @@ defmodule Verk.DslTest do
     end
   end
 
-  def ok do
-    :ok
-  end
+  def ok, do: :ok
 
-  test "bangify" do
-    assert bangify(ok) == nil
+  describe "bagify/1" do
+    test "with no error" do
+      assert bangify(ok) == nil
+      assert bangify(incr(2)) == 3
+    end
 
-    assert bangify(incr(2)) == 3
-
-    assert_raise RuntimeError, "Bad math", fn ->
-      bangify(incr(nil))
+    test "with {:error, _}" do
+      assert_raise RuntimeError, "Bad math", fn ->
+        bangify(incr(nil))
+      end
     end
   end
 end

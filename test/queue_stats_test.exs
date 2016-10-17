@@ -16,109 +16,119 @@ defmodule Verk.QueueStatsTest do
     :ok
   end
 
-  test "all" do
-    init([]) # create table
+  describe "all/0" do
+    test "list counters" do
+      init([]) # create table
 
-    handle_event(%Verk.Events.JobStarted{ job: %Verk.Job{ queue: "queue_1" } }, :state)
-    handle_event(%Verk.Events.JobStarted{ job: %Verk.Job{ queue: "queue_1" } }, :state)
-    handle_event(%Verk.Events.JobStarted{ job: %Verk.Job{ queue: "queue_2" } }, :state)
-    handle_event(%Verk.Events.JobFinished{ job: %Verk.Job{ queue: "queue_1" } }, :state)
-    handle_event(%Verk.Events.JobFailed{ job: %Verk.Job{ queue: "queue_1" } }, :state)
+      handle_event(%Verk.Events.JobStarted{ job: %Verk.Job{ queue: "queue_1" } }, :state)
+      handle_event(%Verk.Events.JobStarted{ job: %Verk.Job{ queue: "queue_1" } }, :state)
+      handle_event(%Verk.Events.JobStarted{ job: %Verk.Job{ queue: "queue_2" } }, :state)
+      handle_event(%Verk.Events.JobFinished{ job: %Verk.Job{ queue: "queue_1" } }, :state)
+      handle_event(%Verk.Events.JobFailed{ job: %Verk.Job{ queue: "queue_1" } }, :state)
 
-    assert all == [%{ queue: "queue_1", running_counter: 0, finished_counter: 1, failed_counter: 1 },
-                   %{ queue: "queue_2", running_counter: 1, finished_counter: 0, failed_counter: 0 } ]
+      assert all == [%{ queue: "queue_1", running_counter: 0, finished_counter: 1, failed_counter: 1 },
+                     %{ queue: "queue_2", running_counter: 1, finished_counter: 0, failed_counter: 0 } ]
+    end
   end
 
-  test "handle_call reset_started with no element" do
-    init([]) # create table
+  describe "handle_call/2" do
+    test "reset_started with no element" do
+      init([]) # create table
 
-    assert handle_call({ :reset_started, "queue" }, :state) == { :ok, :ok, :state }
-    assert :ets.tab2list(@table) == [{ "queue", 0, 0, 0, 0, 0 }]
+      assert handle_call({ :reset_started, "queue" }, :state) == { :ok, :ok, :state }
+      assert :ets.tab2list(@table) == [{ "queue", 0, 0, 0, 0, 0 }]
+    end
+
+    test "reset_started with existing element" do
+      init([]) # create table
+      :ets.insert_new(@table, { "queue", 1, 2, 3, 4, 5 })
+
+      assert handle_call({ :reset_started, "queue" }, :state) == { :ok, :ok, :state }
+      assert :ets.tab2list(@table) == [{ "queue", 0, 2, 3, 4, 5 }]
+    end
   end
 
-  test "handle_call reset_started with existing element" do
-    init([]) # create table
-    :ets.insert_new(@table, { "queue", 1, 2, 3, 4, 5 })
+  describe "init/1" do
+    test "creates an ETS table" do
+      assert :ets.info(@table) == :undefined
 
-    assert handle_call({ :reset_started, "queue" }, :state) == { :ok, :ok, :state }
-    assert :ets.tab2list(@table) == [{ "queue", 0, 2, 3, 4, 5 }]
+      assert init([]) == { :ok, nil }
+
+      assert :ets.info(@table) != :undefined
+    end
   end
 
-  test "init creates an ETS table" do
-    assert :ets.info(@table) == :undefined
+  describe "handle_event/2" do
+    test "with started event" do
+      init([]) # create table
+      event = %Verk.Events.JobStarted{ job: %Verk.Job{ queue: "queue" } }
 
-    assert init([]) == { :ok, nil }
+      assert handle_event(event, :state) == { :ok, :state }
 
-    assert :ets.info(@table) != :undefined
+      assert :ets.tab2list(@table) == [{ :total, 1, 0, 0, 0, 0 }, { "queue", 1, 0, 0, 0, 0 }]
+    end
+
+    test "with finished event" do
+      init([]) # create table
+      event = %Verk.Events.JobFinished{ job: %Verk.Job{ queue: "queue" } }
+
+      assert handle_event(event, :state) == { :ok, :state }
+
+      assert :ets.tab2list(@table) == [{ :total, -1, 1, 0, 0, 0 }, { "queue", -1, 1, 0, 0, 0 }]
+    end
+
+    test "with failed event" do
+      init([]) # create table
+      event = %Verk.Events.JobFailed{ job: %Verk.Job{ queue: "queue" } }
+
+      assert handle_event(event, :state) == { :ok, :state }
+
+      assert :ets.tab2list(@table) == [{ :total, -1, 0, 1, 0, 0 }, { "queue", -1, 0, 1, 0, 0 }]
+    end
   end
 
-  test "handle_event with started event" do
-    init([]) # create table
-    event = %Verk.Events.JobStarted{ job: %Verk.Job{ queue: "queue" } }
+  describe "handle_info/2" do
+    test "persist processed and failed counts" do
+      init([])
 
-    assert handle_event(event, :state) == { :ok, :state }
+      handle_event(%Verk.Events.JobStarted{ job: %Verk.Job{ queue: "queue_1" } }, :state)
+      handle_event(%Verk.Events.JobFailed{ job: %Verk.Job{ queue: "queue_1" } }, :state)
+      handle_event(%Verk.Events.JobStarted{ job: %Verk.Job{ queue: "queue_2" } }, :state)
+      handle_event(%Verk.Events.JobFinished{ job: %Verk.Job{ queue: "queue_2" } }, :state)
 
-    assert :ets.tab2list(@table) == [{ :total, 1, 0, 0, 0, 0 }, { "queue", 1, 0, 0, 0, 0 }]
-  end
+      assert handle_info(:persist_stats, :state) == {:ok, :state}
 
-  test "handle_event with finished event" do
-    init([]) # create table
-    event = %Verk.Events.JobFinished{ job: %Verk.Job{ queue: "queue" } }
+      result = Redix.command!(Verk.Redis, ["MGET", "stat:processed:queue_1", "stat:failed:queue_1",
+                                                   "stat:processed:queue_2", "stat:failed:queue_2",
+                                                   "stat:processed", "stat:failed"])
+      assert result == [
+        nil, "1",
+        "1", nil,
+        "1", "1"
+      ]
 
-    assert handle_event(event, :state) == { :ok, :state }
+      handle_event(%Verk.Events.JobStarted{ job: %Verk.Job{ queue: "queue_1" } }, :state)
+      handle_event(%Verk.Events.JobFinished{ job: %Verk.Job{ queue: "queue_1" } }, :state)
+      assert handle_info(:persist_stats, :state) == { :ok, :state }
+      result = Redix.command!(Verk.Redis, ["MGET", "stat:processed:queue_1", "stat:failed:queue_1",
+                                                   "stat:processed:queue_2", "stat:failed:queue_2",
+                                                   "stat:processed", "stat:failed"])
+      assert result == [
+        "1", "1",
+        "1", nil,
+        "2", "1"
+      ]
 
-    assert :ets.tab2list(@table) == [{ :total, -1, 1, 0, 0, 0 }, { "queue", -1, 1, 0, 0, 0 }]
-  end
+      assert handle_info(:persist_stats, :state) == { :ok, :state }
 
-  test "handle_event with failed event" do
-    init([]) # create table
-    event = %Verk.Events.JobFailed{ job: %Verk.Job{ queue: "queue" } }
-
-    assert handle_event(event, :state) == { :ok, :state }
-
-    assert :ets.tab2list(@table) == [{ :total, -1, 0, 1, 0, 0 }, { "queue", -1, 0, 1, 0, 0 }]
-  end
-
-  test "persist processed and failed counts" do
-    init([])
-
-    handle_event(%Verk.Events.JobStarted{ job: %Verk.Job{ queue: "queue_1" } }, :state)
-    handle_event(%Verk.Events.JobFailed{ job: %Verk.Job{ queue: "queue_1" } }, :state)
-    handle_event(%Verk.Events.JobStarted{ job: %Verk.Job{ queue: "queue_2" } }, :state)
-    handle_event(%Verk.Events.JobFinished{ job: %Verk.Job{ queue: "queue_2" } }, :state)
-
-    assert handle_info(:persist_stats, :state) == {:ok, :state}
-
-    result = Redix.command!(Verk.Redis, ["MGET", "stat:processed:queue_1", "stat:failed:queue_1",
-                                                 "stat:processed:queue_2", "stat:failed:queue_2",
-                                                 "stat:processed", "stat:failed"])
-    assert result == [
-      nil, "1",
-      "1", nil,
-      "1", "1"
-    ]
-
-    handle_event(%Verk.Events.JobStarted{ job: %Verk.Job{ queue: "queue_1" } }, :state)
-    handle_event(%Verk.Events.JobFinished{ job: %Verk.Job{ queue: "queue_1" } }, :state)
-    assert handle_info(:persist_stats, :state) == { :ok, :state }
-    result = Redix.command!(Verk.Redis, ["MGET", "stat:processed:queue_1", "stat:failed:queue_1",
-                                                 "stat:processed:queue_2", "stat:failed:queue_2",
-                                                 "stat:processed", "stat:failed"])
-    assert result == [
-      "1", "1",
-      "1", nil,
-      "2", "1"
-    ]
-
-    assert handle_info(:persist_stats, :state) == { :ok, :state }
-
-    result = Redix.command!(Verk.Redis, ["MGET", "stat:processed:queue_1", "stat:failed:queue_1",
-                                                 "stat:processed:queue_2", "stat:failed:queue_2",
-                                                 "stat:processed", "stat:failed"])
-    assert result == [
-      "1", "1",
-      "1", nil,
-      "2", "1"
-    ]
+      result = Redix.command!(Verk.Redis, ["MGET", "stat:processed:queue_1", "stat:failed:queue_1",
+                                                   "stat:processed:queue_2", "stat:failed:queue_2",
+                                                   "stat:processed", "stat:failed"])
+      assert result == [
+        "1", "1",
+        "1", nil,
+        "2", "1"
+      ]
+    end
   end
 end
