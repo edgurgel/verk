@@ -8,96 +8,135 @@ defmodule Verk.SortedSetTest do
     { :ok, %{ redis: redis } }
   end
 
-  test "count", %{ redis: redis } do
-    Redix.command!(redis, ~w(ZADD sorted 123 abc))
+  describe "count/2" do
+    test "with items", %{ redis: redis } do
+      Redix.command!(redis, ~w(ZADD sorted 123 abc))
 
-    assert count("sorted", redis) == {:ok, 1}
+      assert count("sorted", redis) == {:ok, 1}
+    end
+
+    test "with no items", %{ redis: redis } do
+      assert count("sorted", redis) == {:ok, 0}
+    end
   end
 
-  test "count with no items", %{ redis: redis } do
-    assert count("sorted", redis) == {:ok, 0}
+  describe "count!/2" do
+    test "with no items", %{ redis: redis } do
+      assert count!("sorted", redis) == 0
+    end
+
+    test "with items", %{ redis: redis } do
+      Redix.command!(redis, ~w(ZADD sorted 123 abc))
+
+      assert count!("sorted", redis) == 1
+    end
   end
 
-  test "count!", %{ redis: redis } do
-    assert count!("sorted", redis) == 0
+  describe "clear/2" do
+    test "with no items", %{ redis: redis } do
+      assert clear("sorted", redis) == {:ok, false}
+    end
+
+    test "with items", %{ redis: redis } do
+      Redix.command!(redis, ~w(ZADD sorted 123 abc))
+      assert clear("sorted", redis) == {:ok, true}
+
+      assert Redix.command!(redis, ~w(GET sorted)) == nil
+    end
   end
 
-  test "clear", %{ redis: redis } do
-    assert clear("sorted", redis) == {:ok, false}
+  describe "clear!/2" do
+    test "with no items", %{ redis: redis } do
+      assert clear!("sorted", redis) == false
+    end
 
-    Redix.command!(redis, ~w(ZADD sorted 123 abc))
-    assert clear("sorted", redis) == {:ok, true}
+    test "with items", %{ redis: redis } do
+      Redix.command!(redis, ~w(ZADD sorted 123 abc))
+      assert clear!("sorted", redis) == true
 
-    assert Redix.command!(redis, ~w(GET sorted)) == nil
+      assert Redix.command!(redis, ~w(GET sorted)) == nil
+    end
   end
 
-  test "clear!", %{ redis: redis } do
-    assert clear!("sorted", redis) == false
+  describe "range/2" do
+    test "with items", %{ redis: redis } do
+      job = %Verk.Job{class: "Class", args: []}
+      json = Poison.encode!(job)
+      Redix.command!(redis, ~w(ZADD sorted 123 #{json}))
 
-    Redix.command!(redis, ~w(ZADD sorted 123 abc))
+      assert range("sorted", redis) == {:ok, [%{ job | original_json: json }]}
+    end
 
-    assert clear!("sorted", redis) == true
-
-    assert Redix.command!(redis, ~w(GET sorted)) == nil
+    test "with no items", %{ redis: redis } do
+      assert range("sorted", redis) == {:ok, []}
+    end
   end
 
-  test "range", %{ redis: redis } do
-    job = %Verk.Job{class: "Class", args: []}
-    json = Poison.encode!(job)
-    Redix.command!(redis, ~w(ZADD sorted 123 #{json}))
+  describe "range!/2" do
+    test "with items", %{ redis: redis } do
+      job = %Verk.Job{class: "Class", args: []}
+      json = Poison.encode!(job)
+      Redix.command!(redis, ~w(ZADD sorted 123 #{json}))
 
-    assert range("sorted", redis) == {:ok, [%{ job | original_json: json }]}
+      assert range!("sorted", redis) == [%{ job | original_json: json }]
+    end
+
+    test "with no items", %{ redis: redis } do
+      assert range!("sorted", redis) == []
+    end
   end
 
-  test "range with no items", %{ redis: redis } do
-    assert range("sorted", redis) == {:ok, []}
+  describe "delete_job/3" do
+    test "with job", %{ redis: redis } do
+      job = %Verk.Job{class: "Class", args: []}
+      json = Poison.encode!(job)
+      job = %{ job | original_json: json}
+
+      Redix.command!(redis, ~w(ZADD sorted 123 #{json}))
+
+      assert delete_job("sorted", job, redis) == {:ok, true}
+    end
+
+    test "with no job", %{ redis: redis } do
+      job = %Verk.Job{class: "Class", args: []}
+
+      assert delete_job("sorted", job, redis) == {:ok, false}
+    end
+
+    test "with original_json", %{ redis: redis } do
+      json = %Verk.Job{class: "Class", args: []} |> Poison.encode!
+
+      add_job!(json, redis)
+
+      assert delete_job("sorted", json, redis) == {:ok, true}
+    end
   end
 
-  test "range!", %{ redis: redis } do
-    assert range!("sorted", redis) == []
+  describe "delete_job!/3" do
+    test "with job", %{ redis: redis } do
+      job = %Verk.Job{class: "Class", args: []}
+      json = Poison.encode!(job)
+      job = %{ job | original_json: json}
+
+      Redix.command!(redis, ~w(ZADD sorted 123 #{json}))
+
+      assert delete_job!("sorted", job, redis) == true
+    end
+
+    test "with no job", %{ redis: redis } do
+      job = %Verk.Job{class: "Class", args: []}
+
+      assert delete_job!("sorted", job, redis) == false
+    end
+
+    test "with original_json", %{ redis: redis } do
+      json = %Verk.Job{class: "Class", args: []} |> Poison.encode!
+
+      add_job!(json, redis)
+
+      assert delete_job!("sorted", json, redis) == true
+    end
   end
 
-  test "delete_job with job", %{ redis: redis } do
-    job = %Verk.Job{class: "Class", args: []}
-    json = Poison.encode!(job)
-    job = %{ job | original_json: json}
-
-    assert delete_job("sorted", job, redis) == {:ok, false}
-
-    Redix.command!(redis, ~w(ZADD sorted 123 #{json}))
-
-    assert delete_job("sorted", job, redis) == {:ok, true}
-  end
-
-  test "delete_job! with job", %{ redis: redis } do
-    job = %Verk.Job{class: "Class", args: []}
-    json = Poison.encode!(job)
-    job = %{ job | original_json: json}
-
-    assert delete_job!("sorted", job, redis) == false
-
-    Redix.command!(redis, ~w(ZADD sorted 123 #{json}))
-
-    assert delete_job!("sorted", job, redis) == true
-  end
-
-  test "delete_job with original_json", %{ redis: redis } do
-    json = %Verk.Job{class: "Class", args: []} |> Poison.encode!
-
-    assert delete_job("sorted", json, redis) == {:ok, false}
-
-    Redix.command!(redis, ~w(ZADD sorted 123 #{json}))
-
-    assert delete_job("sorted", json, redis) == {:ok, true}
-  end
-
-  test "delete_job! with original_json", %{ redis: redis } do
-    json = %Verk.Job{class: "Class", args: []} |> Poison.encode!
-
-    assert delete_job!("sorted", json, redis) == false
-
-    Redix.command!(redis, ~w(ZADD sorted 123 #{json}))
-
-    assert delete_job!("sorted", json, redis) == true
-  end
+  defp add_job!(json, redis), do: Redix.command!(redis, ~w(ZADD sorted 123 #{json}))
 end
