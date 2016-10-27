@@ -15,7 +15,6 @@ defmodule Verk.QueueManager do
   @lpop_rpush_src_dest_script_sha Verk.Scripts.sha("lpop_rpush_src_dest")
   @mrpop_lpush_src_dest_script_sha Verk.Scripts.sha("mrpop_lpush_src_dest")
 
-  @max_dead 100
   @max_jobs 100
 
   defmodule State do
