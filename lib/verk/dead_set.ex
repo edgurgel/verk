@@ -5,7 +5,7 @@ defmodule Verk.DeadSet do
   import Verk.Dsl
   alias Verk.{SortedSet, Job}
 
-  @max_jobs 100
+  @max_dead_jobs Application.get_env(:verk, :max_dead_jobs, 100)
   @timeout 60 * 60 * 24 * 7 # a week
 
   @dead_key "dead"
@@ -22,7 +22,7 @@ defmodule Verk.DeadSet do
   def add(job, timestamp, redis \\ Verk.Redis) do
     case Redix.pipeline(redis, [["ZADD", @dead_key, timestamp, Poison.encode!(job)],
                                 ["ZREMRANGEBYSCORE", @dead_key, "-inf", timestamp - @timeout],
-                                ["ZREMRANGEBYRANK", @dead_key, 0, -@max_jobs]]) do
+                                ["ZREMRANGEBYRANK", @dead_key, 0, -@max_dead_jobs]]) do
       {:ok, _} -> :ok
       {:error, error} -> {:error, error}
     end
