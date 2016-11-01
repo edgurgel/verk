@@ -165,7 +165,7 @@ defmodule Verk.WorkersManagerTest do
       job = %Verk.Job{ class: module, args: args, jid: job_id }
 
       expect(Verk.QueueManager, :dequeue, [queue_manager_name, 1], [:encoded_job])
-      expect(Verk.Job, :decode!, [:encoded_job], job)
+      expect(Verk.Job, :decode, [:encoded_job], {:ok, job})
       expect(:poolboy, :status, [pool_name], {nil, 1, nil, nil})
       expect(:poolboy, :checkout, [pool_name, false], worker)
       expect(Verk.Worker, :perform_async, [worker, worker, job], :ok)
@@ -175,6 +175,32 @@ defmodule Verk.WorkersManagerTest do
       assert_receive %Verk.Events.JobStarted{ job: ^job, started_at: _ }
 
       assert validate [Verk.QueueManager, :poolboy, Verk.Worker]
+    end
+
+    test "timeout with free workers and malformed job to be done", %{ monitors: monitors } do
+      :rand.seed(:exs64, {1,2,3})
+      queue_manager_name = :queue_manager_name
+      pool_name = :pool_name
+      timeout = 1000
+      worker = self
+      module = :module
+      args = [:arg1, :arg2]
+      job_id = "job_id"
+      state = %State{ monitors: monitors, pool_name: pool_name,
+                      pool_size: 1, queue_manager_name: queue_manager_name, timeout: timeout }
+      job = %Verk.Job{ class: module, args: args, jid: job_id }
+
+      expect(Verk.QueueManager, :dequeue, [queue_manager_name, 1], [:encoded_job])
+      expect(Verk.Job, :decode, [:encoded_job], {:error, "error"})
+      expect(:poolboy, :status, [pool_name], {nil, 1, nil, nil})
+      expect(:poolboy, :checkout, [pool_name, false], worker)
+
+      assert handle_info(:timeout, state) == { :noreply, state, 1350 }
+      # After receiving an error from Job.decode/1 and removing from the inprogress
+      # queue, we expect the job to not be present in the worker table.
+      assert match?([], :ets.lookup(monitors, worker))
+
+      assert validate [Verk.QueueManager, :poolboy]
     end
 
     test "DOWN coming from dead worker with reason and stacktrace", %{ monitors: monitors } do
