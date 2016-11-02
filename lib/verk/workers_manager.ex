@@ -104,7 +104,7 @@ defmodule Verk.WorkersManager do
               {:ok, verk_job} -> start_job(verk_job, state)
               {:error, error} ->
                 Logger.error("Failed to decode job, error: #{inspect error}, original job: #{inspect job}")
-                QueueManager.ack(state.queue_manager_name, job)
+                QueueManager.malformed(state.queue_manager_name, job)
             end
           end)
         reason ->

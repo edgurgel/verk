@@ -66,6 +66,13 @@ defmodule Verk.QueueManager do
   end
 
   @doc """
+  Remove a malformed job from the inprogress queue
+  """
+  def malformed(queue_manager, job) do
+    GenServer.cast(queue_manager, {:malformed, job})
+  end
+
+  @doc """
   Enqueue inprogress jobs back to the queue
   """
   def enqueue_inprogress(queue_manager) do
@@ -145,6 +152,15 @@ defmodule Verk.QueueManager do
   @doc false
   def handle_cast({:ack, job}, state) do
     case Redix.command(state.redis, ["LREM", inprogress(state.queue_name, state.node_id), "-1", job.original_json]) do
+      {:ok, 1} -> :ok
+      _ -> Logger.error("Failed to acknowledge job #{inspect job}")
+    end
+    {:noreply, state}
+  end
+
+  @doc false
+  def handle_cast({:malformed, job}, state) do
+    case Redix.command(state.redis, ["LREM", inprogress(state.queue_name, state.node_id), "-1", job]) do
       {:ok, 1} -> :ok
       _ -> Logger.error("Failed to acknowledge job #{inspect job}")
     end
