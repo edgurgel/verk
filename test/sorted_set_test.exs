@@ -86,6 +86,34 @@ defmodule Verk.SortedSetTest do
     end
   end
 
+  describe "range_with_score/2" do
+    test "with items", %{ redis: redis } do
+      job = %Verk.Job{class: "Class", args: []}
+      json = Poison.encode!(job)
+      Redix.command!(redis, ~w(ZADD sorted 123 #{json}))
+
+      assert range_with_score("sorted", redis) == {:ok, [{%{ job | original_json: json }, 123}]}
+    end
+
+    test "with no items", %{ redis: redis } do
+      assert range_with_score("sorted", redis) == {:ok, []}
+    end
+  end
+
+  describe "range_with_score!/2" do
+    test "with items", %{ redis: redis } do
+      job = %Verk.Job{class: "Class", args: []}
+      json = Poison.encode!(job)
+      Redix.command!(redis, ~w(ZADD sorted 123 #{json}))
+
+      assert range_with_score("sorted", redis) == {:ok, [{%{ job | original_json: json }, 123}]}
+    end
+
+    test "with no items", %{ redis: redis } do
+      assert range_with_score!("sorted", redis) == []
+    end
+  end
+
   describe "delete_job/3" do
     test "with job", %{ redis: redis } do
       job = %Verk.Job{class: "Class", args: []}

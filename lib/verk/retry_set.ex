@@ -86,6 +86,22 @@ defmodule Verk.RetrySet do
   end
 
   @doc """
+  List jobs from `start` to `stop` including their scores
+  """
+  @spec range_with_score(integer, integer, GenServer.server) :: {:ok, [{Verk.Job.T, integer}]} | {:error, Redix.Error.t}
+  def range_with_score(start \\ 0, stop \\ -1, redis \\ Verk.Redis) do
+    SortedSet.range_with_score(@retry_key, start, stop, redis)
+  end
+
+  @doc """
+  List jobs from `start` to `stop` including their scores, raising if there's an error
+  """
+  @spec range_with_score!(integer, integer, GenServer.server) :: [{Verk.Job.T, integer}]
+  def range_with_score!(start \\ 0, stop \\ -1, redis \\ Verk.Redis) do
+    SortedSet.range_with_score!(@retry_key, start, stop, redis)
+  end
+
+  @doc """
   Delete the job from the retry set
 
   It returns `{:ok, true}` if the job was found and deleted

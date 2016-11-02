@@ -110,6 +110,42 @@ defmodule Verk.RetrySetTest do
     end
   end
 
+  describe "range_with_score/0" do
+    test "range_with_score" do
+      job = %Verk.Job{class: "Class", args: []}
+      json = Poison.encode!(job)
+
+      expect(SortedSet, :range_with_score, [key, 0, -1, Verk.Redis], {:ok, [{%{ job | original_json: json }, 45}]})
+
+      assert range_with_score == {:ok, [{%{ job | original_json: json }, 45}]}
+      assert validate SortedSet
+    end
+  end
+
+  describe "range_with_score/2" do
+    test "range_with_score with start and stop" do
+      job = %Verk.Job{class: "Class", args: []}
+      json = Poison.encode!(job)
+
+      expect(SortedSet, :range_with_score, [key, 1, 2, Verk.Redis], {:ok, [{%{ job | original_json: json }, 45}]})
+
+      assert range_with_score(1, 2) == {:ok, [{%{ job | original_json: json }, 45}]}
+      assert validate SortedSet
+    end
+  end
+
+  describe "range_with_score!/0" do
+    test "range_with_score!" do
+      job = %Verk.Job{class: "Class", args: []}
+      json = Poison.encode!(job)
+
+      expect(SortedSet, :range_with_score!, [key, 0, -1, Verk.Redis], [{%{ job | original_json: json }, 45}])
+
+      assert range_with_score! == [{%{ job | original_json: json }, 45}]
+      assert validate SortedSet
+    end
+  end
+
   describe "delete_job/1" do
     test "job with original_json" do
       job = %Verk.Job{class: "Class", args: []}
