@@ -68,6 +68,32 @@ defmodule Verk.SortedSet do
   end
 
   @doc """
+  Lists jobs from `start` to `stop` along with the item scores
+  """
+  @spec range_with_score(String.t, integer, integer, GenServer.server)
+    :: {:ok, [{Verk.Job.T, integer}]} | {:error, Redix.Error.t}
+  def range_with_score(key, start \\ 0, stop \\ -1, redis) do
+    case Redix.command(redis, ["ZRANGE", key, start, stop, "WITHSCORES"]) do
+      {:ok, jobs} ->
+        # The Redis returned list alternates, [<job>, <job score>, ...].
+        jobs_with_scores =
+          jobs
+          |> Enum.chunk(2)
+          |> Enum.into([], fn [job, score] -> {Job.decode!(job), String.to_integer(score)} end)
+        {:ok, jobs_with_scores}
+      {:error, error} -> {:error, error}
+    end
+  end
+
+  @doc """
+  Lists jobs from `start` to `stop` along with the item scores, raising if there's an error
+  """
+  @spec range_with_score!(String.t, integer, integer, GenServer.server) :: nil
+  def range_with_score!(key, start \\ 0, stop \\ -1, redis) do
+    bangify(range_with_score(key, start, stop, redis))
+  end
+
+  @doc """
   Deletes the job from the sorted set
 
   It returns `{:ok, true}` if the job was found and deleted
