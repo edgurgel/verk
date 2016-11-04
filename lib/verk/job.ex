@@ -14,6 +14,17 @@ defmodule Verk.Job do
   @doc """
   Decode the JSON payload storing the original json as part of the struct.
   """
+  @spec decode(binary) :: {:ok, %__MODULE__{}} | {:error, Poison.Error.t}
+  def decode(payload) do
+    case Poison.decode(payload, as: %__MODULE__{}) do
+      {:ok, job} -> {:ok, %Verk.Job{job | original_json: payload}}
+      {:error, error} -> {:error, error}
+    end
+  end
+
+  @doc """
+  Decode the JSON payload storing the original json as part of the struct, raising if there is an error
+  """
   @spec decode!(binary) :: %__MODULE__{}
   def decode!(payload) do
     job = Poison.decode!(payload, as: %__MODULE__{})

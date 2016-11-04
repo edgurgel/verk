@@ -250,5 +250,17 @@ defmodule Verk.QueueManagerTest do
 
       assert validate Redix
     end
+
+    test "malformed job" do
+      job = ""
+
+      expect(Redix, :command, [:redis, ["LREM", "inprogress:test_queue:test_node", "-1", job]], { :ok, 1 })
+
+      state = %State{ queue_name: "test_queue", redis: :redis, node_id: "test_node" }
+
+      assert handle_cast({ :malformed, job}, state) == { :noreply, state }
+
+      assert validate Redix
+    end
   end
 end

@@ -99,7 +99,14 @@ defmodule Verk.WorkersManager do
     if workers != 0 do
       case QueueManager.dequeue(state.queue_manager_name, workers) do
         jobs when is_list(jobs) ->
-          for job <- jobs, do: job |> Job.decode! |> start_job(state)
+          Enum.each(jobs, fn job ->
+            case job |> Job.decode do
+              {:ok, verk_job} -> start_job(verk_job, state)
+              {:error, error} ->
+                Logger.error("Failed to decode job, error: #{inspect error}, original job: #{inspect job}")
+                QueueManager.malformed(state.queue_manager_name, job)
+            end
+          end)
         reason ->
           Logger.error("Failed to fetch a job. Reason: #{inspect reason}")
       end
