@@ -132,24 +132,11 @@ The jobs that will run on top of Verk should be idempotent as they may run more 
 
 One can track when jobs start and finish or fail. This can be useful to build metrics around the jobs. The `QueueStats` handler does some kind of metrics using these events: https://github.com/edgurgel/verk/blob/master/lib/verk/queue_stats.ex
 
-Verk has an Event Manager that notify the following events:
+Verk has an Event Manager that notifies the following events:
 
 * `Verk.Events.JobStarted`
 * `Verk.Events.JobFinished`
 * `Verk.Events.JobFailed`
-
-Here is an example of a `GenEvent` handler to print any event:
-
-```elixir
-defmodule PrintHandler do
-  use GenEvent
-
-  def handle_event(event, state) do
-    IO.puts "Event received: #{inspect event}"
-    { :ok, state }
-  end
-end
-```
 
 One can define an error tracking handler like this:
 
@@ -157,6 +144,9 @@ One can define an error tracking handler like this:
 defmodule TrackingErrorHandler do
   use GenEvent
 
+  def init(parent) do
+    {:ok, parent}
+  end
   def handle_event(%Verk.Events.JobFailed{job: job, failed_at: failed_at, stacktrace: trace}, state) do
     MyTrackingExceptionSystem.track(stacktrace: trace, name: job.class)
     { :ok, state }
@@ -168,13 +158,58 @@ defmodule TrackingErrorHandler do
 end
 ```
 
-You also need to add the handler to connect with the event manager:
+You also need to add the handler to connect with the event manager. You can do this in a number of ways:
 
-```elixir
-GenEvent.add_mon_handler(Verk.EventManager, TrackingErrorHandler, [])
-```
+1. Managing the event handler with a GenServer:
+
+  ```elixir
+  defmodule TrackingErrorHandlerServer do
+    def start_link(opts) do
+      GenServer.start_link(__MODULE__, opts, [])
+    end
+    def init(manager_name) do
+      case GenEvent.add_mon_handler(manager_name, TrackingErrorHandler, []) do
+        :ok -> {:ok, manager_name}
+        {:error, reason} -> {:stop, reason}
+      end
+    end
+  end
+  ```
+
+  Then adding the GenServer to your supervision tree:
+
+  ```elixir
+  defmodule Example.App do
+    use Application
+
+    def start(_type, _args) do
+      import Supervisor.Spec
+      tree = [supervisor(Verk.Supervisor, []),
+              worker(TrackingErrorHandler, [Verk.EventManager])]
+      opts = [name: Simple.Sup, strategy: :one_for_one]
+      Supervisor.start_link(tree, opts)
+    end
+  end
+  ```
+
+2. Using [Watcher](https://github.com/edgurgel/watcher) to add the GenEvent to your supervision tree:
+
+  ```elixir
+  defmodule Example.App do
+    use Application
+
+    def start(_type, _args) do
+      import Supervisor.Spec
+      tree = [supervisor(Verk.Supervisor, []),
+              worker(Watcher, [Verk.EventManager, TrackingErrorHandler, []])]
+      opts = [name: Simple.Sup, strategy: :one_for_one]
+      Supervisor.start_link(tree, opts)
+    end
+  end
+  ```
 
 More info about `GenEvent.add_mon_handler/3` [here](http://elixir-lang.org/docs/v1.1/elixir/GenEvent.html#add_mon_handler/3).
+
 
 ## Dashboard ?
 
