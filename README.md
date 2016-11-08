@@ -185,7 +185,7 @@ You also need to add the handler to connect with the event manager. You can do t
     def start(_type, _args) do
       import Supervisor.Spec
       tree = [supervisor(Verk.Supervisor, []),
-              worker(TrackingErrorHandler, [Verk.EventManager])]
+              worker(TrackingErrorHandlerServer, [Verk.EventManager])]
       opts = [name: Simple.Sup, strategy: :one_for_one]
       Supervisor.start_link(tree, opts)
     end
