@@ -8,15 +8,21 @@ defmodule Verk.Log do
   alias Verk.{Job, Time}
 
   def start(%Job{jid: job_id, class: module}, process_id) do
-    info("#{module} #{job_id} start", process_id: inspect(process_id))
+    :verk
+    |> Application.get_env(:start_job_log_level, :info)
+    |> log("#{module} #{job_id} start", process_id: inspect(process_id))
   end
 
   def done(%Job{jid: job_id, class: module}, start_time, process_id) do
-    info("#{module} #{job_id} done: #{elapsed_time(start_time)}", process_id: inspect(process_id))
+    :verk
+    |> Application.get_env(:done_job_log_level, :info)
+    |> log("#{module} #{job_id} done: #{elapsed_time(start_time)}", process_id: inspect(process_id))
   end
 
   def fail(%Job{jid: job_id, class: module}, start_time, process_id) do
-    info("#{module} #{job_id} fail: #{elapsed_time(start_time)}", process_id: inspect(process_id))
+    :verk
+    |> Application.get_env(:fail_job_log_level, :info)
+    |> log("#{module} #{job_id} fail: #{elapsed_time(start_time)}", process_id: inspect(process_id))
   end
 
   defp elapsed_time(start_time) do
