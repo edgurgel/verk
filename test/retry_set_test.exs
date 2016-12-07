@@ -187,4 +187,46 @@ defmodule Verk.RetrySetTest do
       assert validate SortedSet
     end
   end
+
+  describe "requeue_job/1" do
+    test "job with original_json" do
+      job = %Verk.Job{class: "Class", args: []}
+      json = Poison.encode!(job)
+      job = %{ job | original_json: json }
+
+      expect(SortedSet, :requeue_job, [key, json, Verk.Redis], :ok)
+
+      assert requeue_job(job) == :ok
+      assert validate SortedSet
+    end
+
+    test "job with no original_json" do
+      json = %Verk.Job{class: "Class", args: []} |> Poison.encode!
+      expect(SortedSet, :requeue_job, [key, json, Verk.Redis], {:ok, true})
+
+      assert requeue_job(json) == {:ok, true}
+      assert validate SortedSet
+    end
+  end
+
+  describe "requeue_job!/1" do
+    test "job with original_json" do
+      job = %Verk.Job{class: "Class", args: []}
+      json = Poison.encode!(job)
+      job = %{ job | original_json: json }
+
+      expect(SortedSet, :requeue_job!, [key, json, Verk.Redis], true)
+
+      assert requeue_job!(job) == true
+      assert validate SortedSet
+    end
+
+    test "job with no original_json" do
+      json = %Verk.Job{class: "Class", args: []} |> Poison.encode!
+      expect(SortedSet, :requeue_job!, [key, json, Verk.Redis], true)
+
+      assert requeue_job!(json) == true
+      assert validate SortedSet
+    end
+  end
 end
