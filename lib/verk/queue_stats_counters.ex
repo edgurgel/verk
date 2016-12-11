@@ -17,11 +17,16 @@ defmodule Verk.QueueStatsCounters do
   end
 
   @doc """
-  It outputs the current stats about each queue and `total`
+  It outputs the current stats about each queue and `total` and search for a `prefix` if provided
   """
-  def all do
-    :ets.select(@counters_table, [{{:"$1", :"$2", :"$3", :"$4", :_, :_}, [],
-                                  [{{:"$1", :"$2", :"$3", :"$4"}}]}])
+  def all(prefix) do
+    prefix = to_charlist(prefix)
+    match = if prefix != '' do
+      [{{prefix ++ :"$1", :"$2", :"$3", :"$4", :_, :_}, [], [{{prefix ++ :"$1", :"$2", :"$3", :"$4"}}]}]
+    else
+      [{{:"$1", :"$2", :"$3", :"$4", :_, :_}, [], [{{:"$1", :"$2", :"$3", :"$4"}}]}]
+    end
+    :ets.select(@counters_table, match)
   end
 
   @doc """
@@ -29,6 +34,7 @@ defmodule Verk.QueueStatsCounters do
   """
   @spec reset_started(binary) :: :ok
   def reset_started(queue) do
+    queue = to_charlist(queue)
     unless :ets.update_element(@counters_table, queue, {2, 0}) do
       true = :ets.insert_new(@counters_table, new_element(queue))
     end
@@ -40,17 +46,17 @@ defmodule Verk.QueueStatsCounters do
   @spec register(:started | :finished | :failed, binary) :: integer
   def register(:started, queue) do
     update = {2, 1}
-    update_counters(queue, update)
+    update_counters(to_charlist(queue), update)
     update_counters(:total, update)
   end
   def register(:finished, queue) do
     updates = [{3, 1}, {2, -1}]
-    update_counters(queue, updates)
+    update_counters(to_charlist(queue), updates)
     update_counters(:total, updates)
   end
   def register(:failed, queue) do
     updates = [{4, 1}, {2, -1}]
-    update_counters(queue, updates)
+    update_counters(to_charlist(queue), updates)
     update_counters(:total, updates)
   end
 
@@ -62,8 +68,7 @@ defmodule Verk.QueueStatsCounters do
     cmds = Enum.reduce(counters, [], fn {queue, _started, processed, failed, last_processed, last_failed}, commands ->
       delta_processed = processed - last_processed
       delta_failed    = failed - last_failed
-      :ets.update_counter(@counters_table, queue, [{5, delta_processed},
-                                             {6, delta_failed}])
+      :ets.update_counter(@counters_table, queue, [{5, delta_processed}, {6, delta_failed}])
 
       [incrby(queue, :processed, delta_processed) | [incrby(queue, :failed, delta_failed) | commands]]
     end)
