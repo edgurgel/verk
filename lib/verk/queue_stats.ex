@@ -15,12 +15,12 @@ defmodule Verk.QueueStats do
   @persist_interval 10_000
 
   @doc """
-  Lists the queues and their stats
+  Lists the queues and their stats searching for a `prefix` if provided
   """
-  @spec all :: Map.t
-  def all do
-    for {queue, running, finished, failed} <- QueueStatsCounters.all, is_binary(queue) do
-      %{queue: queue, running_counter: running, finished_counter: finished, failed_counter: failed}
+  @spec all(binary) :: Map.t
+  def all(prefix \\ "") do
+    for {queue, running, finished, failed} <- QueueStatsCounters.all(prefix), is_list(queue) do
+      %{queue: to_string(queue), running_counter: running, finished_counter: finished, failed_counter: failed}
     end
   end
 

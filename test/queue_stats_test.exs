@@ -16,7 +16,7 @@ defmodule Verk.QueueStatsTest do
     :ok
   end
 
-  describe "all/0" do
+  describe "all/1" do
     test "list counters" do
       init([]) # create table
 
@@ -29,6 +29,20 @@ defmodule Verk.QueueStatsTest do
       assert all == [%{ queue: "queue_1", running_counter: 0, finished_counter: 1, failed_counter: 1 },
                      %{ queue: "queue_2", running_counter: 1, finished_counter: 0, failed_counter: 0 } ]
     end
+
+    test "list counters searching for a prefix" do
+      init([]) # create table
+
+      handle_event(%Verk.Events.JobStarted{ job: %Verk.Job{ queue: "default" } }, :state)
+      handle_event(%Verk.Events.JobStarted{ job: %Verk.Job{ queue: "default" } }, :state)
+      handle_event(%Verk.Events.JobFinished{ job: %Verk.Job{ queue: "default" } }, :state)
+      handle_event(%Verk.Events.JobStarted{ job: %Verk.Job{ queue: "default-something" } }, :state)
+      handle_event(%Verk.Events.JobFailed{ job: %Verk.Job{ queue: "default-something" } }, :state)
+      handle_event(%Verk.Events.JobStarted{ job: %Verk.Job{ queue: "priority" } }, :state)
+
+      assert all("def") == [%{ queue: "default", running_counter: 1, finished_counter: 1, failed_counter: 0 },
+                            %{ queue: "default-something", running_counter: 0, finished_counter: 0, failed_counter: 1 } ]
+    end
   end
 
   describe "handle_call/2" do
@@ -36,15 +50,15 @@ defmodule Verk.QueueStatsTest do
       init([]) # create table
 
       assert handle_call({ :reset_started, "queue" }, :state) == { :ok, :ok, :state }
-      assert :ets.tab2list(@table) == [{ "queue", 0, 0, 0, 0, 0 }]
+      assert :ets.tab2list(@table) == [{ 'queue', 0, 0, 0, 0, 0 }]
     end
 
     test "reset_started with existing element" do
       init([]) # create table
-      :ets.insert_new(@table, { "queue", 1, 2, 3, 4, 5 })
+      :ets.insert_new(@table, { 'queue', 1, 2, 3, 4, 5 })
 
       assert handle_call({ :reset_started, "queue" }, :state) == { :ok, :ok, :state }
-      assert :ets.tab2list(@table) == [{ "queue", 0, 2, 3, 4, 5 }]
+      assert :ets.tab2list(@table) == [{ 'queue', 0, 2, 3, 4, 5 }]
     end
   end
 
@@ -65,7 +79,7 @@ defmodule Verk.QueueStatsTest do
 
       assert handle_event(event, :state) == { :ok, :state }
 
-      assert :ets.tab2list(@table) == [{ :total, 1, 0, 0, 0, 0 }, { "queue", 1, 0, 0, 0, 0 }]
+      assert :ets.tab2list(@table) == [{ :total, 1, 0, 0, 0, 0 }, { 'queue', 1, 0, 0, 0, 0 }]
     end
 
     test "with finished event" do
@@ -74,7 +88,7 @@ defmodule Verk.QueueStatsTest do
 
       assert handle_event(event, :state) == { :ok, :state }
 
-      assert :ets.tab2list(@table) == [{ :total, -1, 1, 0, 0, 0 }, { "queue", -1, 1, 0, 0, 0 }]
+      assert :ets.tab2list(@table) == [{ :total, -1, 1, 0, 0, 0 }, { 'queue', -1, 1, 0, 0, 0 }]
     end
 
     test "with failed event" do
@@ -83,7 +97,7 @@ defmodule Verk.QueueStatsTest do
 
       assert handle_event(event, :state) == { :ok, :state }
 
-      assert :ets.tab2list(@table) == [{ :total, -1, 0, 1, 0, 0 }, { "queue", -1, 0, 1, 0, 0 }]
+      assert :ets.tab2list(@table) == [{ :total, -1, 0, 1, 0, 0 }, { 'queue', -1, 0, 1, 0, 0 }]
     end
   end
 
