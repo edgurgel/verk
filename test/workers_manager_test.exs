@@ -283,15 +283,16 @@ defmodule Verk.WorkersManagerTest do
       job = %Verk.Job{}
       job_id = "job_id"
       ref = make_ref
+      start_time = Time.now
 
       expect(Verk.QueueManager, :ack, [queue_manager_name, job], :ok)
       expect(:poolboy, :checkin, [pool_name, worker], :ok)
 
-      :ets.insert(monitors, { worker, job_id, job, ref, Time.now })
+      :ets.insert(monitors, { worker, job_id, job, ref, start_time })
       assert handle_info({ :DOWN, ref, :_, worker, :normal }, state) == { :noreply, state, 0 }
 
       assert :ets.lookup(state.monitors, worker) == []
-      assert_receive %Verk.Events.JobFinished{ job: ^job, finished_at: _ }
+      assert_receive %Verk.Events.JobFinished{ job: ^job, started_at: ^start_time, finished_at: _ }
 
       assert validate [Verk.QueueManager, :poolboy]
     end
