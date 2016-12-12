@@ -144,5 +144,10 @@ defmodule Verk.QueueStatsTest do
         "2", "1"
       ]
     end
+
+    test 'test with unexpected message' do
+      init([])
+      assert handle_info(:pretty_sweet, :state) == {:ok, :state}
+    end
   end
 end
