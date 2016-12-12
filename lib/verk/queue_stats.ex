@@ -71,4 +71,9 @@ defmodule Verk.QueueStats do
     Process.send_after(self, :persist_stats, @persist_interval)
     {:ok, state}
   end
+
+  @doc false
+  def handle_info(_, state) do
+    {:ok, state}
+  end
 end
