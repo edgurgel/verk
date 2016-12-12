@@ -80,12 +80,12 @@ defmodule RedisScriptsTest do
       assert Redix.command(redis, ~w(ZRANGEBYSCORE retry -inf +inf WITHSCORES)) == { :ok, [] }
     end
 
-    test "valid job format, empty original queue returns nil", %{ redis: redis } do
+    test "valid job format, empty original queue job is still requeued", %{ redis: redis } do
       job = "{\"jid\":\"123\",\"queue\":\"test_queue\"}"
       { :ok, _ } = Redix.command(redis, ~w(DEL retry queue:test_queue))
 
       assert Redix.command(redis, ~w(ZRANGEBYSCORE retry -inf +inf WITHSCORES)) == { :ok, [] }
-      assert Redix.command(redis, ["EVAL", @requeue_job_now_script, 1, "retry", job]) == { :ok, nil }
+      assert Redix.command(redis, ["EVAL", @requeue_job_now_script, 1, "retry", job]) == { :ok, job }
       assert Redix.command(redis, ~w(ZRANGEBYSCORE retry -inf +inf WITHSCORES)) == { :ok, [] }
     end
   end
