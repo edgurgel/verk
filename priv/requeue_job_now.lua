@@ -6,14 +6,13 @@ if job then
   if queue then
     local queue_key = string.format('queue:%s', queue)
 
-    -- Don't requeue the job unless its removal from current sorted set
-    -- can be confirmed.
-    local removed = redis.call("ZREM", KEYS[1], job)
-    if removed == 1 then
-      redis.call("LPUSH", queue_key, job)
+    -- Don't requeue the job unless it has been added to the destination queue.
+    local added = redis.call("LPUSH", queue_key, job)
+    if added ~= 0 then
+      redis.call("ZREM", KEYS[1], job)
     else
-      -- Signifies that the job was not present in the initial queue
-      -- and so no work was done.
+      -- Signifies that the job could not be added to the destination
+      -- queue and no work was done.
       return nil
     end
   end
