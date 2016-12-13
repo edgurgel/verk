@@ -1,10 +1,19 @@
-local jobs = redis.call('LRANGE', KEYS[1], 0, -1)
+local batch_size = ARGV[1]
+local source = KEYS[1]
+local destination = KEYS[2]
+local job_count = redis.call('LLEN', source)
+local limit = job_count
 
-if table.getn(jobs) > 0 then
-  local queue_key = KEYS[2]
-  redis.call("RPUSH", queue_key, unpack(jobs))
+if job_count > 0 then
+  if job_count > 1000 then
+    local limit = batch_size
+  end
 
-  redis.call('DEL', KEYS[1])
+  for i=1, batch_size do
+    redis.call("RPOPLPUSH", source, destination)
+  end
+
+  return limit
+else
+  return nil
 end
-
-return table.getn(jobs)
