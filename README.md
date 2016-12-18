@@ -218,7 +218,7 @@ More info about `GenEvent.add_mon_handler/3` [here](http://elixir-lang.org/docs/
 
 Check [Verk Web](https://github.com/edgurgel/verk_web)!
 
-![](http://i.imgur.com/AclG57m.png)
+![Dashboard](http://i.imgur.com/LsDKIVT.png)
 
 ## Sponsorship
 
