@@ -138,18 +138,33 @@ defmodule Verk.WorkersManagerTest do
     end
   end
 
-  describe "handle_info/2" do
-    test "enqueue_inprogress" do
+  describe "handle_info/2 enqueue_inprogress" do
+    test "enqueue_inprogress having no more jobs" do
       queue_manager_name = "queue_manager_name"
       state = %State{ queue_manager_name: queue_manager_name }
 
       expect(Verk.QueueManager, :enqueue_inprogress, [queue_manager_name], :ok)
 
       assert handle_info(:enqueue_inprogress, state) == { :noreply, state, 0 }
+      refute_receive :enqueue_inprogress
 
       assert validate Verk.QueueManager
     end
 
+    test "enqueue_inprogress having more jobs" do
+      queue_manager_name = "queue_manager_name"
+      state = %State{ queue_manager_name: queue_manager_name }
+
+      expect(Verk.QueueManager, :enqueue_inprogress, [queue_manager_name], :more)
+
+      assert handle_info(:enqueue_inprogress, state) == { :noreply, state }
+      assert_receive :enqueue_inprogress
+
+      assert validate Verk.QueueManager
+    end
+  end
+
+  describe "handle_info/2 timeout" do
     test "timeout with no free workers", %{ monitors: monitors } do
       pool_name = "pool_name"
       new Verk.QueueManager
@@ -232,7 +247,9 @@ defmodule Verk.WorkersManagerTest do
 
       assert validate [Verk.QueueManager, :poolboy]
     end
+  end
 
+  describe "handle_info/2 DOWN" do
     test "DOWN coming from dead worker with reason and stacktrace", %{ monitors: monitors } do
       ref = make_ref
       worker = self

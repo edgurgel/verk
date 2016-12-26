@@ -32,10 +32,21 @@ defmodule Verk.QueueManagerTest do
     end
   end
 
-  describe "handle_call/3" do
-    test "enqueue_inprogress" do
-      script = Verk.Scripts.sha("lpop_rpush_src_dest")
-      expect(Redix, :command, [:redis, ["EVALSHA", script, 2, "inprogress:test_queue:test_node", "queue:test_queue"]], { :ok, 42 })
+  describe "handle_call/3 enqueue_inprogress" do
+    @script Verk.Scripts.sha("lpop_rpush_src_dest")
+
+    test "with more jobs to enqueue" do
+      expect(Redix, :command, [:redis, ["EVALSHA", @script, 2, "inprogress:test_queue:test_node", "queue:test_queue", 1000]], { :ok, [42, 2] })
+
+      state = %State{ queue_name: "test_queue", redis: :redis, node_id: "test_node" }
+
+      assert handle_call(:enqueue_inprogress, :from, state) == { :reply, :more, state }
+
+      assert validate Redix
+    end
+
+    test "with no more jobs to enqueue" do
+      expect(Redix, :command, [:redis, ["EVALSHA", @script, 2, "inprogress:test_queue:test_node", "queue:test_queue", 1000]], { :ok, [0, 0] })
 
       state = %State{ queue_name: "test_queue", redis: :redis, node_id: "test_node" }
 
@@ -44,9 +55,8 @@ defmodule Verk.QueueManagerTest do
       assert validate Redix
     end
 
-    test "enqueue_inprogress and redis failed" do
-      script = Verk.Scripts.sha("lpop_rpush_src_dest")
-      expect(Redix, :command, [:redis, ["EVALSHA", script, 2, "inprogress:test_queue:test_node", "queue:test_queue"]], { :error, :reason })
+    test "when redis fails" do
+      expect(Redix, :command, [:redis, ["EVALSHA", @script, 2, "inprogress:test_queue:test_node", "queue:test_queue", 1000]], { :error, :reason })
 
       state = %State{ queue_name: "test_queue", redis: :redis, node_id: "test_node" }
 
@@ -54,7 +64,9 @@ defmodule Verk.QueueManagerTest do
 
       assert validate Redix
     end
+  end
 
+  describe "handle_call/3 dequeue" do
     test "dequeue with an empty queue" do
       expect(Redix, :command, [:redis, ["EVALSHA", @mrpop_script, 2, "queue:test_queue", "inprogress:test_queue:test_node", 3]], { :ok, [] })
 
@@ -107,7 +119,9 @@ defmodule Verk.QueueManagerTest do
       pid = spawn_link(fn -> :timer.sleep(5000) end)
       assert dequeue(pid, 1, 1) == :timeout
     end
+  end
 
+  describe "handle_call/3 retry" do
     test "retry on a job with retry count 0" do
       failed_at = 100
 
@@ -237,7 +251,7 @@ defmodule Verk.QueueManagerTest do
     end
   end
 
-  describe "handle_cast/2" do
+  describe "handle_cast/2 ack" do
     test "ack job" do
       encoded_job = "encoded_job"
       job = %Verk.Job{ original_json: encoded_job }
@@ -250,7 +264,9 @@ defmodule Verk.QueueManagerTest do
 
       assert validate Redix
     end
+  end
 
+  describe "handle_cast/2 malformed" do
     test "malformed job" do
       job = ""
 
