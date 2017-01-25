@@ -14,17 +14,46 @@ defmodule Verk.WorkersManagerTest do
     end
   end
 
+  defmodule Repeater do
+    use GenStage
+
+    def start(pid) do
+      GenStage.start(__MODULE__, pid)
+    end
+
+
+    def init(pid) do
+      {:consumer, pid, subscribe_to: [Verk.EventHandler]}
+    end
+
+    def handle_events(events, _from, pid) do
+      Enum.each(events, fn(event) ->
+        send pid, event
+      end)
+
+      {:noreply, [], pid}
+    end
+  end
+
   setup_all do
     { :ok, pid } = GenEvent.start(name: Verk.EventManager)
-    on_exit fn -> GenEvent.stop(pid) end
+    Application.put_env(:verk, :use_gen_stage, true)
+    { :ok, gen_event_pid } = GenStage.start(Verk.EventHandler, :ok, name: Verk.EventHandler)
+    on_exit fn ->
+      GenEvent.stop(pid)
+      GenStage.stop(gen_event_pid)
+      Application.put_env(:verk, :use_gen_stage, false)
+    end
     :ok
   end
 
   setup do
     pid = self
     new :poolboy
+    {:ok, repeater_pid} = Repeater.start(pid)
     on_exit fn ->
       GenEvent.remove_handler(Verk.EventManager, TestHandler, pid)
+      GenStage.stop(repeater_pid)
       unload
     end
     GenEvent.add_mon_handler(Verk.EventManager, TestHandler, pid)
@@ -173,6 +202,7 @@ defmodule Verk.WorkersManagerTest do
       assert handle_info(:timeout, state) == { :noreply, state, 1350 }
       assert match?([{^worker, ^job_id, ^job, _, _}], :ets.lookup(monitors, worker))
       assert_receive %Verk.Events.JobStarted{ job: ^job, started_at: _ }
+      assert_receive %Verk.Events.JobStarted{ job: ^job, started_at: _ }
 
       assert validate [Verk.QueueManager, :poolboy, Verk.Worker]
     end
@@ -188,7 +218,7 @@ defmodule Verk.WorkersManagerTest do
       job_id = "job_id"
       state = %State{ monitors: monitors, pool_name: pool_name,
                       pool_size: 1, queue_manager_name: queue_manager_name, timeout: timeout }
-      job = %Verk.Job{ class: module, args: args, jid: job_id }
+      _job = %Verk.Job{ class: module, args: args, jid: job_id }
 
       expect(Verk.QueueManager, :dequeue, [queue_manager_name, 1], [:encoded_job])
       expect(Verk.Job, :decode, [:encoded_job], {:error, "error"})
@@ -227,6 +257,9 @@ defmodule Verk.WorkersManagerTest do
       assert_receive %Verk.Events.JobFailed{ job: ^job, failed_at: _,
                                              stacktrace: :stacktrace,
                                              exception: ^exception }
+      assert_receive %Verk.Events.JobFailed{ job: ^job, failed_at: _,
+                                             stacktrace: :stacktrace,
+                                             exception: ^exception }
 
       assert validate [:poolboy, Verk.Log, Verk.QueueManager]
     end
@@ -255,6 +288,9 @@ defmodule Verk.WorkersManagerTest do
       assert_receive %Verk.Events.JobFailed{ job: ^job, failed_at: _,
                                              stacktrace: [],
                                              exception: ^exception }
+      assert_receive %Verk.Events.JobFailed{ job: ^job, failed_at: _,
+                                             stacktrace: [],
+                                             exception: ^exception }
 
       assert validate [:poolboy, Verk.Log, Verk.QueueManager]
     end
@@ -275,6 +311,7 @@ defmodule Verk.WorkersManagerTest do
       assert handle_info({ :DOWN, ref, :_, worker, :normal }, state) == { :noreply, state, 0 }
 
       assert :ets.lookup(state.monitors, worker) == []
+      assert_receive %Verk.Events.JobFinished{ job: ^job, finished_at: _ }
       assert_receive %Verk.Events.JobFinished{ job: ^job, finished_at: _ }
 
       assert validate [Verk.QueueManager, :poolboy]
@@ -304,6 +341,9 @@ defmodule Verk.WorkersManagerTest do
       assert_receive %Verk.Events.JobFailed{ job: ^job, failed_at: _,
                                              stacktrace: [],
                                              exception: ^exception }
+      assert_receive %Verk.Events.JobFailed{ job: ^job, failed_at: _,
+                                             stacktrace: [],
+                                             exception: ^exception }
 
       assert validate [Verk.Log, Verk.QueueManager, :poolboy]
     end
@@ -325,6 +365,7 @@ defmodule Verk.WorkersManagerTest do
       assert handle_cast({ :done, worker, job_id }, state) == { :noreply, state, 0 }
 
       assert :ets.lookup(state.monitors, worker) == []
+      assert_receive %Verk.Events.JobFinished{ job: ^job, finished_at: _ }
       assert_receive %Verk.Events.JobFinished{ job: ^job, finished_at: _ }
 
       assert validate [:poolboy, Verk.QueueManager]
@@ -351,6 +392,9 @@ defmodule Verk.WorkersManagerTest do
       assert handle_cast({ :failed, worker, job_id, exception, :stacktrace }, state) == { :noreply, state, 0 }
 
       assert :ets.lookup(monitors, worker) == []
+      assert_receive %Verk.Events.JobFailed{ job: ^job, failed_at: _,
+                                             stacktrace: :stacktrace,
+                                             exception: ^exception }
       assert_receive %Verk.Events.JobFailed{ job: ^job, failed_at: _,
                                              stacktrace: :stacktrace,
                                              exception: ^exception }
