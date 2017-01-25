@@ -17,6 +17,9 @@ end
 
 if Code.ensure_loaded?(GenStage) do
   defmodule Verk.EventHandler do
+    @moduledoc """
+    A GenStage producer that broadcasts events to subscribed consumers.
+    """
     use GenStage
 
     def start_link do

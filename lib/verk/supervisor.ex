@@ -27,7 +27,8 @@ defmodule Verk.Supervisor do
     queue_stats_watcher = worker(Watcher, [Verk.EventManager, Verk.QueueStats, []])
     redis               = worker(Redix, [redis_url, [name: Verk.Redis]])
 
-    children = [redis, verk_event_manager, queue_stats_watcher, schedule_manager] ++ children
+    children = [redis, verk_event_manager, queue_stats_watcher, schedule_manager]
+               |> Kernel.++(children)
                |> add_gen_stage_event_handler()
     supervise(children, strategy: :one_for_one)
   end
