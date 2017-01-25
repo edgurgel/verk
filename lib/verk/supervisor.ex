@@ -23,10 +23,12 @@ defmodule Verk.Supervisor do
 
     schedule_manager    = worker(Verk.ScheduleManager, [], id: :schedule_manager)
     verk_event_manager  = worker(GenEvent, [[name: Verk.EventManager]])
+
     queue_stats_watcher = worker(Watcher, [Verk.EventManager, Verk.QueueStats, []])
     redis               = worker(Redix, [redis_url, [name: Verk.Redis]])
 
     children = [redis, verk_event_manager, queue_stats_watcher, schedule_manager] ++ children
+               |> add_gen_stage_event_handler()
     supervise(children, strategy: :one_for_one)
   end
 
@@ -50,5 +52,13 @@ defmodule Verk.Supervisor do
 
   defp supervisor_name(queue) do
     String.to_atom("#{queue}.supervisor")
+  end
+
+  defp add_gen_stage_event_handler(children) do
+    if Application.get_env(:verk, :use_gen_stage, false) && Code.ensure_loaded?(GenStage) do
+      [worker(Verk.EventHandler, []) | children]
+    else
+      children
+    end
   end
 end
