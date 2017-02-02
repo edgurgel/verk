@@ -92,6 +92,21 @@ This job can also be scheduled using `Verk.schedule/2`:
  Verk.schedule(%Verk.Job{queue: :default, class: "ExampleWorker", args: [1,2]}, perform_at)
  ```
 
+### Custom functions
+
+Functions other than `perform` can also be executed:
+
+```elixir
+defmodule ExampleWorker do
+  def custom_perform(arg1, arg2) do
+    arg1 + arg2
+  end
+end
+
+
+Verk.enqueue(%Verk.Job{queue: :default, class: "ExampleWorker", function: :custom_perform, args: [1,2], max_retry_count: 5})
+```
+
 ## Configuration
 
 Example configuration for verk having 2 queues: `default` and `priority`

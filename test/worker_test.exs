@@ -2,6 +2,10 @@ defmodule TestWorker do
   def perform(pid) do
     send pid, :perform_executed
   end
+
+  def custom_perform(pid) do
+    send pid, :custom_perform_executed
+  end
 end
 
 defmodule TestWorkerCurrentJob do
@@ -36,6 +40,15 @@ defmodule Verk.WorkerTest do
       assert handle_cast({ :perform, job, worker }, :state) == { :stop, :normal, :state }
 
       assert_receive :perform_executed
+      assert_receive {:"$gen_cast", {:done, ^worker, "job_id"}}
+    end
+
+    test "cast perform runs the specified module with specified function the args succeding" do
+      worker = self
+      job = %Verk.Job{jid: "job_id", class: "TestWorker", function: :custom_perform, args: [worker]}
+      assert handle_cast({ :perform, job, worker }, :state) == { :stop, :normal, :state }
+
+      assert_receive :custom_perform_executed
       assert_receive {:"$gen_cast", {:done, ^worker, "job_id"}}
     end
 
