@@ -34,10 +34,10 @@ defmodule Verk.Worker do
     try do
       :erlang.put(@process_dict_key, job)
       [job.class] |> Module.safe_concat |> apply(:perform, job.args)
-      GenServer.cast(manager, {:done, self, job.jid})
+      GenServer.cast(manager, {:done, self(), job.jid})
       {:stop, :normal, state}
     rescue
-      exception -> GenServer.cast(manager, {:failed, self, job.jid, exception, System.stacktrace})
+      exception -> GenServer.cast(manager, {:failed, self(), job.jid, exception, System.stacktrace})
       {:stop, :failed, state}
     end
   end

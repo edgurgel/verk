@@ -82,7 +82,7 @@ defmodule Verk.WorkersManager do
 
     Logger.info "Workers Manager started for queue #{queue_name}"
 
-    send self, :enqueue_inprogress
+    send self(), :enqueue_inprogress
     Verk.QueueStats.reset_started(queue_name)
 
     {:ok, state}
@@ -198,7 +198,7 @@ defmodule Verk.WorkersManager do
       worker when is_pid(worker) ->
         monitor!(state.monitors, worker, job)
         Log.start(job, worker)
-        Verk.Worker.perform_async(worker, self, job)
+        Verk.Worker.perform_async(worker, self(), job)
         notify!(%Events.JobStarted{job: job, started_at: Time.now})
     end
   end

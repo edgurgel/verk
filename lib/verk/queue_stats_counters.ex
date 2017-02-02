@@ -65,7 +65,7 @@ defmodule Verk.QueueStatsCounters do
   """
   @spec persist :: :ok | {:error, term}
   def persist do
-    cmds = Enum.reduce(counters, [], fn {queue, _started, processed, failed, last_processed, last_failed}, commands ->
+    cmds = Enum.reduce(counters(), [], fn {queue, _started, processed, failed, last_processed, last_failed}, commands ->
       delta_processed = processed - last_processed
       delta_failed    = failed - last_failed
       :ets.update_counter(@counters_table, queue, [{5, delta_processed}, {6, delta_failed}])

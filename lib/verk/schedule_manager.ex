@@ -79,6 +79,6 @@ defmodule Verk.ScheduleManager do
     schedule_fetch!(fetch_message, interval)
   end
   defp schedule_fetch!(fetch_message, interval) do
-    Process.send_after(self, fetch_message, interval)
+    Process.send_after(self(), fetch_message, interval)
   end
 end

@@ -7,7 +7,6 @@ defmodule Verk.QueueManager do
   require Logger
   alias Verk.{DeadSet, RetrySet, Time, Job}
 
-  @processing_key "processing"
   @default_stacktrace_size 5
 
   @external_resource "priv/lpop_rpush_src_dest.lua"
