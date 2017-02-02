@@ -49,7 +49,7 @@ defmodule Verk do
     enqueue(job, redis)
   end
   def enqueue(job = %Job{max_retry_count: count}, _redis) when not is_integer(count), do: {:error, {:invalid_max_retry_count, job}}
-  def enqueue(job = %Job{jid: nil}, redis), do: enqueue(%Job{job | jid: generate_jid}, redis)
+  def enqueue(job = %Job{jid: nil}, redis), do: enqueue(%Job{job | jid: generate_jid()}, redis)
   def enqueue(%Job{jid: jid, queue: queue} = job, redis) do
     case Redix.command(redis, ["LPUSH", "queue:#{queue}", Poison.encode!(job)]) do
       {:ok, _} -> {:ok, jid}
@@ -74,7 +74,7 @@ defmodule Verk do
   def schedule(job = %Job{class: nil}, %DateTime{}, _redis), do: {:error, {:missing_module, job}}
   def schedule(job = %Job{args: args}, %DateTime{}, _redis) when not is_list(args), do: {:error, {:missing_args, job}}
   def schedule(job = %Job{jid: nil}, perform_at = %DateTime{}, redis) do
-    schedule(%Job{job | jid: generate_jid}, perform_at, redis)
+    schedule(%Job{job | jid: generate_jid()}, perform_at, redis)
   end
   def schedule(%Job{jid: jid} = job, %DateTime{} = perform_at, redis) do
     if Time.after?(Time.now, perform_at) do

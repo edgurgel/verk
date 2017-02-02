@@ -35,7 +35,7 @@ defmodule Verk.QueueStats do
   @doc false
   def init(_) do
     QueueStatsCounters.init
-    Process.send_after(self, :persist_stats, @persist_interval)
+    Process.send_after(self(), :persist_stats, @persist_interval)
     {:ok, nil}
   end
 
@@ -68,7 +68,7 @@ defmodule Verk.QueueStats do
       {:error, reason} ->
         Logger.error("QueueStats failed to persist stats to Redis. Reason: #{inspect reason}")
     end
-    Process.send_after(self, :persist_stats, @persist_interval)
+    Process.send_after(self(), :persist_stats, @persist_interval)
     {:ok, state}
   end
 

@@ -14,8 +14,8 @@ defmodule Verk.Mixfile do
      test_coverage: [tool: Coverex.Task, coveralls: true],
      name: "Verk",
      description: @description,
-     package: package,
-     deps: deps]
+     package: package(),
+     deps: deps()]
   end
 
   def application do
