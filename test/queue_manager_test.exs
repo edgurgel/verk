@@ -35,7 +35,7 @@ defmodule Verk.QueueManagerTest do
   describe "handle_call/3" do
     test "enqueue_inprogress" do
       script = Verk.Scripts.sha("lpop_rpush_src_dest")
-      expect(Redix, :command, [:redis, ["EVALSHA", script, 2, "inprogress:test_queue:test_node", "queue:test_queue"]], { :ok, 42 })
+      expect(Redix, :command, [:redis, ["EVALSHA", script, 2, "inprogress:test_queue:test_node", "queue:test_queue", 1000]], { :ok, 42 })
 
       state = %State{ queue_name: "test_queue", redis: :redis, node_id: "test_node" }
 
@@ -46,7 +46,7 @@ defmodule Verk.QueueManagerTest do
 
     test "enqueue_inprogress and redis failed" do
       script = Verk.Scripts.sha("lpop_rpush_src_dest")
-      expect(Redix, :command, [:redis, ["EVALSHA", script, 2, "inprogress:test_queue:test_node", "queue:test_queue"]], { :error, :reason })
+      expect(Redix, :command, [:redis, ["EVALSHA", script, 2, "inprogress:test_queue:test_node", "queue:test_queue", 1000]], { :error, :reason })
 
       state = %State{ queue_name: "test_queue", redis: :redis, node_id: "test_node" }
 

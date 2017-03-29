@@ -97,9 +97,13 @@ defmodule Verk.QueueManager do
   def handle_call(:enqueue_inprogress, _from, state) do
     in_progress_key = inprogress(state.queue_name, state.node_id)
     case Redix.command(state.redis, ["EVALSHA", @lpop_rpush_src_dest_script_sha, 2,
-                                     in_progress_key, "queue:#{state.queue_name}"]) do
+                                     in_progress_key, "queue:#{state.queue_name}", 1000]) do
+      {:ok, nil} ->
+        Logger.info("No jobs in queue #{state.queue_name} inprogress list")
+        {:reply, :ok, state}
       {:ok, n} ->
         Logger.info("#{n} jobs readded to the queue #{state.queue_name} from inprogress list")
+        Process.send(self, :enqueue_inprogress, [])
         {:reply, :ok, state}
       {:error, reason} ->
         Logger.error("Failed to add jobs back to queue #{state.queue_name} from inprogress. Error: #{inspect reason}")

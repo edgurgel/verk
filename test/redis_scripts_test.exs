@@ -20,7 +20,7 @@ defmodule RedisScriptsTest do
       { :ok, _ } = Redix.command(redis, ~w(RPUSH dest job1 job2 job3))
       { :ok, _ } = Redix.command(redis, ~w(LPUSH source job4 job5 job6))
 
-      assert Redix.command(redis, ["EVAL", @lpop_rpush_src_dest_script, 2, "source", "dest"]) == {:ok, 3 }
+      assert Redix.command(redis, ["EVAL", @lpop_rpush_src_dest_script, 2, "source", "dest", 1000]) == {:ok, 3 }
 
       assert Redix.command(redis, ~w(LRANGE source 0 -1)) == { :ok, [] }
       assert Redix.command(redis, ~w(LRANGE dest 0 -1)) == { :ok, ~w(job1 job2 job3 job6 job5 job4) }
