@@ -5,7 +5,8 @@ defmodule Verk.RetrySetTest do
   import :meck
 
   setup do
-    new SortedSet
+    new [SortedSet, Redix]
+    :rand.seed(:exs1024, {123, 123534, 345345})
     on_exit fn -> :meck.unload end
     :ok
   end
@@ -14,7 +15,7 @@ defmodule Verk.RetrySetTest do
     test "adds a job" do
       job = %Verk.Job{ retry_count: 1 }
       failed_at = 1
-      retry_at  = "45.0"
+      retry_at  = "29.0"
       expect(Poison, :encode!, [job], :payload)
       expect(Redix, :command, [:redis, ["ZADD", "retry", retry_at, :payload]], { :ok, 1 })
 
@@ -28,7 +29,7 @@ defmodule Verk.RetrySetTest do
     test "add!" do
       job = %Verk.Job{ retry_count: 1 }
       failed_at = 1
-      retry_at  = "45.0"
+      retry_at  = "29.0"
       expect(Poison, :encode!, [job], :payload)
       expect(Redix, :command, [:redis, ["ZADD", "retry", retry_at, :payload]], { :ok, 1 })
 

@@ -35,7 +35,7 @@ defmodule Verk.RetrySet do
   end
 
   defp calculate_retry_at(failed_at, retry_count) do
-    delay = :math.pow(retry_count, 4) + 15 + (:random.uniform(30) * (retry_count + 1))
+    delay = :math.pow(retry_count, 4) + 15 + (:rand.uniform(30) * (retry_count + 1))
     failed_at + delay
   end
 

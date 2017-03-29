@@ -89,7 +89,7 @@ defmodule Verk do
   end
 
   defp generate_jid do
-    <<part1::32, part2::32>> = :crypto.rand_bytes(8)
+    <<part1::32, part2::32>> = :crypto.strong_rand_bytes(8)
    "#{part1}#{part2}"
   end
 end
