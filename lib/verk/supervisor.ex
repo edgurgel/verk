@@ -57,7 +57,7 @@ defmodule Verk.Supervisor do
 
   defp add_gen_stage_event_handler(children) do
     if Application.get_env(:verk, :use_gen_stage, false) && Code.ensure_loaded?(GenStage) do
-      [worker(Verk.EventHandler, []) | children]
+      [worker(Verk.EventProducer, []) | children]
     else
       children
     end

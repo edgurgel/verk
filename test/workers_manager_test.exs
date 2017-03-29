@@ -23,7 +23,7 @@ defmodule Verk.WorkersManagerTest do
 
 
     def init(pid) do
-      {:consumer, pid, subscribe_to: [Verk.EventHandler]}
+      {:consumer, pid, subscribe_to: [Verk.EventProducer]}
     end
 
     def handle_events(events, _from, pid) do
@@ -38,7 +38,7 @@ defmodule Verk.WorkersManagerTest do
   setup_all do
     { :ok, pid } = GenEvent.start(name: Verk.EventManager)
     Application.put_env(:verk, :use_gen_stage, true)
-    { :ok, gen_event_pid } = GenStage.start(Verk.EventHandler, :ok, name: Verk.EventHandler)
+    { :ok, gen_event_pid } = GenStage.start(Verk.EventProducer, :ok, name: Verk.EventProducer)
     on_exit fn ->
       GenEvent.stop(pid)
       GenStage.stop(gen_event_pid)
