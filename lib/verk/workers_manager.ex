@@ -221,11 +221,7 @@ defmodule Verk.WorkersManager do
   end
 
   defp notify!(event) do
-    if Application.get_env(:verk, :use_gen_stage, false) && Code.ensure_loaded?(GenStage) do
-      Verk.EventProducer.async_notify(event)
-    end
-
-    :ok = GenEvent.ack_notify(Verk.EventManager, event)
+    :ok = Verk.EventProducer.async_notify(event)
   end
 
   defp free_workers(pool_name) do
