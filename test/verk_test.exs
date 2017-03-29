@@ -60,37 +60,46 @@ defmodule VerkTest do
     test "a job with a jid and a queue passing redis connection" do
       job = %Verk.Job{ queue: "test_queue", jid: "job_id", class: "TestWorker",
         args: [], max_retry_count: 1 }
+      now = Time.now
+      expected_job = %Verk.Job{ job | enqueued_at: now |> DateTime.to_unix }
       encoded_job = "encoded_job"
-      expect(Poison, :encode!, [job], encoded_job)
+      expect(Time, :now, [], now)
+      expect(Poison, :encode!, [expected_job], encoded_job)
       expect(Redix, :command, [Verk.Redis, ["LPUSH", "queue:test_queue", encoded_job]], { :ok, :_ })
 
       assert enqueue(job, Verk.Redis) == { :ok, "job_id" }
 
-      assert validate [Poison, Redix]
+      assert validate [Poison, Redix, Time]
     end
 
     test "a job with a jid and a queue passing no redis connection" do
       job = %Verk.Job{ queue: "test_queue", jid: "job_id", class: "TestWorker",
         args: [], max_retry_count: 1 }
+      now = Time.now
+      expected_job = %Verk.Job{ job | enqueued_at: now |> DateTime.to_unix }
       encoded_job = "encoded_job"
-      expect(Poison, :encode!, [job], encoded_job)
+      expect(Time, :now, [], now)
+      expect(Poison, :encode!, [expected_job], encoded_job)
       expect(Redix, :command, [Verk.Redis, ["LPUSH", "queue:test_queue", encoded_job]], { :ok, :_ })
 
       assert enqueue(job) == { :ok, "job_id" }
 
-      assert validate [Poison, Redix]
+      assert validate [Poison, Redix, Time]
     end
 
     test "a job with a jid and a queue" do
       job = %Verk.Job{ queue: "test_queue", jid: "job_id", class: "TestWorker",
         args: [], max_retry_count: 1 }
+      now = Time.now
+      expected_job = %Verk.Job{ job | enqueued_at: now |> DateTime.to_unix }
       encoded_job = "encoded_job"
-      expect(Poison, :encode!, [job], encoded_job)
+      expect(Time, :now, [], now)
+      expect(Poison, :encode!, [expected_job], encoded_job)
       expect(Redix, :command, [Verk.Redis, ["LPUSH", "queue:test_queue", encoded_job]], { :ok, :_ })
 
       assert enqueue(job) == { :ok, "job_id" }
 
-      assert validate [Poison, Redix]
+      assert validate [Poison, Redix, Time]
     end
 
     test "a job without a jid" do
