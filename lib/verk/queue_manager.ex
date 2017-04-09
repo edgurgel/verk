@@ -15,6 +15,7 @@ defmodule Verk.QueueManager do
   @mrpop_lpush_src_dest_script_sha Verk.Scripts.sha("mrpop_lpush_src_dest")
 
   @max_jobs 100
+  @max_enqueue_inprogress 1000
 
   defmodule State do
     @moduledoc false
@@ -94,13 +95,19 @@ defmodule Verk.QueueManager do
   end
 
   @doc false
+  @lint {Credo.Check.Refactor.ABCSize, false}
   def handle_call(:enqueue_inprogress, _from, state) do
     in_progress_key = inprogress(state.queue_name, state.node_id)
     case Redix.command(state.redis, ["EVALSHA", @lpop_rpush_src_dest_script_sha, 2,
-                                     in_progress_key, "queue:#{state.queue_name}"]) do
-      {:ok, n} ->
-        Logger.info("#{n} jobs readded to the queue #{state.queue_name} from inprogress list")
+                                     in_progress_key, "queue:#{state.queue_name}", @max_enqueue_inprogress]) do
+      {:ok, [0, m]} ->
+        Logger.info("Added #{m} jobs.")
+        Logger.info("No more jobs to be added to the queue #{state.queue_name} from inprogress list.")
         {:reply, :ok, state}
+      {:ok, [n, m]} ->
+        Logger.info("Added #{m} jobs.")
+        Logger.info("#{n} jobs still to be added to the queue #{state.queue_name} from inprogress list.")
+        {:reply, :more, state}
       {:error, reason} ->
         Logger.error("Failed to add jobs back to queue #{state.queue_name} from inprogress. Error: #{inspect reason}")
         {:stop, :redis_failed, state}

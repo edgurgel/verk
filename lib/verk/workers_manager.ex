@@ -90,8 +90,13 @@ defmodule Verk.WorkersManager do
 
   @doc false
   def handle_info(:enqueue_inprogress, state) do
-    :ok = QueueManager.enqueue_inprogress(state.queue_manager_name)
-    {:noreply, state, 0}
+    case QueueManager.enqueue_inprogress(state.queue_manager_name) do
+      :ok ->
+        {:noreply, state, 0}
+      :more ->
+        send self, :enqueue_inprogress
+        {:noreply, state}
+    end
   end
 
   def handle_info(:timeout, state) do
