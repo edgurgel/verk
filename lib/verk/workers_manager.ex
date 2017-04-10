@@ -72,7 +72,7 @@ defmodule Verk.WorkersManager do
   """
   def init([workers_manager_name, queue_name, queue_manager_name, pool_name, size]) do
     monitors = :ets.new(workers_manager_name, [:named_table, read_concurrency: true])
-    timeout = Application.get_env(:verk, :workers_manager_timeout, @default_timeout)
+    timeout = Confex.get(:verk, :workers_manager_timeout, @default_timeout)
     state = %State{queue_name: queue_name,
                   queue_manager_name: queue_manager_name,
                   pool_name: pool_name,
@@ -226,7 +226,7 @@ defmodule Verk.WorkersManager do
   end
 
   defp notify!(event) do
-    if Application.get_env(:verk, :use_gen_stage, false) && Code.ensure_loaded?(GenStage) do
+    if Confex.get(:verk, :use_gen_stage, false) && Code.ensure_loaded?(GenStage) do
       Verk.EventProducer.async_notify(event)
     end
 

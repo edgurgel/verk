@@ -14,7 +14,7 @@ defmodule Verk.ScheduleManagerTest do
   test "init load scripts and schedule fetch" do
     state = %State{ redis: :redis }
 
-    { :ok, redis_url } = Application.fetch_env(:verk, :redis_url)
+    redis_url = Confex.get(:verk, :redis_url)
 
     expect(Redix, :start_link, [redis_url], {:ok, :redis })
     expect(Verk.Scripts, :load, [:redis], :ok)

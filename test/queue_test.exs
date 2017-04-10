@@ -6,8 +6,7 @@ defmodule Verk.QueueTest do
   @queue_key "queue:default"
 
   setup do
-    { :ok, pid } = Application.fetch_env(:verk, :redis_url)
-                    |> elem(1)
+    { :ok, pid } = Confex.get(:verk, :redis_url)
                     |> Redix.start_link([name: Verk.Redis])
     Redix.command!(pid, ~w(DEL #{@queue_key}))
     on_exit fn ->

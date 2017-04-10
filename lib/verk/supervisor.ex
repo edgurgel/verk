@@ -16,10 +16,10 @@ defmodule Verk.Supervisor do
 
   @doc false
   def init(_) do
-    queues = Application.get_env(:verk, :queues, [])
+    queues = Confex.get(:verk, :queues, [])
     children = for {queue, size} <- queues, do: queue_child(queue, size)
 
-    {:ok, redis_url} = Application.fetch_env(:verk, :redis_url)
+    redis_url = Confex.get(:verk, :redis_url)
 
     schedule_manager    = worker(Verk.ScheduleManager, [], id: :schedule_manager)
     verk_event_manager  = worker(GenEvent, [[name: Verk.EventManager]])
@@ -56,7 +56,7 @@ defmodule Verk.Supervisor do
   end
 
   defp add_gen_stage_event_handler(children) do
-    if Application.get_env(:verk, :use_gen_stage, false) && Code.ensure_loaded?(GenStage) do
+    if Confex.get(:verk, :use_gen_stage, false) && Code.ensure_loaded?(GenStage) do
       [worker(Verk.EventProducer, []) | children]
     else
       children

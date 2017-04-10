@@ -19,7 +19,7 @@ defmodule Verk.Mixfile do
   end
 
   def application do
-    [applications: [:logger, :poison, :redix, :poolboy, :watcher],
+    [applications: [:logger, :confex, :poison, :redix, :poolboy, :watcher],
      env: [node_id: "1", redis_url: "redis://127.0.0.1:6379"]]
   end
 
@@ -28,6 +28,7 @@ defmodule Verk.Mixfile do
      { :poison, "~> 2.0"},
      { :poolboy, "~> 1.5.1" },
      { :watcher, "~> 1.0" },
+     { :confex, "~> 1.5.0" },
      { :gen_stage, "== 0.11.0", optional: true },
      { :credo, "~> 0.4", only: [:dev, :test] },
      { :earmark, "~> 1.0", only: :dev },
