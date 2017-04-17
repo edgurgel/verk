@@ -5,8 +5,7 @@ config :verk,
   poll_interval: 5000,
   node_id: "1",
   redis_url: "redis://127.0.0.1:6379",
-  workers_manager_timeout: 1200,
-  use_gen_stage: false
+  workers_manager_timeout: 1200
   # failed_job_stacktrace_size: 5
 
 config :logger, :console,

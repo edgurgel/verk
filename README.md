@@ -18,7 +18,7 @@ Verk will hold one connection to Redis per queue plus one dedicated to the `Sche
 
 The `ScheduleManager` fetches jobs from the `retry` set to be enqueued back to the original queue when it's ready to be retried.
 
-It also has one GenEvent manager called `EventManager`.
+It also has one GenStage producer called `Verk.EventProducer`.
 
 The image below is an overview of Verk's supervision tree running with a queue named `default` having 5 workers.
 
@@ -145,41 +145,31 @@ One can define an error tracking handler like this:
 
 ```elixir
 defmodule TrackingErrorHandler do
-  use GenEvent
+  use GenStage
 
-  def init(parent) do
-    {:ok, parent}
+  def start_link() do
+    GenStage.start_link(__MODULE__, :ok)
   end
-  def handle_event(%Verk.Events.JobFailed{job: job, failed_at: failed_at, stacktrace: trace}, state) do
+
+  def init(_) do
+    filter = fn event -> event.__struct__ == Verk.Events.JobFailed end
+    {:consumer, :state, subscribe_to: [{Verk.EventProducer, selector: filter}]}
+  end
+
+  def handle_events(events, _from, state) do
+    Enum.each(events, &handle_event/1)
+    {:noreply, [], state}
+  end
+
+  defp handle_event(%Verk.Events.JobFailed{job: job, failed_at: failed_at, stacktrace: trace}) do
     MyTrackingExceptionSystem.track(stacktrace: trace, name: job.class)
-    { :ok, state }
-  end
-  def handle_event(_, state) do
-    # Ignore other events
-    { :ok, state }
   end
 end
 ```
 
-You also need to add the handler to connect with the event manager. You can do this in a number of ways:
+Notice the selector to get just the type JobFailed. If no selector is set every event is sent.
 
-1. Managing the event handler with a GenServer:
-
-  ```elixir
-  defmodule TrackingErrorHandlerServer do
-    def start_link(opts) do
-      GenServer.start_link(__MODULE__, opts, [])
-    end
-    def init(manager_name) do
-      case GenEvent.add_mon_handler(manager_name, TrackingErrorHandler, []) do
-        :ok -> {:ok, manager_name}
-        {:error, reason} -> {:stop, reason}
-      end
-    end
-  end
-  ```
-
-  Then adding the GenServer to your supervision tree:
+Then adding the consumer to your supervision tree:
 
   ```elixir
   defmodule Example.App do
@@ -188,31 +178,12 @@ You also need to add the handler to connect with the event manager. You can do t
     def start(_type, _args) do
       import Supervisor.Spec
       tree = [supervisor(Verk.Supervisor, []),
-              worker(TrackingErrorHandlerServer, [Verk.EventManager])]
+              worker(TrackingErrorHandler, [])]
       opts = [name: Simple.Sup, strategy: :one_for_one]
       Supervisor.start_link(tree, opts)
     end
   end
   ```
-
-2. Using [Watcher](https://github.com/edgurgel/watcher) to add the GenEvent to your supervision tree:
-
-  ```elixir
-  defmodule Example.App do
-    use Application
-
-    def start(_type, _args) do
-      import Supervisor.Spec
-      tree = [supervisor(Verk.Supervisor, []),
-              worker(Watcher, [Verk.EventManager, TrackingErrorHandler, []])]
-      opts = [name: Simple.Sup, strategy: :one_for_one]
-      Supervisor.start_link(tree, opts)
-    end
-  end
-  ```
-
-More info about `GenEvent.add_mon_handler/3` [here](http://elixir-lang.org/docs/v1.1/elixir/GenEvent.html#add_mon_handler/3).
-
 
 ## Dashboard ?
 
