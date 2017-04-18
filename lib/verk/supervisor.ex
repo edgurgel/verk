@@ -16,7 +16,7 @@ defmodule Verk.Supervisor do
 
   @doc false
   def init(_) do
-    queues = Confex.get(:verk, :queues, [])
+    queues = Confex.get_map(:verk, :queues, [])
     children = for {queue, size} <- queues, do: queue_child(queue, size)
 
     redis_url = Confex.get(:verk, :redis_url)
