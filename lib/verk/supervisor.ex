@@ -2,8 +2,8 @@ defmodule Verk.Supervisor do
   @moduledoc """
   Supervisor definition for Verk application. It consists of:
   * `Verk.ScheduleManager`
-  * GenEvent manager named `Verk.EventManager`
-  * Watcher of the handler `Verk.QueueStats`
+  * GenStage producer named `Verk.EventProducer`
+  * GenStage consumer `Verk.QueueStats`
   * Redis connectionn named `Verk.Redis`
   * A `Verk.Queue.Supervisor` per queue
   """
@@ -21,15 +21,13 @@ defmodule Verk.Supervisor do
 
     redis_url = Confex.get(:verk, :redis_url)
 
-    schedule_manager    = worker(Verk.ScheduleManager, [], id: :schedule_manager)
-    verk_event_manager  = worker(GenEvent, [[name: Verk.EventManager]])
+    schedule_manager = worker(Verk.ScheduleManager, [], id: Verk.ScheduleManager)
+    event_producer   = worker(Verk.EventProducer, [])
 
-    queue_stats_watcher = worker(Watcher, [Verk.EventManager, Verk.QueueStats, []])
-    redis               = worker(Redix, [redis_url, [name: Verk.Redis]])
+    queue_stats = worker(Verk.QueueStats, [])
+    redis       = worker(Redix, [redis_url, [name: Verk.Redis]], id: Verk.Redis)
 
-    children = [redis, verk_event_manager, queue_stats_watcher, schedule_manager]
-               |> Kernel.++(children)
-               |> add_gen_stage_event_handler()
+    children = [redis, event_producer, queue_stats, schedule_manager] ++ children
     supervise(children, strategy: :one_for_one)
   end
 
@@ -53,13 +51,5 @@ defmodule Verk.Supervisor do
 
   defp supervisor_name(queue) do
     String.to_atom("#{queue}.supervisor")
-  end
-
-  defp add_gen_stage_event_handler(children) do
-    if Confex.get(:verk, :use_gen_stage, false) && Code.ensure_loaded?(GenStage) do
-      [worker(Verk.EventProducer, []) | children]
-    else
-      children
-    end
   end
 end
