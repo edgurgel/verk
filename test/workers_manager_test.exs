@@ -94,7 +94,7 @@ defmodule Verk.WorkersManagerTest do
       queue_manager_name = "queue_manager_name"
       pool_name = "pool_name"
       pool_size = "size"
-      timeout = Application.get_env(:verk, :workers_manager_timeout)
+      timeout = Confex.get(:verk, :workers_manager_timeout)
       state = %State{ queue_name: queue_name, queue_manager_name: queue_manager_name,
                       pool_name: pool_name, pool_size: pool_size,
                       monitors: :workers_manager, timeout: timeout }

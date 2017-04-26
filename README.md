@@ -109,7 +109,18 @@ config :verk, queues: [default: 25, priority: 10],
               redis_url: "redis://127.0.0.1:6379"
 ```
 
-The configuration for releases is still a work in progress.
+Verk supports the convention `{:system, "ENV_NAME", default}` for reading environment configuration at runtime using [Confex](https://hexdocs.pm/confex/readme.html):
+
+```elixir
+config :verk, queues: [default: 25, priority: 10],
+              max_retry_count: 10,
+              poll_interval: {:system, :integer, "VERK_POLL_INTERVAL", 5000},
+              start_job_log_level: :info,
+              done_job_log_level: :info,
+              fail_job_log_level: :info,
+              node_id: "1",
+              redis_url: {:system, "VERK_REDIS_URL", "redis://127.0.0.1:6379"}
+```
 
 ## Queues
 

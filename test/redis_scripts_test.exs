@@ -7,8 +7,7 @@ defmodule RedisScriptsTest do
   @requeue_job_now_script File.read!("#{:code.priv_dir(:verk)}/requeue_job_now.lua")
 
   setup do
-    { :ok, redis } = Application.fetch_env(:verk, :redis_url)
-                      |> elem(1)
+    { :ok, redis } = Confex.get(:verk, :redis_url)
                       |> Redix.start_link([name: Verk.Redis])
     on_exit fn -> Redix.stop(redis) end
     { :ok, %{ redis: redis } }
