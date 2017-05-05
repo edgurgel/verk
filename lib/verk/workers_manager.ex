@@ -129,7 +129,7 @@ defmodule Verk.WorkersManager do
   def handle_info({:DOWN, mref, _, worker, :normal}, state) do
     case :ets.lookup(state.monitors, worker) do
       [{^worker, _job_id, job, ^mref, start_time}] ->
-        succeed(job, start_time, worker, mref, state.monitors, state.queue_manager_name)
+        succeed(job, :unknown, start_time, worker, mref, state.monitors, state.queue_manager_name)
       _ -> Logger.warn "Worker finished but such worker was not monitored #{inspect(worker)}"
     end
     {:noreply, state, 0}
@@ -162,11 +162,11 @@ defmodule Verk.WorkersManager do
   end
 
   @doc false
-  def handle_cast({:done, worker, job_id}, state) do
+  def handle_cast({:done, worker, job_id, result}, state) do
     :ok = :poolboy.checkin(state.pool_name, worker)
     case :ets.lookup(state.monitors, worker) do
       [{^worker, ^job_id, job, mref, start_time}] ->
-        succeed(job, start_time, worker, mref, state.monitors, state.queue_manager_name)
+        succeed(job, result, start_time, worker, mref, state.monitors, state.queue_manager_name)
       _ -> Logger.warn "#{job_id} finished but no worker was monitored"
     end
     {:noreply, state, 0}
@@ -183,11 +183,11 @@ defmodule Verk.WorkersManager do
     {:noreply, state, 0}
   end
 
-  defp succeed(job, start_time, worker, mref, monitors, queue_manager_name) do
+  defp succeed(job, result, start_time, worker, mref, monitors, queue_manager_name) do
     QueueManager.ack(queue_manager_name, job)
     Log.done(job, start_time, worker)
     demonitor!(monitors, worker, mref)
-    notify!(%Events.JobFinished{job: job, finished_at: Time.now})
+    notify!(%Events.JobFinished{job: job, result: result, finished_at: Time.now})
   end
 
   defp fail(job, start_time, worker, mref, monitors, queue_manager_name, exception, stacktrace) do
