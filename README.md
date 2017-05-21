@@ -22,7 +22,7 @@ It also has one GenStage producer called `Verk.EventProducer`.
 
 The image below is an overview of Verk's supervision tree running with a queue named `default` having 5 workers.
 
-![Supervision Tree](http://i.imgur.com/8BW8D04.png)
+![Supervision Tree](http://i.imgur.com/ATsNAvJ.png)
 
 Feature set:
 
@@ -37,7 +37,7 @@ First, add Verk to your `mix.exs` dependencies:
 
 ```elixir
 def deps do
-  [{:verk, "~> 0.12"}]
+  [{:verk, "~> 0.14"}]
 end
 ```
 
