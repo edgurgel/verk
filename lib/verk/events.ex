@@ -1,7 +1,7 @@
 defmodule Verk.Events do
   defmodule JobFinished do
     @moduledoc false
-    defstruct [:job, :finished_at]
+    defstruct [:job, :result, :finished_at]
   end
 
   defmodule JobStarted do

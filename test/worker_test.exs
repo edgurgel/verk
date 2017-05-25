@@ -27,7 +27,7 @@ defmodule Verk.WorkerTest do
       assert handle_cast({ :perform, job, worker }, :state) == { :stop, :normal, :state }
 
       assert_receive :perform_executed
-      assert_receive {:"$gen_cast", {:done, ^worker, "job_id"}}
+      assert_receive {:"$gen_cast", {:done, ^worker, "job_id", _}}
     end
 
     test "cast perform runs the specified atom module with the args succeding" do
@@ -36,7 +36,7 @@ defmodule Verk.WorkerTest do
       assert handle_cast({ :perform, job, worker }, :state) == { :stop, :normal, :state }
 
       assert_receive :perform_executed
-      assert_receive {:"$gen_cast", {:done, ^worker, "job_id"}}
+      assert_receive {:"$gen_cast", {:done, ^worker, "job_id", _}}
     end
 
     test "cast perform runs the no exist module with the args succeding" do
@@ -63,7 +63,7 @@ defmodule Verk.WorkerTest do
       assert handle_cast({ :perform, job, worker }, :state) == { :stop, :normal, :state }
 
       assert_receive ^job
-      assert_receive {:"$gen_cast", {:done, ^worker, "job_id"}}
+      assert_receive {:"$gen_cast", {:done, ^worker, "job_id", _}}
     end
   end
 
