@@ -280,21 +280,24 @@ defmodule Verk.WorkersManagerTest do
       pool_name = "pool_name"
       state = %State{ monitors: monitors, pool_name: pool_name, queue_manager_name: queue_manager_name }
       worker = self
+      now = DateTime.utc_now
       job = %Verk.Job{}
+      finished_job = %Verk.Job{ finished_at: now}
       job_id = "job_id"
       ref = make_ref
       start_time = Time.now
 
       expect(Verk.QueueManager, :ack, [queue_manager_name, job], :ok)
       expect(:poolboy, :checkin, [pool_name, worker], :ok)
+      expect(Time, :now, 0, now)
 
       :ets.insert(monitors, { worker, job_id, job, ref, start_time })
       assert handle_info({ :DOWN, ref, :_, worker, :normal }, state) == { :noreply, state, 0 }
 
       assert :ets.lookup(state.monitors, worker) == []
-      assert_receive %Verk.Events.JobFinished{ job: ^job, started_at: ^start_time, finished_at: _ }
+      assert_receive %Verk.Events.JobFinished{ job: ^finished_job, started_at: ^start_time, finished_at: ^now }
 
-      assert validate [Verk.QueueManager, :poolboy]
+      assert validate [Verk.QueueManager, :poolboy, Time]
     end
 
     test "DOWN coming from dead worker with failed reason", %{ monitors: monitors } do
@@ -332,19 +335,22 @@ defmodule Verk.WorkersManagerTest do
       pool_name = "pool_name"
       state = %State{ monitors: monitors, pool_name: pool_name, queue_manager_name: queue_manager_name }
       worker = self
+      now = DateTime.utc_now
       job = %Verk.Job{}
+      finished_job = %Verk.Job{ finished_at: now}
       job_id = "job_id"
 
       expect(Verk.QueueManager, :ack, [queue_manager_name, job], :ok)
       expect(:poolboy, :checkin, [pool_name, worker], :ok)
+      expect(Time, :now, 0, now)
 
       :ets.insert(monitors, { worker, job_id, job, make_ref, Time.now })
       assert handle_cast({ :done, worker, job_id }, state) == { :noreply, state, 0 }
 
       assert :ets.lookup(state.monitors, worker) == []
-      assert_receive %Verk.Events.JobFinished{ job: ^job, finished_at: _ }
+      assert_receive %Verk.Events.JobFinished{ job: ^finished_job, finished_at: ^now }
 
-      assert validate [:poolboy, Verk.QueueManager]
+      assert validate [:poolboy, Verk.QueueManager, Time]
     end
 
     test "cast failed coming from worker", %{ monitors: monitors } do
