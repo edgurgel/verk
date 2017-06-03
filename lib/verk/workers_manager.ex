@@ -187,7 +187,9 @@ defmodule Verk.WorkersManager do
     QueueManager.ack(queue_manager_name, job)
     Log.done(job, start_time, worker)
     demonitor!(monitors, worker, mref)
-    notify!(%Events.JobFinished{job: job, finished_at: Time.now})
+    finished_at = Time.now
+    job = %{job | finished_at: finished_at}
+    notify!(%Events.JobFinished{job: job, started_at: start_time, finished_at: finished_at})
   end
 
   defp fail(job, start_time, worker, mref, monitors, queue_manager_name, exception, stacktrace) do
@@ -195,7 +197,8 @@ defmodule Verk.WorkersManager do
     demonitor!(monitors, worker, mref)
     :ok = QueueManager.retry(queue_manager_name, job, exception, stacktrace)
     :ok = QueueManager.ack(queue_manager_name, job)
-    notify!(%Events.JobFailed{job: job, failed_at: Time.now, exception: exception, stacktrace: stacktrace})
+    notify!(%Events.JobFailed{job: job, started_at: start_time, failed_at: Time.now,
+                              exception: exception, stacktrace: stacktrace})
   end
 
   defp start_job(job, state) do
