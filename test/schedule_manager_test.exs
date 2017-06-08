@@ -7,7 +7,7 @@ defmodule Verk.ScheduleManagerTest do
   setup do
     Application.put_env(:verk, :poll_interval, 50)
     script = Verk.Scripts.sha("enqueue_retriable_job")
-    on_exit fn -> unload end
+    on_exit fn -> unload() end
     { :ok, %{ script: script } }
   end
 

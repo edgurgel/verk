@@ -7,7 +7,7 @@ defmodule Verk.QueueManagerTest do
   @mrpop_script Verk.Scripts.sha("mrpop_lpush_src_dest")
 
   setup do
-    on_exit fn -> unload end
+    on_exit fn -> unload() end
     :ok
   end
 

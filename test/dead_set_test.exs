@@ -7,7 +7,7 @@ defmodule Verk.DeadSetTest do
   setup do
     { :ok, redis } = Confex.get(:verk, :redis_url) |> Redix.start_link
     Redix.command!(redis, ~w(DEL dead))
-    on_exit fn -> unload end
+    on_exit fn -> unload() end
     { :ok, %{ redis: redis } }
   end
 
@@ -19,7 +19,7 @@ defmodule Verk.DeadSetTest do
 
       assert add(job, failed_at, redis) == :ok
 
-      assert Redix.command!(redis, ["ZRANGE", key, 0, -1, "WITHSCORES"]) == [payload, to_string(failed_at)]
+      assert Redix.command!(redis, ["ZRANGE", key(), 0, -1, "WITHSCORES"]) == [payload, to_string(failed_at)]
     end
 
     test "replaces old jobs", %{ redis: redis } do
@@ -32,7 +32,7 @@ defmodule Verk.DeadSetTest do
       assert add(job1, failed_at + 1, redis) == :ok
       assert add(job2, failed_at + 2, redis) == :ok
 
-      assert Redix.command!(redis, ["ZRANGE", key, 0, 2, "WITHSCORES"])
+      assert Redix.command!(redis, ["ZRANGE", key(), 0, 2, "WITHSCORES"])
         == [payload1, to_string(failed_at + 1), payload2, to_string(failed_at + 2)]
     end
   end
@@ -45,7 +45,7 @@ defmodule Verk.DeadSetTest do
 
       assert add!(job, failed_at, redis) == nil
 
-      assert Redix.command!(redis, ["ZRANGE", key, 0, -1, "WITHSCORES"]) == [payload, to_string(failed_at)]
+      assert Redix.command!(redis, ["ZRANGE", key(), 0, -1, "WITHSCORES"]) == [payload, to_string(failed_at)]
     end
 
     test "replaces old jobs", %{ redis: redis } do
@@ -58,43 +58,43 @@ defmodule Verk.DeadSetTest do
       assert add!(job1, failed_at + 1, redis) == nil
       assert add!(job2, failed_at + 2, redis) == nil
 
-      assert Redix.command!(redis, ["ZRANGE", key, 0, 2, "WITHSCORES"])
+      assert Redix.command!(redis, ["ZRANGE", key(), 0, 2, "WITHSCORES"])
         == [payload1, to_string(failed_at + 1), payload2, to_string(failed_at + 2)]
     end
   end
 
   describe "count/0" do
     test "count" do
-      expect(SortedSet, :count, [key, Verk.Redis], {:ok, 1})
+      expect(SortedSet, :count, [key(), Verk.Redis], {:ok, 1})
 
-      assert count == {:ok, 1}
+      assert count() == {:ok, 1}
       assert validate SortedSet
     end
   end
 
   describe "count!/0" do
     test "count!" do
-      expect(SortedSet, :count!, [key, Verk.Redis], 1)
+      expect(SortedSet, :count!, [key(), Verk.Redis], 1)
 
-      assert count! == 1
+      assert count!() == 1
       assert validate SortedSet
     end
   end
 
   describe "clear/0" do
     test "clear" do
-      expect(SortedSet, :clear, [key, Verk.Redis], :ok)
+      expect(SortedSet, :clear, [key(), Verk.Redis], :ok)
 
-      assert clear == :ok
+      assert clear() == :ok
       assert validate SortedSet
     end
   end
 
   describe "clear!/0" do
     test "clear!" do
-      expect(SortedSet, :clear!, [key, Verk.Redis], nil)
+      expect(SortedSet, :clear!, [key(), Verk.Redis], nil)
 
-      assert clear! == nil
+      assert clear!() == nil
       assert validate SortedSet
     end
   end
@@ -104,9 +104,9 @@ defmodule Verk.DeadSetTest do
       job = %Verk.Job{class: "Class", args: []}
       json = Poison.encode!(job)
 
-      expect(SortedSet, :range, [key, 0, -1, Verk.Redis], {:ok, [%{ job | original_json: json }]})
+      expect(SortedSet, :range, [key(), 0, -1, Verk.Redis], {:ok, [%{ job | original_json: json }]})
 
-      assert range == {:ok, [%{ job | original_json: json }]}
+      assert range() == {:ok, [%{ job | original_json: json }]}
       assert validate SortedSet
     end
   end
@@ -116,7 +116,7 @@ defmodule Verk.DeadSetTest do
       job = %Verk.Job{class: "Class", args: []}
       json = Poison.encode!(job)
 
-      expect(SortedSet, :range, [key, 1, 2, Verk.Redis], {:ok, [%{ job | original_json: json }]})
+      expect(SortedSet, :range, [key(), 1, 2, Verk.Redis], {:ok, [%{ job | original_json: json }]})
 
       assert range(1, 2) == {:ok, [%{ job | original_json: json }]}
       assert validate SortedSet
@@ -128,9 +128,9 @@ defmodule Verk.DeadSetTest do
       job = %Verk.Job{class: "Class", args: []}
       json = Poison.encode!(job)
 
-      expect(SortedSet, :range!, [key, 0, -1, Verk.Redis], [%{ job | original_json: json }])
+      expect(SortedSet, :range!, [key(), 0, -1, Verk.Redis], [%{ job | original_json: json }])
 
-      assert range! == [%{ job | original_json: json }]
+      assert range!() == [%{ job | original_json: json }]
       assert validate SortedSet
     end
   end
@@ -140,7 +140,7 @@ defmodule Verk.DeadSetTest do
       job = %Verk.Job{class: "Class", args: []}
       json = Poison.encode!(job)
 
-      expect(SortedSet, :range!, [key, 1, 2, Verk.Redis], [%{ job | original_json: json }])
+      expect(SortedSet, :range!, [key(), 1, 2, Verk.Redis], [%{ job | original_json: json }])
 
       assert range!(1, 2) == [%{ job | original_json: json }]
       assert validate SortedSet
@@ -153,7 +153,7 @@ defmodule Verk.DeadSetTest do
       json = Poison.encode!(job)
       job = %{ job | original_json: json }
 
-      expect(SortedSet, :delete_job, [key, json, Verk.Redis], :ok)
+      expect(SortedSet, :delete_job, [key(), json, Verk.Redis], :ok)
 
       assert delete_job(job) == :ok
       assert validate SortedSet
@@ -161,7 +161,7 @@ defmodule Verk.DeadSetTest do
 
     test "with original_json" do
       json = %Verk.Job{class: "Class", args: []} |> Poison.encode!
-      expect(SortedSet, :delete_job, [key, json, Verk.Redis], :ok)
+      expect(SortedSet, :delete_job, [key(), json, Verk.Redis], :ok)
 
       assert delete_job(json) == :ok
       assert validate SortedSet
@@ -174,7 +174,7 @@ defmodule Verk.DeadSetTest do
       json = Poison.encode!(job)
       job = %{ job | original_json: json }
 
-      expect(SortedSet, :delete_job!, [key, json, Verk.Redis], nil)
+      expect(SortedSet, :delete_job!, [key(), json, Verk.Redis], nil)
 
       assert delete_job!(job) == nil
       assert validate SortedSet
@@ -182,7 +182,7 @@ defmodule Verk.DeadSetTest do
 
     test "with original_json" do
       json = %Verk.Job{class: "Class", args: []} |> Poison.encode!
-      expect(SortedSet, :delete_job!, [key, json, Verk.Redis], :nil)
+      expect(SortedSet, :delete_job!, [key(), json, Verk.Redis], :nil)
 
       assert delete_job!(json) == nil
       assert validate SortedSet
