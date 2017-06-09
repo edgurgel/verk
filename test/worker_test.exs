@@ -22,7 +22,7 @@ defmodule Verk.WorkerTest do
 
   describe "handle_cast/2" do
     test "cast perform runs the specified module with the args succeding" do
-      worker = self
+      worker = self()
       job = %Verk.Job{jid: "job_id", class: "TestWorker", args: [worker]}
       assert handle_cast({ :perform, job, worker }, :state) == { :stop, :normal, :state }
 
@@ -31,7 +31,7 @@ defmodule Verk.WorkerTest do
     end
 
     test "cast perform runs the specified atom module with the args succeding" do
-      worker = self
+      worker = self()
       job = %Verk.Job{jid: "job_id", class: TestWorker, args: [worker]}
       assert handle_cast({ :perform, job, worker }, :state) == { :stop, :normal, :state }
 
@@ -40,7 +40,7 @@ defmodule Verk.WorkerTest do
     end
 
     test "cast perform runs the no exist module with the args succeding" do
-      worker = self
+      worker = self()
       job = %Verk.Job{jid: "job_id", class: TestWorkerNoExist, args: [worker]}
       assert handle_cast({ :perform, job, worker }, :state) == { :stop, :failed, :state }
 
@@ -49,7 +49,7 @@ defmodule Verk.WorkerTest do
     end
 
     test "cast perform runs the specified module with the args failing" do
-      worker = self
+      worker = self()
       job = %Verk.Job{jid: "job_id", class: "FailWorker", args: ["arg1"]}
       exception = ArgumentError.exception("invalid argument arg1")
       assert handle_cast({ :perform, job, worker }, :state) == { :stop, :failed, :state }
@@ -58,7 +58,7 @@ defmodule Verk.WorkerTest do
     end
 
     test "cast perform accessing the job" do
-      worker = self
+      worker = self()
       job = %Verk.Job{jid: "job_id", class: "TestWorkerCurrentJob", args: [worker]}
       assert handle_cast({ :perform, job, worker }, :state) == { :stop, :normal, :state }
 
@@ -69,7 +69,7 @@ defmodule Verk.WorkerTest do
 
   describe "perform_async/3" do
     test "perform_async casts message to worker to perform the job" do
-      worker = self
+      worker = self()
       assert perform_async(worker, :manager, :job)
 
       assert_receive {:"$gen_cast", {:perform, :job, :manager}}
@@ -80,7 +80,7 @@ defmodule Verk.WorkerTest do
     test "gets current_job" do
       :erlang.put(:verk_current_job, :job)
 
-      assert current_job == :job
+      assert current_job() == :job
     end
   end
 end

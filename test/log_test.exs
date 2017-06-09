@@ -6,7 +6,7 @@ defmodule Verk.LogTest do
 
   describe "start/2" do
     test "logs start" do
-      worker = self
+      worker = self()
       job = %Verk.Job{}
 
       assert capture_log(fn -> Verk.Log.start(job, worker) end) =~ ~r/start/
@@ -15,7 +15,7 @@ defmodule Verk.LogTest do
 
   describe "done/3" do
     test "logs done with time in milliseconds" do
-      worker = self
+      worker = self()
       job = %Verk.Job{}
       start_time = Verk.Time.now
 
@@ -25,7 +25,7 @@ defmodule Verk.LogTest do
     end
 
     test "logs done with time in seconds" do
-      worker = self
+      worker = self()
       job = %Verk.Job{}
       start_time = Verk.Time.now
       |> Verk.Time.shift(-2)
@@ -38,7 +38,7 @@ defmodule Verk.LogTest do
 
   describe "fail/3" do
     test "logs fail with time in milliseconds" do
-      worker = self
+      worker = self()
       job = %Verk.Job{}
       start_time = Verk.Time.now
 
@@ -48,7 +48,7 @@ defmodule Verk.LogTest do
     end
 
     test "logs fail with time in seconds" do
-      worker = self
+      worker = self()
       job = %Verk.Job{}
       start_time = Verk.Time.now
       |> Time.shift(-2, :seconds)

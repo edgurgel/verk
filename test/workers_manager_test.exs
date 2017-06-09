@@ -23,10 +23,10 @@ defmodule Verk.WorkersManagerTest do
   end
 
   setup do
-    pid = self
+    pid = self()
     new :poolboy
     {:ok, _} = GenStage.start_link(Repeater, pid)
-    on_exit fn -> unload end
+    on_exit fn -> unload() end
     table = :ets.new(:"queue_name.workers_manager", [:named_table, read_concurrency: true])
     {:ok, monitors: table}
   end
@@ -40,18 +40,18 @@ defmodule Verk.WorkersManagerTest do
 
   describe "running_jobs/1" do
     test "list running jobs with jobs to list", %{ monitors: monitors } do
-      row = { self, "job_id", "job", make_ref, "start_time" }
+      row = { self(), "job_id", "job", make_ref(), "start_time" }
       :ets.insert(monitors, row)
 
-      assert running_jobs("queue_name") == [%{ process: self, job: "job", started_at: "start_time" }]
+      assert running_jobs("queue_name") == [%{ process: self(), job: "job", started_at: "start_time" }]
     end
 
     test "list running jobs respecting the limit", %{ monitors: monitors } do
-      row1 = { self, "job_id", "job", make_ref, "start_time" }
-      row2 = { self, "job_id2", "job2", make_ref, "start_time2" }
+      row1 = { self(), "job_id", "job", make_ref(), "start_time" }
+      row2 = { self(), "job_id2", "job2", make_ref(), "start_time2" }
       :ets.insert(monitors, [row2, row1])
 
-      assert running_jobs("queue_name", 1) == [%{ process: self, job: "job", started_at: "start_time" }]
+      assert running_jobs("queue_name", 1) == [%{ process: self(), job: "job", started_at: "start_time" }]
     end
 
     test "list running jobs with no jobs" do
@@ -65,13 +65,13 @@ defmodule Verk.WorkersManagerTest do
     end
 
     test "with matching job_id", %{ monitors: monitors } do
-      row = { self, "job_id", "job data", make_ref, "start_time" }
+      row = { self(), "job_id", "job data", make_ref(), "start_time" }
       :ets.insert(monitors, row)
 
       { :ok, result } = inspect_worker("queue_name", "job_id")
 
       assert result[:job] == "job data"
-      assert result[:process] == self
+      assert result[:process] == self()
       assert result[:started_at] == "start_time"
 
       expected = [:current_stacktrace, :initial_call, :reductions, :status]
@@ -80,7 +80,7 @@ defmodule Verk.WorkersManagerTest do
 
     test "with matching job_id but process is gone", %{ monitors: monitors } do
       pid = :erlang.list_to_pid('<3.57.1>')
-      row = { pid, "job_id", "job data", make_ref, "start_time" }
+      row = { pid, "job_id", "job data", make_ref(), "start_time" }
       :ets.insert(monitors, row)
 
       assert inspect_worker("queue_name", "job_id") == { :error, :not_found }
@@ -140,7 +140,7 @@ defmodule Verk.WorkersManagerTest do
       new Verk.QueueManager
       state = %State{ monitors: monitors, pool_name: pool_name, pool_size: 1 }
 
-      row = { self, "job_id", "job", make_ref, "start_time" }
+      row = { self(), "job_id", "job", make_ref(), "start_time" }
       :ets.insert(monitors, row)
 
       expect(:poolboy, :status, ["pool_name"], {nil, 0, nil, nil})
@@ -170,7 +170,7 @@ defmodule Verk.WorkersManagerTest do
       queue_manager_name = :queue_manager_name
       pool_name = :pool_name
       timeout = 1000
-      worker = self
+      worker = self()
       module = :module
       args = [:arg1, :arg2]
       job_id = "job_id"
@@ -196,7 +196,7 @@ defmodule Verk.WorkersManagerTest do
       queue_manager_name = :queue_manager_name
       pool_name = :pool_name
       timeout = 1000
-      worker = self
+      worker = self()
       module = :module
       args = [:arg1, :arg2]
       job_id = "job_id"
@@ -220,8 +220,8 @@ defmodule Verk.WorkersManagerTest do
 
   describe "handle_info/2 DOWN" do
     test "DOWN coming from dead worker with reason and stacktrace", %{ monitors: monitors } do
-      ref = make_ref
-      worker = self
+      ref = make_ref()
+      worker = self()
       pool_name = "pool_name"
       job = "job"
       queue_manager_name = "queue_manager_name"
@@ -248,8 +248,8 @@ defmodule Verk.WorkersManagerTest do
     end
 
     test "DOWN coming from dead worker with reason and no stacktrace", %{ monitors: monitors } do
-      ref = make_ref
-      worker = self
+      ref = make_ref()
+      worker = self()
       pool_name = "pool_name"
       job = "job"
       queue_manager_name = "queue_manager_name"
@@ -279,12 +279,12 @@ defmodule Verk.WorkersManagerTest do
       queue_manager_name = "queue_manager_name"
       pool_name = "pool_name"
       state = %State{ monitors: monitors, pool_name: pool_name, queue_manager_name: queue_manager_name }
-      worker = self
+      worker = self()
       now = DateTime.utc_now
       job = %Verk.Job{}
       finished_job = %Verk.Job{ finished_at: now}
       job_id = "job_id"
-      ref = make_ref
+      ref = make_ref()
       start_time = Time.now
 
       expect(Verk.QueueManager, :ack, [queue_manager_name, job], :ok)
@@ -301,8 +301,8 @@ defmodule Verk.WorkersManagerTest do
     end
 
     test "DOWN coming from dead worker with failed reason", %{ monitors: monitors } do
-      ref = make_ref
-      worker = self
+      ref = make_ref()
+      worker = self()
       pool_name = "pool_name"
       job = "job"
       job_id = "job_id"
@@ -334,7 +334,7 @@ defmodule Verk.WorkersManagerTest do
       queue_manager_name = "queue_manager_name"
       pool_name = "pool_name"
       state = %State{ monitors: monitors, pool_name: pool_name, queue_manager_name: queue_manager_name }
-      worker = self
+      worker = self()
       now = DateTime.utc_now
       job = %Verk.Job{}
       finished_job = %Verk.Job{ finished_at: now}
@@ -344,7 +344,7 @@ defmodule Verk.WorkersManagerTest do
       expect(:poolboy, :checkin, [pool_name, worker], :ok)
       expect(Time, :now, 0, now)
 
-      :ets.insert(monitors, { worker, job_id, job, make_ref, Time.now })
+      :ets.insert(monitors, { worker, job_id, job, make_ref(), Time.now })
       assert handle_cast({ :done, worker, job_id }, state) == { :noreply, state, 0 }
 
       assert :ets.lookup(state.monitors, worker) == []
@@ -354,8 +354,8 @@ defmodule Verk.WorkersManagerTest do
     end
 
     test "cast failed coming from worker", %{ monitors: monitors } do
-      ref = make_ref
-      worker = self
+      ref = make_ref()
+      worker = self()
       pool_name = "pool_name"
       job = "job"
       job_id = "job_id"

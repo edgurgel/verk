@@ -6,7 +6,7 @@ defmodule Verk.SortedSetTest do
   @requeue_now_script Verk.Scripts.sha("requeue_job_now")
 
   setup do
-    on_exit fn -> unload end
+    on_exit fn -> unload() end
     { :ok, redis } = Confex.get(:verk, :redis_url) |> Redix.start_link
     Redix.command!(redis, ~w(DEL sorted))
     { :ok, %{ redis: redis } }

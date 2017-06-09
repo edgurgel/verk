@@ -25,7 +25,7 @@ defmodule Verk.QueueStatsTest do
       handle_events([%Verk.Events.JobFinished{ job: %Verk.Job{ queue: "queue_1" } }], :from, :state)
       handle_events([%Verk.Events.JobFailed{ job: %Verk.Job{ queue: "queue_1" } }], :from, :state)
 
-      assert all == [%{ queue: "queue_1", running_counter: 0, finished_counter: 1, failed_counter: 1 },
+      assert all() == [%{ queue: "queue_1", running_counter: 0, finished_counter: 1, failed_counter: 1 },
                      %{ queue: "queue_2", running_counter: 1, finished_counter: 0, failed_counter: 0 } ]
     end
 

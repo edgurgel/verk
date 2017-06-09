@@ -5,7 +5,7 @@ defmodule VerkTest do
   alias Verk.Time
 
   setup do
-    on_exit fn -> unload end
+    on_exit fn -> unload() end
     :ok
   end
 

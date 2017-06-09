@@ -13,7 +13,7 @@ defmodule Verk.DslTest do
 
   describe "bagify/1" do
     test "with no error" do
-      assert bangify(ok) == nil
+      assert bangify(ok()) == nil
       assert bangify(incr(2)) == 3
     end
 

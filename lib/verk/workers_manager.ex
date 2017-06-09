@@ -94,7 +94,7 @@ defmodule Verk.WorkersManager do
       :ok ->
         {:noreply, state, 0}
       :more ->
-        send self, :enqueue_inprogress
+        send self(), :enqueue_inprogress
         {:noreply, state}
     end
   end
