@@ -27,4 +27,26 @@ defmodule Verk.Events do
                            stacktrace: [:erlang.stack_item()], exception: Exception.t}
     defstruct [:job, :started_at, :failed_at, :stacktrace, :exception]
   end
+
+  defmodule QueueRunning do
+    @moduledoc """
+    When a queue is running
+    """
+    @type t :: %__MODULE__{queue: atom}
+    defstruct [:queue]
+  end
+  defmodule QueuePausing do
+    @moduledoc """
+    When a queue is pausing
+    """
+    @type t :: %__MODULE__{queue: atom}
+    defstruct [:queue]
+  end
+  defmodule QueuePaused do
+    @moduledoc """
+    When a queue paused
+    """
+    @type t :: %__MODULE__{queue: atom}
+    defstruct [:queue]
+  end
 end

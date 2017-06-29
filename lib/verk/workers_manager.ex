@@ -13,7 +13,8 @@ defmodule Verk.WorkersManager do
 
   defmodule State do
     @moduledoc false
-    defstruct [:queue_name, :pool_name, :queue_manager_name, :pool_size, :monitors, :timeout]
+    defstruct queue_name: nil, pool_name: nil, queue_manager_name: nil,
+              pool_size: nil, monitors: nil, timeout: nil, status: :running
   end
 
   @doc """
@@ -68,24 +69,52 @@ defmodule Verk.WorkersManager do
   end
 
   @doc """
+  Pauses a `queue`
+  """
+  @spec pause(binary | atom) :: :ok | :already_paused
+  def pause(queue), do: GenServer.call(name(queue), :pause)
+
+  @doc """
+  Resumes a `queue`.
+  """
+  @spec resume(binary | atom) :: :ok | :already_running
+  def resume(queue), do: GenServer.call(name(queue), :resume)
+
+  @doc """
   Create a table to monitor workers saving data about the assigned queue/pool
   """
   def init([workers_manager_name, queue_name, queue_manager_name, pool_name, size]) do
     monitors = :ets.new(workers_manager_name, [:named_table, read_concurrency: true])
-    timeout = Confex.get_env(:verk, :workers_manager_timeout, @default_timeout)
-    state = %State{queue_name: queue_name,
-                  queue_manager_name: queue_manager_name,
-                  pool_name: pool_name,
-                  pool_size: size,
-                  monitors: monitors,
-                  timeout: timeout}
-
-    Logger.info "Workers Manager started for queue #{queue_name}"
+    timeout  = Confex.get_env(:verk, :workers_manager_timeout, @default_timeout)
+    status   = Verk.Manager.status(queue_name)
+    state    = %State{queue_name: queue_name,
+                      queue_manager_name: queue_manager_name,
+                      pool_name: pool_name,
+                      pool_size: size,
+                      monitors: monitors,
+                      timeout: timeout,
+                      status: status}
+    Logger.info "Workers Manager started for queue #{queue_name} (#{status})"
 
     send self(), :enqueue_inprogress
-    Verk.QueueStats.reset_started(queue_name)
+
+    if status == :running, do: notify!(%Events.QueueRunning{queue: queue_name})
 
     {:ok, state}
+  end
+
+  @doc false
+  def handle_call(:pause, _from, state = %State{status: :running}) do
+    notify!(%Events.QueuePausing{queue: state.queue_name})
+    {:reply, :ok, %{state | status: :pausing}, 0}
+  end
+  def handle_call(:pause, _from, state = %State{status: :paused}), do: {:reply, :already_paused, state}
+  def handle_call(:pause, _from, state), do: {:reply, :ok, state}
+
+  def handle_call(:resume, _from, state = %State{status: :running}), do: {:reply, :already_running, state}
+  def handle_call(:resume, _from, state) do
+    notify!(%Events.QueueRunning{queue: state.queue_name})
+    {:reply, :ok, %{state | status: :running}, 0}
   end
 
   @doc false
@@ -96,6 +125,19 @@ defmodule Verk.WorkersManager do
       :more ->
         send self(), :enqueue_inprogress
         {:noreply, state}
+    end
+  end
+
+  def handle_info(:timeout, state = %State{status: :paused}), do: {:noreply, state}
+
+  def handle_info(:timeout, state = %State{status: :pausing}) do
+    n_running_jobs = :ets.info(state.monitors, :size)
+
+    if n_running_jobs == 0 do
+      notify!(%Events.QueuePaused{queue: state.queue_name})
+      {:noreply, %{state | status: :paused}}
+    else
+      {:noreply, state}
     end
   end
 
