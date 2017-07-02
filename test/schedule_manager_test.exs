@@ -45,7 +45,7 @@ defmodule Verk.ScheduleManagerTest do
     expect(Redix, :command, [:redis, ["EVALSHA", script, 1, "retry", now |> DateTime.to_unix]], {:ok, encoded_job})
 
     assert handle_info(:fetch_retryable, state) == { :noreply, state }
-    assert_receive :fetch_retryable, 5
+    assert_receive :fetch_retryable, 50
 
     assert validate [Time, Redix]
   end
