@@ -5,7 +5,7 @@ defmodule Verk.DeadSetTest do
   import :meck
 
   setup do
-    { :ok, redis } = Confex.get(:verk, :redis_url) |> Redix.start_link
+    { :ok, redis } = Confex.get_env(:verk, :redis_url) |> Redix.start_link
     Redix.command!(redis, ~w(DEL dead))
     on_exit fn -> unload() end
     { :ok, %{ redis: redis } }

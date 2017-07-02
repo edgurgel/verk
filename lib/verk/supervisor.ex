@@ -16,10 +16,10 @@ defmodule Verk.Supervisor do
 
   @doc false
   def init(_) do
-    queues = Confex.get_map(:verk, :queues, [])
+    queues = Confex.get_env(:verk, :queues, [])
     children = for {queue, size} <- queues, do: queue_child(queue, size)
 
-    redis_url = Confex.get(:verk, :redis_url)
+    redis_url = Confex.get_env(:verk, :redis_url)
 
     schedule_manager = worker(Verk.ScheduleManager, [], id: Verk.ScheduleManager)
     event_producer   = worker(Verk.EventProducer, [])

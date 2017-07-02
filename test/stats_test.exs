@@ -3,7 +3,7 @@ defmodule Verk.StatsTest do
   import Verk.Stats
 
   setup do
-    { :ok, redis } = Confex.get(:verk, :redis_url)
+    { :ok, redis } = Confex.get_env(:verk, :redis_url)
                       |> Redix.start_link
     Redix.command!(redis, ~w(DEL stat:processed stat:failed))
     Redix.command!(redis, ~w(DEL stat:processed:default stat:failed:default))
