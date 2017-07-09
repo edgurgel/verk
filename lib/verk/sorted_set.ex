@@ -15,7 +15,6 @@ defmodule Verk.SortedSet do
     Redix.command(redis, ["ZCARD", key])
   end
 
-
   @doc """
   Counts how many jobs are inside the sorted set, raising if there's an error
   """

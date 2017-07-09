@@ -28,7 +28,7 @@ defmodule Verk.Time do
   A positive result indicates that `datetime2` occurred after `datetime1`.
   """
   @spec diff(DAteTime.t, DateTime.t, System.time_unit) :: integer
-  def diff(%DateTime{} = datetime1, %DateTime{} = datetime2, units \\ :seconds) do
+  def diff(datetime1 = %DateTime{}, datetime2 = %DateTime{}, units \\ :seconds) do
     unix_dt1 = DateTime.to_unix(datetime1, units)
     unix_dt2 = DateTime.to_unix(datetime2, units)
     unix_dt2 - unix_dt1
