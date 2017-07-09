@@ -83,8 +83,8 @@ defmodule Verk.QueueManager do
   Connect to redis
   """
   def init([queue_name]) do
-    node_id = Confex.get(:verk, :node_id, "1")
-    {:ok, redis} = Redix.start_link(Confex.get(:verk, :redis_url))
+    node_id = Confex.get_env(:verk, :node_id, "1")
+    {:ok, redis} = Redix.start_link(Confex.get_env(:verk, :redis_url))
     Verk.Scripts.load(redis)
 
     state = %State{queue_name: queue_name, redis: redis, node_id: node_id}
@@ -177,7 +177,7 @@ defmodule Verk.QueueManager do
   end
 
   defp format_stacktrace(stacktrace) when is_list(stacktrace) do
-    stacktrace_limit = Confex.get(:verk, :failed_job_stacktrace_size, @default_stacktrace_size)
+    stacktrace_limit = Confex.get_env(:verk, :failed_job_stacktrace_size, @default_stacktrace_size)
     Exception.format_stacktrace(Enum.slice(stacktrace, 0..(stacktrace_limit - 1)))
   end
 

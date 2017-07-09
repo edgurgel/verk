@@ -5,7 +5,7 @@ defmodule Verk.DeadSet do
   import Verk.Dsl
   alias Verk.{SortedSet, Job}
 
-  @max_dead_jobs Confex.get(:verk, :max_dead_jobs, 100)
+  @max_dead_jobs Confex.get_env(:verk, :max_dead_jobs, 100)
   @timeout 60 * 60 * 24 * 7 # a week
 
   @dead_key "dead"

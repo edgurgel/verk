@@ -20,8 +20,8 @@ defmodule Verk.QueueManagerTest do
 
   describe "init/1" do
     test "sets up redis connection" do
-      redis_url = Confex.get(:verk, :redis_url)
-      node_id = Confex.get(:verk, :node_id, "1")
+      redis_url = Confex.get_env(:verk, :redis_url)
+      node_id = Confex.get_env(:verk, :node_id, "1")
 
       expect(Redix, :start_link, [redis_url], {:ok, :redis })
       expect(Verk.Scripts, :load, [:redis], :ok)
