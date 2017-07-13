@@ -7,7 +7,7 @@ defmodule Verk.Mixfile do
 
   def project do
     [app: :verk,
-     version: "0.14.1",
+     version: "1.0.0",
      elixir: "~> 1.3",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
@@ -24,15 +24,15 @@ defmodule Verk.Mixfile do
   end
 
   defp deps do
-    [{ :redix, "~> 0.4" },
+    [{ :redix, "~> 0.6" },
      { :poison, "~> 2.0"},
      { :poolboy, "~> 1.5.1" },
      { :confex, "~> 3.2.0" },
-     { :gen_stage, "== 0.11.0" },
-     { :credo, "~> 0.4", only: [:dev, :test] },
+     { :gen_stage, "== 0.12.0" },
+     { :credo, "~> 0.8", only: [:dev, :test] },
      { :earmark, "~> 1.0", only: :dev },
-     { :ex_doc, "~> 0.13", only: :dev },
-     { :coverex, "~> 1.4", only: :test },
+     { :ex_doc, "~> 0.16", only: :dev },
+     { :coverex, "== 1.4.13", only: :test },
      { :meck, "~> 0.8", only: :test }]
   end
 

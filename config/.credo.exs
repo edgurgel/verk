@@ -32,6 +32,8 @@
       #      {Credo.Check.Consistency.ExceptionNames, false}
       #
       checks: [
+        {Credo.Check.Readability.ParenthesesOnZeroArityDefs, false},
+        {Credo.Check.Warning.LazyLogging, false},
         {Credo.Check.Consistency.ExceptionNames},
         {Credo.Check.Consistency.LineEndings},
         {Credo.Check.Consistency.SpaceAroundOperators},

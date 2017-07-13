@@ -39,11 +39,9 @@ defmodule Verk.QueueManager do
   Pop a job from the assigned queue and reply with it if not empty
   """
   def dequeue(queue_manager, n, timeout \\ 5000) do
-    try do
-      GenServer.call(queue_manager, {:dequeue, n}, timeout)
-    catch
-      :exit, {:timeout, _} -> :timeout
-    end
+    GenServer.call(queue_manager, {:dequeue, n}, timeout)
+  catch
+    :exit, {:timeout, _} -> :timeout
   end
 
   @doc """
@@ -51,11 +49,9 @@ defmodule Verk.QueueManager do
   """
   def retry(queue_manager, job, exception, stacktrace, timeout \\ 5000) do
     now = Time.now |> DateTime.to_unix
-    try do
-      GenServer.call(queue_manager, {:retry, job, now, exception, stacktrace}, timeout)
-    catch
-      :exit, {:timeout, _} -> :timeout
-    end
+    GenServer.call(queue_manager, {:retry, job, now, exception, stacktrace}, timeout)
+  catch
+    :exit, {:timeout, _} -> :timeout
   end
 
   @doc """
