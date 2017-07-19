@@ -28,7 +28,7 @@ defmodule Verk.Mixfile do
      { :poison, "~> 2.0"},
      { :poolboy, "~> 1.5.1" },
      { :confex, "~> 3.2.0" },
-     { :gen_stage, "== 0.12.0" },
+     { :gen_stage, "== 0.12.1" },
      { :credo, "~> 0.8", only: [:dev, :test] },
      { :earmark, "~> 1.0", only: :dev },
      { :ex_doc, "~> 0.16", only: :dev },
