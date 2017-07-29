@@ -37,12 +37,11 @@ First, add Verk to your `mix.exs` dependencies:
 
 ```elixir
 def deps do
-  [{:verk, "~> 0.14"}]
+  [{:verk, "~> 1.0"}]
 end
 ```
 
-and run `$ mix deps.get`. Now, list the `:verk` application as your
-application dependency:
+and run `$ mix deps.get`. Add `:verk` to your applications list if your Elixir version is 1.3 or lower:
 
 ```elixir
 def application do
