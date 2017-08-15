@@ -25,7 +25,7 @@ defmodule Verk.Mixfile do
 
   defp deps do
     [{ :redix, "~> 0.6" },
-     { :poison, "~> 2.0"},
+     { :poison, "~> 2.0 or ~> 3.0"},
      { :poolboy, "~> 1.5.1" },
      { :confex, "~> 3.2.0" },
      { :gen_stage, "== 0.12.1" },
