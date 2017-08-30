@@ -1,15 +1,9 @@
 language: elixir
 elixir:
-  - 1.3.4
   - 1.4.5
 otp_release:
-  - 18.2
   - 19.3
   - 20.0
-matrix:
-  exclude:
-    - elixir: 1.3.4
-      otp_release: 20.0
 script:
   - MIX_ENV=test mix test --no-start --trace --cover
   - MIX_ENV=test mix credo --strict
