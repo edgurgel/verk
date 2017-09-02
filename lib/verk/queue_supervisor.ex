@@ -10,8 +10,7 @@ defmodule Verk.Queue.Supervisor do
 
   @doc false
   def start_link(name, size) do
-    supervisor_name = String.to_atom("#{name}.supervisor")
-    Supervisor.start_link(__MODULE__, [name, size], name: supervisor_name)
+    Supervisor.start_link(__MODULE__, [name, size], name: name(name))
   end
 
   @doc false
@@ -29,5 +28,15 @@ defmodule Verk.Queue.Supervisor do
   defp poolboy_spec(pool_name, pool_size) do
     args = [[name: {:local, pool_name}, worker_module: Verk.Worker, size: pool_size, max_overflow: 0], []]
     worker(:poolboy, args, restart: :permanent, shutdown: 5000, id: pool_name)
+  end
+
+  @doc false
+  def name(queue) do
+    String.to_atom("#{queue}.supervisor")
+  end
+
+  @doc false
+  def child_spec(queue, size) when is_atom(queue) do
+    supervisor(Verk.Queue.Supervisor, [queue, size], id: name(queue))
   end
 end
