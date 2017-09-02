@@ -8,7 +8,7 @@ defmodule Verk do
 
   It has an API that provides information about the queues
   """
-  alias Verk.{Job, Time}
+  alias Verk.{Job, Time, Manager}
 
   @schedule_key "schedule"
 
@@ -17,7 +17,7 @@ defmodule Verk do
   """
   @spec add_queue(atom, pos_integer) :: Supervisor.on_start_child
   def add_queue(queue, size \\ 25) when is_atom(queue) and size > 0 do
-    Verk.Supervisor.start_child(queue, size)
+    Manager.add(queue, size)
   end
 
   @doc """
@@ -25,7 +25,7 @@ defmodule Verk do
   """
   @spec remove_queue(atom) :: :ok | {:error, :not_found}
   def remove_queue(queue) when is_atom(queue) do
-    Verk.Supervisor.stop_child(queue)
+    Manager.remove(queue)
   end
 
   @doc """
