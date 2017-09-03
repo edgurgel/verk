@@ -2,7 +2,7 @@ defmodule VerkTest do
   use ExUnit.Case
   import :meck
   import Verk
-  alias Verk.Time
+  alias Verk.{Time, Manager}
 
   setup do
     on_exit fn -> unload() end
@@ -10,49 +10,36 @@ defmodule VerkTest do
   end
 
   describe "add_queue/2" do
-    test "add a new queue" do
+    test "returns the child spec" do
       queue = :test_queue
 
-      child = { :"test_queue.supervisor", { Verk.Queue.Supervisor, :start_link, [:test_queue, 30] }, :permanent, :infinity, :supervisor, [ Verk.Queue.Supervisor ] }
-      expect(Supervisor, :start_child, [Verk.Supervisor, child], :ok)
+      expect(Manager, :add, [:test_queue, 30], {:ok, :child})
 
-      assert add_queue(queue, 30) == :ok
+      assert add_queue(queue, 30) == {:ok, :child}
 
-      assert validate Supervisor
+      assert validate Manager
     end
   end
 
   describe "remove_queue/1" do
-    test "a queue successfully" do
+    test "returns true if successfully removed" do
       queue = :test_queue
 
-      expect(Supervisor, :terminate_child, [Verk.Supervisor, :"test_queue.supervisor"], :ok)
-      expect(Supervisor, :delete_child, [Verk.Supervisor, :"test_queue.supervisor"], :ok)
+      expect(Manager, :remove, [:test_queue], :ok)
 
       assert remove_queue(queue) == :ok
 
-      assert validate Supervisor
+      assert validate Manager
     end
 
-    test "a queue unsuccessfully terminating child" do
+    test "returns false if failed to remove" do
       queue = :test_queue
 
-      expect(Supervisor, :terminate_child, [Verk.Supervisor, :"test_queue.supervisor"], { :error, :not_found })
+      expect(Manager, :remove, [:test_queue], {:error, :not_found})
 
-      assert remove_queue(queue) == { :error, :not_found }
+      assert remove_queue(queue) == {:error, :not_found}
 
-      assert validate Supervisor
-    end
-
-    test "a queue unsuccessfully deleting child" do
-      queue = :test_queue
-
-      expect(Supervisor, :terminate_child, [Verk.Supervisor, :"test_queue.supervisor"], :ok)
-      expect(Supervisor, :delete_child, [Verk.Supervisor, :"test_queue.supervisor"], { :error, :not_found })
-
-      assert remove_queue(queue) == { :error, :not_found }
-
-      assert validate Supervisor
+      assert validate Manager
     end
   end
 
