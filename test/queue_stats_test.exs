@@ -1,12 +1,16 @@
 defmodule Verk.QueueStatsTest do
   use ExUnit.Case
   import Verk.QueueStats
+  import :meck
+  alias Verk.QueueStatsCounters
+  alias Verk.QueueStats.State
 
   @table :queue_stats
 
   setup do
+    on_exit fn -> unload() end
     { :ok, _ } = Confex.get_env(:verk, :redis_url)
-                  |> Redix.start_link([name: Verk.Redis])
+                 |> Redix.start_link([name: Verk.Redis])
     Redix.pipeline!(Verk.Redis, [["DEL",
         "stat:failed", "stat:processed",
         "stat:failed:queue_1", "stat:processed:queue_1",
@@ -19,9 +23,9 @@ defmodule Verk.QueueStatsTest do
     :ok
   end
 
-  describe "all/1" do
+  describe "handle_call/3" do
     test "list counters" do
-      init([]) # create table
+      QueueStatsCounters.init
 
       handle_events([%Verk.Events.JobStarted{ job: %Verk.Job{ queue: "queue_1" } }], :from, :state)
       handle_events([%Verk.Events.JobStarted{ job: %Verk.Job{ queue: "queue_1" } }], :from, :state)
@@ -29,12 +33,41 @@ defmodule Verk.QueueStatsTest do
       handle_events([%Verk.Events.JobFinished{ job: %Verk.Job{ queue: "queue_1" } }], :from, :state)
       handle_events([%Verk.Events.JobFailed{ job: %Verk.Job{ queue: "queue_1" } }], :from, :state)
 
-      assert all() == [%{ queue: "queue_1", running_counter: 0, finished_counter: 1, failed_counter: 1 },
-                     %{ queue: "queue_2", running_counter: 1, finished_counter: 0, failed_counter: 0 } ]
+      state = %State{ queues: %{ "queue_1" => :running, "queue_2" => :pausing }}
+      new_state = %State{ queues: %{ "queue_1" => :idle, "queue_2" => :pausing }}
+
+      assert handle_call({:all, ""}, :from, state) ==
+        {
+          :reply,
+          [%{ queue: "queue_1", running_counter: 0, finished_counter: 1, failed_counter: 1, status: :idle },
+           %{ queue: "queue_2", running_counter: 1, finished_counter: 0, failed_counter: 0, status: :pausing } ],
+          [],
+          new_state
+        }
+    end
+
+    test "list counters having no status of a queue" do
+      QueueStatsCounters.init
+
+      handle_events([%Verk.Events.JobStarted{ job: %Verk.Job{ queue: "default" } }], :from, :state)
+
+      state = %State{ queues: %{} }
+      new_state = %State{ queues: %{ "default" => :running } }
+
+      expect(Verk.WorkersManager, :status, ["default"], :running)
+
+      assert handle_call({:all, ""}, :from, state) ==
+        {
+          :reply,
+          [%{ queue: "default", running_counter: 1, finished_counter: 0, failed_counter: 0, status: :running }],
+          [],
+          new_state
+        }
+      assert validate(Verk.WorkersManager)
     end
 
     test "list counters searching for a prefix" do
-      init([]) # create table
+      QueueStatsCounters.init
 
       handle_events([%Verk.Events.JobStarted{ job: %Verk.Job{ queue: "default" } }], :from, :state)
       handle_events([%Verk.Events.JobStarted{ job: %Verk.Job{ queue: "default" } }], :from, :state)
@@ -43,25 +76,16 @@ defmodule Verk.QueueStatsTest do
       handle_events([%Verk.Events.JobFailed{ job: %Verk.Job{ queue: "default-something" } }], :from, :state)
       handle_events([%Verk.Events.JobStarted{ job: %Verk.Job{ queue: "priority" } }], :from, :state)
 
-      assert all("def") == [%{ queue: "default", running_counter: 1, finished_counter: 1, failed_counter: 0 },
-                            %{ queue: "default-something", running_counter: 0, finished_counter: 0, failed_counter: 1 } ]
-    end
-  end
+      state = %State{ queues: %{ "default" => :running, "default-something" => :pausing }}
 
-  describe "handle_call/3" do
-    test "reset_started with no element" do
-      init([]) # create table
-
-      assert handle_call({ :reset_started, "queue" }, :from, :state) == { :reply, :ok, [], :state }
-      assert :ets.tab2list(@table) == [{ 'queue', 0, 0, 0, 0, 0 }]
-    end
-
-    test "reset_started with existing element" do
-      init([]) # create table
-      :ets.insert_new(@table, { 'queue', 1, 2, 3, 4, 5 })
-
-      assert handle_call({ :reset_started, "queue" }, :from, :state) == { :reply, :ok, [], :state }
-      assert :ets.tab2list(@table) == [{ 'queue', 0, 2, 3, 4, 5 }]
+      assert handle_call({:all, "def"}, :from, state) ==
+        {
+          :reply,
+          [%{ queue: "default", running_counter: 1, finished_counter: 1, failed_counter: 0, status: :running },
+           %{ queue: "default-something", running_counter: 0, finished_counter: 0, failed_counter: 1, status: :pausing } ],
+          [],
+          state
+        }
     end
   end
 
@@ -69,15 +93,37 @@ defmodule Verk.QueueStatsTest do
     test "creates an ETS table" do
       assert :ets.info(@table) == :undefined
 
-      assert init([]) == { :consumer, :ok, subscribe_to: [Verk.EventProducer] }
+      assert init([]) == { :consumer, %State{}, subscribe_to: [Verk.EventProducer] }
 
       assert :ets.info(@table) != :undefined
     end
   end
 
   describe "handle_event/2" do
+    test "with queue running and existing element" do
+      QueueStatsCounters.init
+      :ets.insert_new(@table, { 'default', 1, 2, 3, 4, 5 })
+
+      event = %Verk.Events.QueueRunning{ queue: :default}
+      state = %State{queues: %{}}
+
+      assert handle_events([event], :from, state) == { :noreply, [], %State{queues: %{ "default" => :running}}}
+
+      assert :ets.tab2list(@table) == [{ 'default', 0, 2, 3, 4, 5 }]
+    end
+
+    test "with queue running" do
+      QueueStatsCounters.init
+      event = %Verk.Events.QueueRunning{ queue: :default}
+      state = %State{queues: %{}}
+
+      assert handle_events([event], :from, state) == { :noreply, [], %State{queues: %{ "default" => :running}}}
+
+      assert :ets.tab2list(@table) == [{ 'default', 0, 0, 0, 0, 0 }]
+    end
+
     test "with started event" do
-      init([]) # create table
+      QueueStatsCounters.init
       event = %Verk.Events.JobStarted{ job: %Verk.Job{ queue: "queue" } }
 
       assert handle_events([event], :from, :state) == { :noreply, [], :state }
@@ -86,7 +132,7 @@ defmodule Verk.QueueStatsTest do
     end
 
     test "with finished event" do
-      init([]) # create table
+      QueueStatsCounters.init
       event = %Verk.Events.JobFinished{ job: %Verk.Job{ queue: "queue" } }
 
       assert handle_events([event], :from, :state) == { :noreply, [], :state }
@@ -95,7 +141,7 @@ defmodule Verk.QueueStatsTest do
     end
 
     test "with failed event" do
-      init([]) # create table
+      QueueStatsCounters.init
       event = %Verk.Events.JobFailed{ job: %Verk.Job{ queue: "queue" } }
 
       assert handle_events([event], :from, :state) == { :noreply, [], :state }
@@ -106,7 +152,7 @@ defmodule Verk.QueueStatsTest do
 
   describe "handle_info/2" do
     test "persist processed and failed counts" do
-      init([])
+      QueueStatsCounters.init
 
       handle_events([%Verk.Events.JobStarted{ job: %Verk.Job{ queue: "queue_1" } }], :from, :state)
       handle_events([%Verk.Events.JobFailed{ job: %Verk.Job{ queue: "queue_1" } }], :from, :state)
@@ -149,7 +195,7 @@ defmodule Verk.QueueStatsTest do
     end
 
     test 'test with unexpected message' do
-      init([])
+      QueueStatsCounters.init
       assert handle_info(:pretty_sweet, :state) == {:noreply, [], :state}
     end
   end

@@ -7,10 +7,21 @@ defmodule Verk.QueueStats do
     * Amount of failed jobs
 
   It will persist to redis from time to time
+
+  It also holds information about the current status of queus. They can be:
+  * running
+  * idle
+  * pausing
+  * paused
   """
   use GenStage
   require Logger
   alias Verk.QueueStatsCounters
+
+  defmodule State do
+    @moduledoc false
+    defstruct queues: %{}
+  end
 
   @persist_interval 10_000
 
@@ -24,48 +35,69 @@ defmodule Verk.QueueStats do
   """
   @spec all(binary) :: Map.t
   def all(prefix \\ "") do
-    for {queue, running, finished, failed} <- QueueStatsCounters.all(prefix), is_list(queue) do
-      %{queue: to_string(queue), running_counter: running, finished_counter: finished, failed_counter: failed}
-    end
+    GenServer.call(__MODULE__, {:all, prefix})
   end
 
-  @doc """
-  Requests to reset started counter for a `queue`
-  """
-  @spec reset_started(binary) :: :ok
-  def reset_started(queue) do
-    GenStage.call(__MODULE__, {:reset_started, to_string(queue)})
+  defp status(queue, queues, running_counter) do
+    status = queues[queue] || Verk.WorkersManager.status(queue)
+    if status == :running and running_counter == 0 do
+      :idle
+    else
+      status
+    end
   end
 
   @doc false
   def init(_) do
     QueueStatsCounters.init
     Process.send_after(self(), :persist_stats, @persist_interval)
-    {:consumer, :ok, subscribe_to: [Verk.EventProducer]}
+    {:consumer, %State{}, subscribe_to: [Verk.EventProducer]}
+  end
+
+  def handle_call({:all, prefix}, _from, state) do
+    result = for {queue, running, finished, failed} <- QueueStatsCounters.all(prefix), is_list(queue) do
+      queue = to_string(queue)
+      %{queue: queue, status: status(queue, state.queues, running),
+        running_counter: running, finished_counter: finished, failed_counter: failed}
+    end
+    queues = for %{queue: queue, status: status} <- result, into: state.queues, do: {queue, status}
+    {:reply, result, [], %State{queues: queues}}
   end
 
   def handle_events(events, _from, state) do
-    for event <- events, do: handle_event(event)
-    {:noreply, [], state}
+    new_state = Enum.reduce(events, state, fn event, state ->
+      handle_event(event, state)
+    end)
+    {:noreply, [], new_state}
   end
 
   @doc false
-  defp handle_event(%Verk.Events.JobStarted{job: job}) do
+  defp handle_event(%Verk.Events.JobStarted{job: job}, state) do
     QueueStatsCounters.register(:started, job.queue)
+    state
   end
 
-  defp handle_event(%Verk.Events.JobFinished{job: job}) do
+  defp handle_event(%Verk.Events.JobFinished{job: job}, state) do
     QueueStatsCounters.register(:finished, job.queue)
+    state
   end
 
-  defp handle_event(%Verk.Events.JobFailed{job: job}) do
+  defp handle_event(%Verk.Events.JobFailed{job: job}, state) do
     QueueStatsCounters.register(:failed, job.queue)
+    state
   end
 
-  @doc false
-  def handle_call({:reset_started, queue}, _from, state) do
+  defp handle_event(%Verk.Events.QueueRunning{queue: queue}, state) do
     QueueStatsCounters.reset_started(queue)
-    {:reply, :ok, [], state}
+    %{state | queues: Map.put(state.queues, to_string(queue), :running)}
+  end
+
+  defp handle_event(%Verk.Events.QueuePausing{queue: queue}, state) do
+    %{state | queues: Map.put(state.queues, to_string(queue), :pausing)}
+  end
+
+  defp handle_event(%Verk.Events.QueuePaused{queue: queue}, state) do
+    %{state | queues: Map.put(state.queues, to_string(queue), :paused)}
   end
 
   @doc false
