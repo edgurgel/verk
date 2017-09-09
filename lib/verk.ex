@@ -28,6 +28,9 @@ defmodule Verk do
     Manager.remove(queue)
   end
 
+  defdelegate pause_queue(queue), to: Verk.Manager, as: :pause
+  defdelegate resume_queue(queue), to: Verk.Manager, as: :resume
+
   @doc """
   Enqueues a Job to the specified queue returning the respective job id
 

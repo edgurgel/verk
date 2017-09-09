@@ -88,7 +88,7 @@ defmodule Verk.WorkersManagerTest do
   end
 
   describe "init/1" do
-    test "inits" do
+    test "inits and notifies if 'running'" do
       name = :workers_manager
       queue_name = "queue_name"
       queue_manager_name = "queue_manager_name"
@@ -97,14 +97,34 @@ defmodule Verk.WorkersManagerTest do
       timeout = Confex.get_env(:verk, :workers_manager_timeout)
       state = %State{ queue_name: queue_name, queue_manager_name: queue_manager_name,
                       pool_name: pool_name, pool_size: pool_size,
-                      monitors: :workers_manager, timeout: timeout }
-      expect(Verk.QueueStats, :reset_started, [queue_name], :ok)
+                      monitors: :workers_manager, timeout: timeout, status: :running }
 
-      assert init([name, queue_name, queue_manager_name, pool_name, pool_size])
-        == { :ok, state }
+      expect(Verk.Manager, :status, [queue_name], :running)
+
+      assert init([name, queue_name, queue_manager_name, pool_name, pool_size]) == { :ok, state }
 
       assert_received :enqueue_inprogress
-      assert validate Verk.QueueStats
+      assert_receive %Verk.Events.QueueRunning{ queue: ^queue_name }
+      assert validate Verk.Manager
+    end
+
+    test "inits and does not notify ir paused" do
+      name = :workers_manager
+      queue_name = "queue_name"
+      queue_manager_name = "queue_manager_name"
+      pool_name = "pool_name"
+      pool_size = "size"
+      timeout = Confex.get_env(:verk, :workers_manager_timeout)
+      state = %State{ queue_name: queue_name, queue_manager_name: queue_manager_name,
+                      pool_name: pool_name, pool_size: pool_size,
+                      monitors: :workers_manager, timeout: timeout, status: :paused }
+
+      expect(Verk.Manager, :status, [queue_name], :paused)
+
+      assert init([name, queue_name, queue_manager_name, pool_name, pool_size]) == { :ok, state }
+
+      assert_received :enqueue_inprogress
+      assert validate Verk.Manager
     end
   end
 
@@ -134,7 +154,80 @@ defmodule Verk.WorkersManagerTest do
     end
   end
 
+  describe "handle_call/3 pause" do
+    test "with running status" do
+      queue_name = "queue_name"
+      state = %State{status: :running, queue_name: queue_name}
+
+      assert handle_call(:pause, :from, state) == { :reply, :ok, %{ state | status: :pausing }, 0 }
+      assert_receive %Verk.Events.QueuePausing{ queue: ^queue_name }
+    end
+
+    test "with pausing status" do
+      state = %State{status: :pausing}
+
+      assert handle_call(:pause, :from, state) == { :reply, :ok, state }
+      refute_receive %Verk.Events.QueuePausing{}
+    end
+
+    test "with paused status" do
+      state = %State{status: :paused}
+
+      assert handle_call(:pause, :from, state) == { :reply, :already_paused, state }
+      refute_receive %Verk.Events.QueuePausing{}
+    end
+  end
+
+  describe "handle_call/3 resume" do
+    test "with running status" do
+      state = %State{status: :running}
+
+      assert handle_call(:resume, :from, state) == { :reply, :already_running, state }
+      refute_receive %Verk.Events.QueueRunning{}
+    end
+
+    test "with pausing status" do
+      queue_name = "queue_name"
+      state = %State{status: :pausing, queue_name: queue_name}
+
+      assert handle_call(:resume, :from, state) == { :reply, :ok, %{state | status: :running}, 0}
+      assert_receive %Verk.Events.QueueRunning{ queue: ^queue_name }
+    end
+
+    test "with paused status" do
+      queue_name = "queue_name"
+      state = %State{status: :paused, queue_name: queue_name}
+
+      assert handle_call(:resume, :from, state) == { :reply, :ok, %{state | status: :running}, 0}
+      assert_receive %Verk.Events.QueueRunning{ queue: ^queue_name }
+    end
+  end
+
   describe "handle_info/2 timeout" do
+    test "timeout with paused status" do
+      state = %State{ status: :paused }
+
+      assert handle_info(:timeout, state) == { :noreply, state }
+    end
+
+    test "timeout with pausing status and jobs running", %{ monitors: monitors } do
+      row = { self(), "job_id", "job", make_ref(), "start_time" }
+      :ets.insert(monitors, row)
+
+      state = %State{ status: :pausing, monitors: monitors }
+
+      assert handle_info(:timeout, state) == { :noreply, state }
+    end
+
+    test "timeout with pausing status and no jobs running", %{ monitors: monitors } do
+      queue_name = "queue_name"
+      state = %State{ status: :pausing, monitors: monitors, queue_name: queue_name }
+
+      assert handle_info(:timeout, state) == { :noreply, %{ state | status: :paused } }
+
+      assert_receive %Verk.Events.QueuePaused{ queue: ^queue_name }
+    end
+
     test "timeout with no free workers", %{ monitors: monitors } do
       pool_name = "pool_name"
       new Verk.QueueManager
