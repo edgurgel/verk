@@ -87,6 +87,28 @@ This job can also be scheduled using `Verk.schedule/2`:
  Verk.schedule(%Verk.Job{queue: :default, class: "ExampleWorker", args: [1,2]}, perform_at)
  ```
 
+### Retry at
+
+A job can define the function `retry_at/2` for custom retry time delay:
+
+```elixir
+defmodule ExampleWorker do
+  def perform(arg1, arg2) do
+    arg1 + arg2
+  end
+
+  def retry_at(failed_at, retry_count) do
+    failed_at + retry_count
+  end
+end
+```
+
+In this example, the first retry will be scheduled a second later,
+the second retry will be scheduled two seconds later, and so on.
+
+If `retry_at/2` is not defined the default exponential backoff is used.
+
+
 ## Configuration
 
 Example configuration for verk having 2 queues: `default` and `priority`
