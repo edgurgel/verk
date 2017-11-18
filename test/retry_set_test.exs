@@ -4,6 +4,12 @@ defmodule Verk.RetrySetTest do
   import Verk.RetrySet
   import :meck
 
+  defmodule DummyJob do
+    def retry_at(_failed_at, _retry_count) do
+      4
+    end
+  end
+
   setup do
     new [SortedSet, Redix]
     :rand.seed(:exs1024, {123, 123534, 345345})
@@ -16,6 +22,18 @@ defmodule Verk.RetrySetTest do
       job = %Verk.Job{ retry_count: 1 }
       failed_at = 1
       retry_at  = "29.0"
+      expect(Poison, :encode!, [job], :payload)
+      expect(Redix, :command, [:redis, ["ZADD", "retry", retry_at, :payload]], { :ok, 1 })
+
+      assert add(job, failed_at, :redis) == :ok
+
+      assert validate [Poison, Redix]
+    end
+
+    test "allows custom retry_at" do
+      job = %Verk.Job{ class: "Verk.RetrySetTest.DummyJob", retry_count: 1 }
+      failed_at = 1
+      retry_at  = "4"
       expect(Poison, :encode!, [job], :payload)
       expect(Redix, :command, [:redis, ["ZADD", "retry", retry_at, :payload]], { :ok, 1 })
 

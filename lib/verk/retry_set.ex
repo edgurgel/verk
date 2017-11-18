@@ -17,7 +17,7 @@ defmodule Verk.RetrySet do
   """
   @spec add(%Job{}, integer,  GenServer.server) :: :ok | {:error, Redix.Error.t}
   def add(job, failed_at, redis \\ Verk.Redis) do
-    retry_at = calculate_retry_at(failed_at, job.retry_count)
+    retry_at = calculate_retry_at(job.class, failed_at, job.retry_count)
     case Redix.command(redis, ["ZADD", @retry_key, to_string(retry_at), Poison.encode!(job)]) do
       {:ok, _} -> :ok
       {:error, error} -> {:error, error}
@@ -34,7 +34,16 @@ defmodule Verk.RetrySet do
     bangify(add(job, failed_at, redis))
   end
 
-  defp calculate_retry_at(failed_at, retry_count) do
+  defp calculate_retry_at(module_name, failed_at, retry_count) do
+    module = Module.safe_concat([module_name])
+    if :erlang.function_exported(module, :retry_at, 2) do
+      apply(module, :retry_at, [failed_at, retry_count])
+    else
+      default_calculate_retry_at(failed_at, retry_count)
+    end
+  end
+
+  defp default_calculate_retry_at(failed_at, retry_count) do
     delay = :math.pow(retry_count, 4) + 15 + (:rand.uniform(30) * (retry_count + 1))
     failed_at + delay
   end
