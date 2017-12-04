@@ -22,6 +22,7 @@ defmodule Verk.Job do
     case Poison.decode(payload, as: %__MODULE__{}) do
       {:ok, job} -> {:ok, %Verk.Job{job | original_json: payload}}
       {:error, error} -> {:error, error}
+      {:error, :invalid, pos} -> {:error, "Invalid json at position: #{pos}"}
     end
   end
 
