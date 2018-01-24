@@ -90,7 +90,6 @@ defmodule Verk.QueueManager do
   end
 
   @doc false
-  @lint {Credo.Check.Refactor.ABCSize, false}
   def handle_call(:enqueue_inprogress, _from, state) do
     in_progress_key = inprogress(state.queue_name, state.node_id)
     case Redix.command(state.redis, ["EVALSHA", @lpop_rpush_src_dest_script_sha, 2,
