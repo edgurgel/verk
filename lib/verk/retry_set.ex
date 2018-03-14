@@ -41,6 +41,8 @@ defmodule Verk.RetrySet do
     else
       default_calculate_retry_at(failed_at, retry_count)
     end
+    rescue
+      ArgumentError -> default_calculate_retry_at(failed_at, retry_count)
   end
 
   defp default_calculate_retry_at(failed_at, retry_count) do
