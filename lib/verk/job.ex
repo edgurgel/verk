@@ -20,7 +20,7 @@ defmodule Verk.Job do
   @spec decode(binary) :: {:ok, %__MODULE__{}} | {:error, Poison.Error.t}
   def decode(payload) do
     case Poison.decode(payload, as: %__MODULE__{}) do
-      {:ok, job} -> {:ok, %Verk.Job{job | original_json: payload}}
+      {:ok, job} -> {:ok, build(job, payload)}
       {:error, error} -> {:error, error}
       {:error, :invalid, pos} -> {:error, "Invalid json at position: #{pos}"}
     end
@@ -32,10 +32,18 @@ defmodule Verk.Job do
   @spec decode!(binary) :: %__MODULE__{}
   def decode!(payload) do
     job = Poison.decode!(payload, as: %__MODULE__{})
-    %Verk.Job{job | original_json: payload}
+    build(job, payload)
   end
 
   def default_max_retry_count do
     @default_max_retry_count
+  end
+
+  defp build(job = %{args: %{}}, payload) do
+    build(%{job | args: []}, payload)
+  end
+
+  defp build(job, payload) do
+    %Verk.Job{job | original_json: payload}
   end
 end

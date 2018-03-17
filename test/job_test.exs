@@ -9,6 +9,13 @@ defmodule Verk.JobTest do
 
       assert Job.decode!(payload) == %Job{ queue: "test_queue", args: [1, 2, 3], original_json: payload, max_retry_count: 5}
     end
+
+    test "replaces map with array when job has no args" do
+      payload = ~s({ "queue" : "test_queue", "args" : {},
+                   "max_retry_count" : 5})
+
+      assert Job.decode!(payload) == %Job{ queue: "test_queue", args: [], original_json: payload, max_retry_count: 5}
+    end
   end
 
   describe "decode/1" do
@@ -24,6 +31,13 @@ defmodule Verk.JobTest do
                    "max_retry_count" : 5})
 
       assert {:error, _} = Job.decode(payload)
+    end
+
+    test "replaces map with array when job has no args" do
+      payload = ~s({ "queue" : "test_queue", "args" : {},
+                   "max_retry_count" : 5})
+
+      assert Job.decode(payload) == {:ok, %Job{ queue: "test_queue", args: [], original_json: payload, max_retry_count: 5}}
     end
   end
 end
