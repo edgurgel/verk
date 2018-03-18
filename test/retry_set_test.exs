@@ -41,6 +41,18 @@ defmodule Verk.RetrySetTest do
 
       assert validate [Poison, Redix]
     end
+
+    test "custom retry_at but module doesn't exist" do
+      job = %Verk.Job{ class: "Verk.NoModule", retry_count: 1 }
+      failed_at = 1
+      retry_at  = "29.0"
+      expect(Poison, :encode!, [job], :payload)
+      expect(Redix, :command, [:redis, ["ZADD", "retry", retry_at, :payload]], { :ok, 1 })
+
+      assert add(job, failed_at, :redis) == :ok
+
+      assert validate [Poison, Redix]
+    end
   end
 
   describe "add!/3" do
