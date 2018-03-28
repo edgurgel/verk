@@ -139,6 +139,21 @@ config :verk, queues: [default: 25, priority: 10],
               redis_url: {:system, "VERK_REDIS_URL", "redis://127.0.0.1:6379"}
 ```
 
+### On Heroku
+
+Heroku provides [an experimental environment variable](https://devcenter.heroku.com/articles/dynos#local-environment-variables) named after the type and number of the dyno. _It is possible that two dynos with the same name could overlap for a short time during a dyno restart._
+
+```elixir
+config :verk, queues: [default: 25, priority: 10],
+              max_retry_count: 10,
+              poll_interval: {:system, :integer, "VERK_POLL_INTERVAL", 5000},
+              start_job_log_level: :info,
+              done_job_log_level: :info,
+              fail_job_log_level: :info,
+              node_id: {:system, "DYNO", "job.1"},
+              redis_url: {:system, "VERK_REDIS_URL", "redis://127.0.0.1:6379"}
+```
+
 ## Queues
 
 It's possible to dynamically add and remove queues from Verk.
