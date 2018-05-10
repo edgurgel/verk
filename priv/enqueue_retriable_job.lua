@@ -6,7 +6,7 @@ if job then
   if queue then
     local queue_key = string.format('queue:%s', queue)
     local enqueued_at = decoded["enqueued_at"]
-    if not enqueued_at then
+    if enqueued_at == cjson.null or not enqueued_at then
       decoded["enqueued_at"] = ARGV[1]
     end
     local reencoded = cjson.encode(decoded)
@@ -17,4 +17,3 @@ if job then
 end
 
 return job
-

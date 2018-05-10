@@ -79,6 +79,17 @@ defmodule RedisScriptsTest do
       assert Redix.command(redis, ["EVAL", @enqueue_retriable_job_script, 1, "schedule", "41"]) == { :ok, nil }
       assert Redix.command(redis, ["EVAL", @enqueue_retriable_job_script, 1, "schedule", "42"]) == { :ok, enqueued_shedulled_job }
     end
+
+    test "enqueue job to queue form null enqueued_at key", %{ redis: redis } do
+      schedulled_job = "{\"jid\":\"123\",\"enqueued_at\":null,\"queue\":\"test_queue\"}"
+      enqueued_shedulled_job = "{\"jid\":\"123\",\"enqueued_at\":\"42\",\"queue\":\"test_queue\"}"
+
+      { :ok, _ } = Redix.command(redis, ~w(DEL schedule queue:test_queue))
+      { :ok, _ } = Redix.command(redis, ~w(ZADD schedule 42 #{schedulled_job}))
+
+      assert Redix.command(redis, ["EVAL", @enqueue_retriable_job_script, 1, "schedule", "41"]) == { :ok, nil }
+      assert Redix.command(redis, ["EVAL", @enqueue_retriable_job_script, 1, "schedule", "42"]) == { :ok, enqueued_shedulled_job }
+    end
   end
 
   describe "requeue_job_now" do
