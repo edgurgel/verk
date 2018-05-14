@@ -71,7 +71,7 @@ defmodule RedisScriptsTest do
 
     test "enqueue job to queue form schedule set", %{ redis: redis } do
       scheduled_job = "{\"jid\":\"123\",\"queue\":\"test_queue\"}"
-      enqueued_scheduled_job = "{\"jid\":\"123\",\"enqueued_at\":\"42\",\"queue\":\"test_queue\"}"
+      enqueued_scheduled_job = "{\"jid\":\"123\",\"enqueued_at\":42,\"queue\":\"test_queue\"}"
 
       { :ok, _ } = Redix.command(redis, ~w(DEL schedule queue:test_queue))
       { :ok, _ } = Redix.command(redis, ~w(ZADD schedule 42 #{scheduled_job}))
@@ -82,7 +82,7 @@ defmodule RedisScriptsTest do
 
     test "enqueue job to queue form null enqueued_at key", %{ redis: redis } do
       scheduled_job = "{\"jid\":\"123\",\"enqueued_at\":null,\"queue\":\"test_queue\"}"
-      enqueued_scheduled_job = "{\"jid\":\"123\",\"enqueued_at\":\"42\",\"queue\":\"test_queue\"}"
+      enqueued_scheduled_job = "{\"jid\":\"123\",\"enqueued_at\":42,\"queue\":\"test_queue\"}"
 
       { :ok, _ } = Redix.command(redis, ~w(DEL schedule queue:test_queue))
       { :ok, _ } = Redix.command(redis, ~w(ZADD schedule 42 #{scheduled_job}))
