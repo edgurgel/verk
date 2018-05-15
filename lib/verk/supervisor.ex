@@ -18,15 +18,18 @@ defmodule Verk.Supervisor do
 
   @doc false
   def init(_) do
-    redis_url = Confex.get_env(:verk, :redis_url)
+    redis_url      = Confex.get_env(:verk, :redis_url)
+    shutdown_timeout = Confex.get_env(:verk, :shutdown_timeout, 30_000)
 
     redis            = worker(Redix, [redis_url, [name: Verk.Redis]], id: Verk.Redis)
     event_producer   = worker(Verk.EventProducer, [], id: Verk.EventProducer)
     queue_stats      = worker(Verk.QueueStats, [], id: Verk.QueueStats)
     schedule_manager = worker(Verk.ScheduleManager, [], id: Verk.ScheduleManager)
     manager_sup      = supervisor(Verk.Manager.Supervisor, [], id: Verk.Manager.Supervisor)
+    drainer          = worker(Verk.QueuesDrainer, [shutdown_timeout], id: Verk.QueuesDrainer,
+                                                                      shutdown: shutdown_timeout)
 
-    children = [redis, event_producer, queue_stats, schedule_manager, manager_sup]
+    children = [redis, event_producer, queue_stats, schedule_manager, manager_sup, drainer]
     supervise(children, strategy: :one_for_one)
   end
 

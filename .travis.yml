@@ -5,8 +5,11 @@ otp_release:
   - 19.3
   - 20.0
 script:
-  - MIX_ENV=test mix test --no-start --trace --cover
+  - mix test --no-start --trace --cover
   - MIX_ENV=test mix credo --strict
+  - cd test/integration
+  - mix deps.get
+  - mix test --no-start --trace
 services:
   - redis-server
 sudo: false
