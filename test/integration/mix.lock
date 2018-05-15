@@ -1,0 +1,6 @@
+%{"confex": {:hex, :confex, "3.2.3", "f3e29188448c790dd75b416daeedddddcce0a9bb657721cd9ed3d857a2de0434", [], [], "hexpm"},
+  "connection": {:hex, :connection, "1.0.4", "a1cae72211f0eef17705aaededacac3eb30e6625b04a6117c1b2db6ace7d5976", [], [], "hexpm"},
+  "gen_stage": {:hex, :gen_stage, "0.12.2", "e0e347cbb1ceb5f4e68a526aec4d64b54ad721f0a8b30aa9d28e0ad749419cbb", [], [], "hexpm"},
+  "poison": {:hex, :poison, "3.1.0", "d9eb636610e096f86f25d9a46f35a9facac35609a7591b3be3326e99a0484665", [], [], "hexpm"},
+  "poolboy": {:hex, :poolboy, "1.5.1", "6b46163901cfd0a1b43d692657ed9d7e599853b3b21b95ae5ae0a777cf9b6ca8", [], [], "hexpm"},
+  "redix": {:hex, :redix, "0.7.1", "25a6c1c0d9b2d12a35aef759f9e49bd9bca00e0cd857ce766412f08fdda72163", [], [{:connection, "~> 1.0", [hex: :connection, repo: "hexpm", optional: false]}], "hexpm"}}
