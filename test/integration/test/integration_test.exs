@@ -1,7 +1,6 @@
 defmodule IntegrationTest do
   use ExUnit.Case
   alias Verk.Events.{QueueRunning, QueuePausing, QueuePaused}
-  doctest Integration
 
   defmodule Consumer do
     use GenStage
@@ -26,13 +25,14 @@ defmodule IntegrationTest do
     {:ok, redis: redis}
   end
 
+  @tag integration: true
   test "shutdown", %{redis: redis} do
     for _x <- (0..10) do
       Verk.enqueue(%Verk.Job{queue: "queue_one", class: Integration.SleepWorker, args: [1_500]}, redis)
       Verk.enqueue(%Verk.Job{queue: "queue_two", class: Integration.SleepWorker, args: [2_000]}, redis)
     end
     Application.ensure_all_started(:integration)
-    {:ok, consumer} = Consumer.start
+    {:ok, _consumer} = Consumer.start
     Application.stop(:integration)
 
     assert_receive %Verk.Events.QueuePausing{queue: :queue_one}
