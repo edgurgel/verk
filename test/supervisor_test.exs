@@ -12,13 +12,14 @@ defmodule Verk.SupervisorTest do
   describe "init/1" do
     test "defines tree" do
       {:ok, {_, children}} = init([])
-      [redix, producer, stats, schedule_manager, manager_sup] = children
+      [redix, producer, stats, schedule_manager, manager_sup, drainer] = children
 
       assert {Verk.Redis, _, _, _, :worker, [Redix]} = redix
       assert {Verk.EventProducer, _, _, _, :worker, [Verk.EventProducer]} = producer
       assert {Verk.QueueStats, _, _, _, :worker, [Verk.QueueStats]} = stats
       assert {Verk.ScheduleManager, _, _, _, :worker, [Verk.ScheduleManager]} = schedule_manager
       assert {Verk.Manager.Supervisor, _, _, _, :supervisor, [Verk.Manager.Supervisor]} = manager_sup
+      assert {Verk.QueuesDrainer, _, _, _, :worker, [Verk.QueuesDrainer]} = drainer
     end
   end
 
