@@ -8,6 +8,8 @@ defmodule Verk.EventProducer do
     GenStage.start_link(__MODULE__, :ok, name: __MODULE__)
   end
 
+  def stop, do: GenStage.stop(__MODULE__)
+
   def async_notify(event) do
     GenStage.cast(__MODULE__, {:notify, event})
   end
