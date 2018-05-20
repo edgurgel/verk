@@ -35,6 +35,23 @@ defmodule Verk.QueuesDrainer do
   end
 
   def terminate(:shutdown, shutdown_timeout) do
+    do_terminate(shutdown_timeout)
+  end
+
+  def terminate({:shutdown, _reason}, shutdown_timeout) do
+    do_terminate(shutdown_timeout)
+  end
+
+  def terminate(:normal, shutdown_timeout) do
+    do_terminate(shutdown_timeout)
+  end
+
+  def terminate(reason, shutdown_timeout) do
+    Logger.info("Queues not being drainer as reason is not expected")
+    :ok
+  end
+
+  defp do_terminate(shutdown_timeout) do
     Logger.warn "Pausing all queues. Max timeout: #{shutdown_timeout}"
 
     {:ok, _pid} = Consumer.start_link()
@@ -50,6 +67,10 @@ defmodule Verk.QueuesDrainer do
     for x <- (0..n_queues), x > 0 do
       receive do
         {:paused, queue} -> Logger.info "Queue #{queue} paused!"
+      after
+        shutdown_timeout ->
+          Logger.error "Waited the maximum amount of time to pause queues."
+          throw :shutdown_timeout
       end
     end
 
