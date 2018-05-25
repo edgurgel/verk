@@ -1,21 +1,22 @@
 defmodule Verk.QueuesDrainerTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: false
   alias Verk.EventProducer
   import Verk.QueuesDrainer
   import :meck
 
-  setup_all do
+  setup do
     {:ok, pid} = EventProducer.start_link()
+    new Verk, [:merge_expects]
     on_exit fn ->
-      if Process.alive?(pid), do: EventProducer.stop()
+      assert_down(pid)
+      unload()
     end
     :ok
   end
 
-  setup do
-    new Verk, [:merge_expects]
-    on_exit fn -> unload() end
-    :ok
+  defp assert_down(pid) do
+    ref = Process.monitor(pid)
+    assert_receive {:DOWN, ^ref, _, _, _}
   end
 
   describe "terminate/2" do
