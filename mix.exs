@@ -29,7 +29,7 @@ defmodule Verk.Mixfile do
      { :poolboy, "~> 1.5.1" },
      { :confex, "~> 3.2.0" },
      { :gen_stage, "~> 0.12.1" },
-     { :credo, "~> 0.8", only: [:dev, :test] },
+     { :credo, "~> 0.9", only: [:dev, :test] },
      { :earmark, "~> 1.0", only: :dev },
      { :ex_doc, "~> 0.16", only: :dev },
      { :coverex, "== 1.4.13", only: :test },
