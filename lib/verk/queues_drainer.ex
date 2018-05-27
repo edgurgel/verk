@@ -62,7 +62,7 @@ defmodule Verk.QueuesDrainer do
     end
 
     n_queues = MapSet.size(queues)
-    Logger.warn "Waiting for #{n_queues} queues"
+    Logger.warn "Waiting for #{n_queues} queue(s)"
 
     for x <- (0..n_queues), x > 0 do
       receive do
@@ -74,7 +74,7 @@ defmodule Verk.QueuesDrainer do
       end
     end
 
-    Logger.warn "All queues paused. Shutting down"
+    Logger.warn "All queues paused. Shutting down."
     :ok
   end
 end
