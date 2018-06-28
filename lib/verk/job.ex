@@ -33,7 +33,7 @@ defmodule Verk.Job do
   @spec decode(binary) :: {:ok, %__MODULE__{}} | {:error, Jason.DecodeError.t()}
   def decode(payload) do
     with {:ok, map} <- Jason.decode(payload),
-         {:ok, args} <- Jason.decode(map["args"]) do
+         {:ok, args} <- unwrap_args(map["args"]) do
       fields =
         map
         |> Map.update!("args", fn _ -> args end)
@@ -59,6 +59,9 @@ defmodule Verk.Job do
   def default_max_retry_count do
     @default_max_retry_count
   end
+
+  defp unwrap_args(wrapped_args) when is_binary(wrapped_args), do: Jason.decode(wrapped_args)
+  defp unwrap_args(args), do: {:ok, args}
 
   defp build(job = %{args: %{}}, payload) do
     build(%{job | args: []}, payload)
