@@ -52,12 +52,12 @@ defmodule VerkTest do
       expected_job = %Verk.Job{ job | enqueued_at: now |> DateTime.to_unix }
 
       expect(Time, :now, [], now)
-      expect(Poison, :encode!, [expected_job], encoded_job)
+      expect(Verk.Job, :encode!, [expected_job], encoded_job)
       expect(Redix, :command, [Verk.Redis, ["LPUSH", "queue:test_queue", encoded_job]], { :ok, :_ })
 
       assert enqueue(job, Verk.Redis) == { :ok, "job_id" }
 
-      assert validate [Poison, Redix, Time]
+      assert validate [Verk.Job, Redix, Time]
     end
 
     test "a job with a jid and a queue passing no redis connection" do
@@ -68,12 +68,12 @@ defmodule VerkTest do
       expected_job = %Verk.Job{ job | enqueued_at: now |> DateTime.to_unix }
 
       expect(Time, :now, [], now)
-      expect(Poison, :encode!, [expected_job], encoded_job)
+      expect(Verk.Job, :encode!, [expected_job], encoded_job)
       expect(Redix, :command, [Verk.Redis, ["LPUSH", "queue:test_queue", encoded_job]], { :ok, :_ })
 
       assert enqueue(job) == { :ok, "job_id" }
 
-      assert validate [Poison, Redix, Time]
+      assert validate [Verk.Job, Redix, Time]
     end
 
     test "a job with a jid and a queue" do
@@ -84,19 +84,19 @@ defmodule VerkTest do
       expected_job = %Verk.Job{ job | enqueued_at: now |> DateTime.to_unix }
 
       expect(Time, :now, [], now)
-      expect(Poison, :encode!, [expected_job], encoded_job)
+      expect(Verk.Job, :encode!, [expected_job], encoded_job)
       expect(Redix, :command, [Verk.Redis, ["LPUSH", "queue:test_queue", encoded_job]], { :ok, :_ })
 
       assert enqueue(job) == { :ok, "job_id" }
 
-      assert validate [Poison, Redix, Time]
+      assert validate [Verk.Job, Redix, Time]
     end
 
     test "a job without a jid" do
       job = %Verk.Job{ queue: "test_queue", class: "TestWorker", args: [], jid: nil }
       encoded_job = "encoded_job"
 
-      expect(Poison, :encode!, 1, encoded_job)
+      expect(Verk.Job, :encode!, 1, encoded_job)
       expect(Redix, :command, [Verk.Redis, ["LPUSH", "queue:test_queue", encoded_job]], { :ok, :_ })
 
       { :ok, jid } = enqueue(job)
@@ -136,13 +136,13 @@ defmodule VerkTest do
       perform_at = Time.shift(now, 100)
       job = %Verk.Job{ queue: "test_queue", jid: "job_id", class: "TestWorker", args: [] }
       encoded_job = "encoded_job"
-      expect(Poison, :encode!, [job], encoded_job)
+      expect(Verk.Job, :encode!, [job], encoded_job)
       perform_at_secs = DateTime.to_unix(perform_at)
       expect(Redix, :command, [Verk.Redis, ["ZADD", "schedule", perform_at_secs, encoded_job]], { :ok, :_ })
 
       assert schedule(job, perform_at) == { :ok, "job_id" }
 
-      assert validate [Poison, Redix]
+      assert validate [Verk.Job, Redix]
     end
 
     test "a job with a jid, a queue and a perform_in passing a redis connection" do
@@ -150,13 +150,13 @@ defmodule VerkTest do
       perform_at = Time.shift(now, 100, :seconds)
       job = %Verk.Job{ queue: "test_queue", jid: "job_id", class: "TestWorker", args: [] }
       encoded_job = "encoded_job"
-      expect(Poison, :encode!, [job], encoded_job)
+      expect(Verk.Job, :encode!, [job], encoded_job)
       perform_at_secs = DateTime.to_unix(perform_at, :seconds)
       expect(Redix, :command, [Verk.Redis, ["ZADD", "schedule", perform_at_secs, encoded_job]], { :ok, :_ })
 
       assert schedule(job, perform_at, Verk.Redis) == { :ok, "job_id" }
 
-      assert validate [Poison, Redix]
+      assert validate [Verk.Job, Redix]
     end
   end
 end

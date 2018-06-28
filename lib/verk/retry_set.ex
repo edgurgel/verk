@@ -18,7 +18,7 @@ defmodule Verk.RetrySet do
   @spec add(%Job{}, integer,  GenServer.server) :: :ok | {:error, Redix.Error.t}
   def add(job, failed_at, redis \\ Verk.Redis) do
     retry_at = calculate_retry_at(job.class, failed_at, job.retry_count)
-    case Redix.command(redis, ["ZADD", @retry_key, to_string(retry_at), Poison.encode!(job)]) do
+    case Redix.command(redis, ["ZADD", @retry_key, to_string(retry_at), Job.encode!(job)]) do
       {:ok, _} -> :ok
       {:error, error} -> {:error, error}
     end

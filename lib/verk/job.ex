@@ -11,18 +11,37 @@ defmodule Verk.Job do
   @type t :: %__MODULE__{error_message: String.t, failed_at: DateTime.t, retry_count: non_neg_integer,
                          queue: String.t, class: String.t | atom, jid: String.t, finished_at: DateTime.t,
                          retried_at: DateTime.t, error_backtrace: String.t}
-  @derive {Poison.Encoder, only: Keyword.keys(@keys)}
   defstruct [:original_json | @keys]
+
+  @doc """
+  Encode the struct to a JSON string, raising if there is an error
+  """
+  @spec encode!(t) :: binary
+  def encode!(%__MODULE__{} = job) do
+    job
+    |> Map.from_struct()
+    |> Map.take(Keyword.keys(@keys))
+    # We wrap the args so there is no issue with cJson on Redis side
+    # It's just an opaque string as far as Redis is concerned
+    |> Map.update!(:args, &Jason.encode!(&1))
+    |> Jason.encode!()
+  end
 
   @doc """
   Decode the JSON payload storing the original json as part of the struct.
   """
-  @spec decode(binary) :: {:ok, %__MODULE__{}} | {:error, Poison.Error.t}
+  @spec decode(binary) :: {:ok, %__MODULE__{}} | {:error, Jason.DecodeError.t()}
   def decode(payload) do
-    case Poison.decode(payload, as: %__MODULE__{}) do
-      {:ok, job} -> {:ok, build(job, payload)}
-      {:error, error} -> {:error, error}
-      {:error, :invalid, pos} -> {:error, "Invalid json at position: #{pos}"}
+    with {:ok, map} <- Jason.decode(payload),
+         {:ok, args} <- Jason.decode(map["args"]) do
+      fields =
+        map
+        |> Map.update!("args", fn _ -> args end)
+        |> Map.new(fn {k, v} -> {String.to_atom(k), v} end)
+      job =
+        struct(%__MODULE__{}, fields)
+        |> build(payload)
+      {:ok, job}
     end
   end
 
@@ -31,8 +50,10 @@ defmodule Verk.Job do
   """
   @spec decode!(binary) :: %__MODULE__{}
   def decode!(payload) do
-    job = Poison.decode!(payload, as: %__MODULE__{})
-    build(job, payload)
+    case decode(payload) do
+      {:ok, job} -> job
+      {:error, error} -> raise error
+    end
   end
 
   def default_max_retry_count do

@@ -65,7 +65,7 @@ defmodule Verk.SortedSetTest do
   describe "range/2" do
     test "with items", %{ redis: redis } do
       job = %Verk.Job{class: "Class", args: []}
-      json = Poison.encode!(job)
+      json = Verk.Job.encode!(job)
       Redix.command!(redis, ~w(ZADD sorted 123 #{json}))
 
       assert range("sorted", redis) == {:ok, [%{ job | original_json: json }]}
@@ -79,7 +79,7 @@ defmodule Verk.SortedSetTest do
   describe "range!/2" do
     test "with items", %{ redis: redis } do
       job = %Verk.Job{class: "Class", args: []}
-      json = Poison.encode!(job)
+      json = Verk.Job.encode!(job)
       Redix.command!(redis, ~w(ZADD sorted 123 #{json}))
 
       assert range!("sorted", redis) == [%{ job | original_json: json }]
@@ -93,7 +93,7 @@ defmodule Verk.SortedSetTest do
   describe "range_with_score/2" do
     test "with items", %{ redis: redis } do
       job = %Verk.Job{class: "Class", args: []}
-      json = Poison.encode!(job)
+      json = Verk.Job.encode!(job)
       Redix.command!(redis, ~w(ZADD sorted 123 #{json}))
 
       assert range_with_score("sorted", redis) == {:ok, [{%{ job | original_json: json }, 123}]}
@@ -107,7 +107,7 @@ defmodule Verk.SortedSetTest do
   describe "range_with_score!/2" do
     test "with items", %{ redis: redis } do
       job = %Verk.Job{class: "Class", args: []}
-      json = Poison.encode!(job)
+      json = Verk.Job.encode!(job)
       Redix.command!(redis, ~w(ZADD sorted 123 #{json}))
 
       assert range_with_score("sorted", redis) == {:ok, [{%{ job | original_json: json }, 123}]}
@@ -121,7 +121,7 @@ defmodule Verk.SortedSetTest do
   describe "delete_job/3" do
     test "with job", %{ redis: redis } do
       job = %Verk.Job{class: "Class", args: []}
-      json = Poison.encode!(job)
+      json = Verk.Job.encode!(job)
       job = %{ job | original_json: json}
 
       Redix.command!(redis, ~w(ZADD sorted 123 #{json}))
@@ -136,7 +136,7 @@ defmodule Verk.SortedSetTest do
     end
 
     test "with original_json", %{ redis: redis } do
-      json = %Verk.Job{class: "Class", args: []} |> Poison.encode!
+      json = %Verk.Job{class: "Class", args: []} |> Verk.Job.encode!
 
       add_job!(json, redis)
 
@@ -147,7 +147,7 @@ defmodule Verk.SortedSetTest do
   describe "delete_job!/3" do
     test "with job", %{ redis: redis } do
       job = %Verk.Job{class: "Class", args: []}
-      json = Poison.encode!(job)
+      json = Verk.Job.encode!(job)
       job = %{ job | original_json: json}
 
       Redix.command!(redis, ~w(ZADD sorted 123 #{json}))
@@ -162,7 +162,7 @@ defmodule Verk.SortedSetTest do
     end
 
     test "with original_json", %{ redis: redis } do
-      json = %Verk.Job{class: "Class", args: []} |> Poison.encode!
+      json = %Verk.Job{class: "Class", args: []} |> Verk.Job.encode!
 
       add_job!(json, redis)
 
@@ -172,7 +172,7 @@ defmodule Verk.SortedSetTest do
 
   describe "requeue_job/3" do
     test "with no job in original queue", %{ redis: redis } do
-      json = %Verk.Job{class: "Class", queue: :default, args: []} |> Poison.encode!
+      json = %Verk.Job{class: "Class", queue: :default, args: []} |> Verk.Job.encode!
 
       expect(Redix, :command, [redis, ["EVALSHA", @requeue_now_script, 1, "sorted", json]], { :ok, nil })
 
@@ -182,7 +182,7 @@ defmodule Verk.SortedSetTest do
 
     test "with job", %{ redis: redis } do
       job = %Verk.Job{class: "Class", queue: :default, args: []}
-      json = Poison.encode!(job)
+      json = Verk.Job.encode!(job)
       job = %{ job | original_json: json}
 
       expect(Redix, :command, [redis, ["EVALSHA", @requeue_now_script, 1, "sorted", json]], { :ok, "job" })
@@ -192,7 +192,7 @@ defmodule Verk.SortedSetTest do
     end
 
     test "with original json", %{ redis: redis } do
-      json = %Verk.Job{class: "Class", queue: :default, args: []} |> Poison.encode!
+      json = %Verk.Job{class: "Class", queue: :default, args: []} |> Verk.Job.encode!
 
       expect(Redix, :command, [redis, ["EVALSHA", @requeue_now_script, 1, "sorted", json]], { :ok, "job" })
 
@@ -203,7 +203,7 @@ defmodule Verk.SortedSetTest do
 
   describe "requeue_job!/3" do
     test "with no job in original queue", %{ redis: redis } do
-      json = %Verk.Job{class: "Class", queue: :default, args: []} |> Poison.encode!
+      json = %Verk.Job{class: "Class", queue: :default, args: []} |> Verk.Job.encode!
 
       expect(Redix, :command, [redis, ["EVALSHA", @requeue_now_script, 1, "sorted", json]], { :ok, nil })
 
@@ -213,7 +213,7 @@ defmodule Verk.SortedSetTest do
 
     test "with job", %{ redis: redis } do
       job = %Verk.Job{class: "Class", queue: :default, args: []}
-      json = Poison.encode!(job)
+      json = Verk.Job.encode!(job)
       job = %{ job | original_json: json}
 
       expect(Redix, :command, [redis, ["EVALSHA", @requeue_now_script, 1, "sorted", json]], { :ok, "job" })
@@ -223,7 +223,7 @@ defmodule Verk.SortedSetTest do
     end
 
     test "with original json", %{ redis: redis } do
-      json = %Verk.Job{class: "Class", queue: :default, args: []} |> Poison.encode!
+      json = %Verk.Job{class: "Class", queue: :default, args: []} |> Verk.Job.encode!
 
       expect(Redix, :command, [redis, ["EVALSHA", @requeue_now_script, 1, "sorted", json]], { :ok, "job" })
 
