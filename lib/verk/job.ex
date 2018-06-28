@@ -17,7 +17,7 @@ defmodule Verk.Job do
   Encode the struct to a JSON string, raising if there is an error
   """
   @spec encode!(t) :: binary
-  def encode!(%__MODULE__{} = job) do
+  def encode!(job = %__MODULE__{}) do
     job
     |> Map.from_struct()
     |> Map.take(Keyword.keys(@keys))
@@ -39,7 +39,8 @@ defmodule Verk.Job do
         |> Map.update!("args", fn _ -> args end)
         |> Map.new(fn {k, v} -> {String.to_atom(k), v} end)
       job =
-        struct(%__MODULE__{}, fields)
+        %__MODULE__{}
+        |> struct(fields)
         |> build(payload)
       {:ok, job}
     end
