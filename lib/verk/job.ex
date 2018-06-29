@@ -32,12 +32,11 @@ defmodule Verk.Job do
   """
   @spec decode(binary) :: {:ok, %__MODULE__{}} | {:error, Jason.DecodeError.t()}
   def decode(payload) do
-    with {:ok, map} <- Jason.decode(payload),
-         {:ok, args} <- unwrap_args(map["args"]) do
+    with {:ok, map} <- Jason.decode(payload, keys: :atoms),
+         {:ok, args} <- unwrap_args(map.args) do
       fields =
         map
-        |> Map.update!("args", fn _ -> args end)
-        |> Map.new(fn {k, v} -> {String.to_atom(k), v} end)
+        |> Map.update!(:args, fn _ -> args end)
       job =
         %__MODULE__{}
         |> struct(fields)
