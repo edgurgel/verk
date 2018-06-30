@@ -1,0 +1,5 @@
+{
+    "[elixir]": {
+        "editor.formatOnSave": false
+      },
+}

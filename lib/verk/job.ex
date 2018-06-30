@@ -61,7 +61,7 @@ defmodule Verk.Job do
     @default_max_retry_count
   end
 
-  defp unwrap_args(wrapped_args) when is_binary(wrapped_args), do: Jason.decode(wrapped_args, keys: :atoms)
+  defp unwrap_args(wrapped_args) when is_binary(wrapped_args), do: Jason.decode(wrapped_args, keys: Application.get_env(:verk, :args_keys, :strings))
   defp unwrap_args(args), do: {:ok, args}
 
   defp build(job = %{args: %{}}, payload) do
