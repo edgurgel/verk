@@ -143,7 +143,7 @@ If `retry_at/2` is not defined the default exponential backoff is used.
 ### Keys in arguments
 
 By default, Verk will decode keys in arguments to binary strings.
-You can change this behavior with the following configuration:
+You can change this behavior for jobs enqueued by Verk with the following configuration:
 ```elixir
 config :verk, :args_keys, value
 ```
@@ -153,6 +153,7 @@ The following values are valid:
 * `:strings` (default) - decodes keys as binary strings
 * `:atoms` - keys are converted to atoms using `String.to_atom/1`
 * `:atoms!` - keys are converted to atoms using `String.to_existing_atom/1`
+
 
 ### On Heroku
 
