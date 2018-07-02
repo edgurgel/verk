@@ -20,7 +20,7 @@ defmodule Verk.DeadSet do
   """
   @spec add(%Job{}, integer,  GenServer.server) :: :ok | {:error, Redix.Error.t}
   def add(job, timestamp, redis \\ Verk.Redis) do
-    case Redix.pipeline(redis, [["ZADD", @dead_key, timestamp, Poison.encode!(job)],
+    case Redix.pipeline(redis, [["ZADD", @dead_key, timestamp, Job.encode!(job)],
                                 ["ZREMRANGEBYSCORE", @dead_key, "-inf", timestamp - @timeout],
                                 ["ZREMRANGEBYRANK", @dead_key, 0, -@max_dead_jobs]]) do
       {:ok, _} -> :ok

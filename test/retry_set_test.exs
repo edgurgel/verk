@@ -22,36 +22,36 @@ defmodule Verk.RetrySetTest do
       job = %Verk.Job{ retry_count: 1 }
       failed_at = 1
       retry_at  = "29.0"
-      expect(Poison, :encode!, [job], :payload)
+      expect(Verk.Job, :encode!, [job], :payload)
       expect(Redix, :command, [:redis, ["ZADD", "retry", retry_at, :payload]], { :ok, 1 })
 
       assert add(job, failed_at, :redis) == :ok
 
-      assert validate [Poison, Redix]
+      assert validate [Verk.Job, Redix]
     end
 
     test "allows custom retry_at" do
       job = %Verk.Job{ class: "Verk.RetrySetTest.DummyJob", retry_count: 1 }
       failed_at = 1
       retry_at  = "4"
-      expect(Poison, :encode!, [job], :payload)
+      expect(Verk.Job, :encode!, [job], :payload)
       expect(Redix, :command, [:redis, ["ZADD", "retry", retry_at, :payload]], { :ok, 1 })
 
       assert add(job, failed_at, :redis) == :ok
 
-      assert validate [Poison, Redix]
+      assert validate [Verk.Job, Redix]
     end
 
     test "custom retry_at but module doesn't exist" do
       job = %Verk.Job{ class: "Verk.NoModule", retry_count: 1 }
       failed_at = 1
       retry_at  = "29.0"
-      expect(Poison, :encode!, [job], :payload)
+      expect(Verk.Job, :encode!, [job], :payload)
       expect(Redix, :command, [:redis, ["ZADD", "retry", retry_at, :payload]], { :ok, 1 })
 
       assert add(job, failed_at, :redis) == :ok
 
-      assert validate [Poison, Redix]
+      assert validate [Verk.Job, Redix]
     end
   end
 
@@ -60,12 +60,12 @@ defmodule Verk.RetrySetTest do
       job = %Verk.Job{ retry_count: 1 }
       failed_at = 1
       retry_at  = "29.0"
-      expect(Poison, :encode!, [job], :payload)
+      expect(Verk.Job, :encode!, [job], :payload)
       expect(Redix, :command, [:redis, ["ZADD", "retry", retry_at, :payload]], { :ok, 1 })
 
       assert add!(job, failed_at, :redis) == nil
 
-      assert validate [Poison, Redix]
+      assert validate [Verk.Job, Redix]
     end
   end
 
@@ -108,7 +108,7 @@ defmodule Verk.RetrySetTest do
   describe "range/0" do
     test "range" do
       job = %Verk.Job{class: "Class", args: []}
-      json = Poison.encode!(job)
+      json = Verk.Job.encode!(job)
 
       expect(SortedSet, :range, [key(), 0, -1, Verk.Redis], {:ok, [%{ job | original_json: json }]})
 
@@ -120,7 +120,7 @@ defmodule Verk.RetrySetTest do
   describe "range/2" do
     test "range with start and stop" do
       job = %Verk.Job{class: "Class", args: []}
-      json = Poison.encode!(job)
+      json = Verk.Job.encode!(job)
 
       expect(SortedSet, :range, [key(), 1, 2, Verk.Redis], {:ok, [%{ job | original_json: json }]})
 
@@ -132,7 +132,7 @@ defmodule Verk.RetrySetTest do
   describe "range!/0" do
     test "range!" do
       job = %Verk.Job{class: "Class", args: []}
-      json = Poison.encode!(job)
+      json = Verk.Job.encode!(job)
 
       expect(SortedSet, :range!, [key(), 0, -1, Verk.Redis], [%{ job | original_json: json }])
 
@@ -144,7 +144,7 @@ defmodule Verk.RetrySetTest do
   describe "range_with_score/0" do
     test "range_with_score" do
       job = %Verk.Job{class: "Class", args: []}
-      json = Poison.encode!(job)
+      json = Verk.Job.encode!(job)
 
       expect(SortedSet, :range_with_score, [key(), 0, -1, Verk.Redis], {:ok, [{%{ job | original_json: json }, 45}]})
 
@@ -156,7 +156,7 @@ defmodule Verk.RetrySetTest do
   describe "range_with_score/2" do
     test "range_with_score with start and stop" do
       job = %Verk.Job{class: "Class", args: []}
-      json = Poison.encode!(job)
+      json = Verk.Job.encode!(job)
 
       expect(SortedSet, :range_with_score, [key(), 1, 2, Verk.Redis], {:ok, [{%{ job | original_json: json }, 45}]})
 
@@ -168,7 +168,7 @@ defmodule Verk.RetrySetTest do
   describe "range_with_score!/0" do
     test "range_with_score!" do
       job = %Verk.Job{class: "Class", args: []}
-      json = Poison.encode!(job)
+      json = Verk.Job.encode!(job)
 
       expect(SortedSet, :range_with_score!, [key(), 0, -1, Verk.Redis], [{%{ job | original_json: json }, 45}])
 
@@ -180,7 +180,7 @@ defmodule Verk.RetrySetTest do
   describe "delete_job/1" do
     test "job with original_json" do
       job = %Verk.Job{class: "Class", args: []}
-      json = Poison.encode!(job)
+      json = Verk.Job.encode!(job)
       job = %{ job | original_json: json }
 
       expect(SortedSet, :delete_job, [key(), json, Verk.Redis], :ok)
@@ -190,7 +190,7 @@ defmodule Verk.RetrySetTest do
     end
 
     test "job with no original_json" do
-      json = %Verk.Job{class: "Class", args: []} |> Poison.encode!
+      json = %Verk.Job{class: "Class", args: []} |> Verk.Job.encode!
       expect(SortedSet, :delete_job, [key(), json, Verk.Redis], {:ok, true})
 
       assert delete_job(json) == {:ok, true}
@@ -201,7 +201,7 @@ defmodule Verk.RetrySetTest do
   describe "delete_job!/1" do
     test "job with original_json" do
       job = %Verk.Job{class: "Class", args: []}
-      json = Poison.encode!(job)
+      json = Verk.Job.encode!(job)
       job = %{ job | original_json: json }
 
       expect(SortedSet, :delete_job!, [key(), json, Verk.Redis], true)
@@ -211,7 +211,7 @@ defmodule Verk.RetrySetTest do
     end
 
     test "job with no original_json" do
-      json = %Verk.Job{class: "Class", args: []} |> Poison.encode!
+      json = %Verk.Job{class: "Class", args: []} |> Verk.Job.encode!
       expect(SortedSet, :delete_job!, [key(), json, Verk.Redis], true)
 
       assert delete_job!(json) == true
@@ -222,7 +222,7 @@ defmodule Verk.RetrySetTest do
   describe "requeue_job/1" do
     test "job with original_json" do
       job = %Verk.Job{class: "Class", args: []}
-      json = Poison.encode!(job)
+      json = Verk.Job.encode!(job)
       job = %{ job | original_json: json }
 
       expect(SortedSet, :requeue_job, [key(), json, Verk.Redis], :ok)
@@ -232,7 +232,7 @@ defmodule Verk.RetrySetTest do
     end
 
     test "job with no original_json" do
-      json = %Verk.Job{class: "Class", args: []} |> Poison.encode!
+      json = %Verk.Job{class: "Class", args: []} |> Verk.Job.encode!
       expect(SortedSet, :requeue_job, [key(), json, Verk.Redis], {:ok, true})
 
       assert requeue_job(json) == {:ok, true}
@@ -243,7 +243,7 @@ defmodule Verk.RetrySetTest do
   describe "requeue_job!/1" do
     test "job with original_json" do
       job = %Verk.Job{class: "Class", args: []}
-      json = Poison.encode!(job)
+      json = Verk.Job.encode!(job)
       job = %{ job | original_json: json }
 
       expect(SortedSet, :requeue_job!, [key(), json, Verk.Redis], true)
@@ -253,7 +253,7 @@ defmodule Verk.RetrySetTest do
     end
 
     test "job with no original_json" do
-      json = %Verk.Job{class: "Class", args: []} |> Poison.encode!
+      json = %Verk.Job{class: "Class", args: []} |> Verk.Job.encode!
       expect(SortedSet, :requeue_job!, [key(), json, Verk.Redis], true)
 
       assert requeue_job!(json) == true

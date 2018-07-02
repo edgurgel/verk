@@ -67,7 +67,7 @@ defmodule Verk.QueueTest do
   describe "range/1" do
     test "with items" do
       job = %Verk.Job{class: "Class", args: []}
-      json = Poison.encode!(job)
+      json = Verk.Job.encode!(job)
       Redix.command!(Verk.Redis, ~w(LPUSH #{@queue_key} #{json}))
 
       assert range(@queue) == {:ok, [%{ job | original_json: json }]}
@@ -82,7 +82,7 @@ defmodule Verk.QueueTest do
   describe "range!/1" do
     test "with items" do
       job = %Verk.Job{class: "Class", args: []}
-      json = Poison.encode!(job)
+      json = Verk.Job.encode!(job)
       Redix.command!(Verk.Redis, ~w(LPUSH #{@queue_key} #{json}))
 
       assert range!(@queue) == [%{ job | original_json: json }]
@@ -100,7 +100,7 @@ defmodule Verk.QueueTest do
 
     test "job with original_json" do
       job = %Verk.Job{class: "Class", args: []}
-      json = Poison.encode!(job)
+      json = Verk.Job.encode!(job)
 
       Redix.command!(Verk.Redis, ~w(LPUSH #{@queue_key} #{json}))
 
@@ -110,7 +110,7 @@ defmodule Verk.QueueTest do
     end
 
     test "job with no original_json" do
-      json = %Verk.Job{class: "Class", args: []} |> Poison.encode!
+      json = %Verk.Job{class: "Class", args: []} |> Verk.Job.encode!
 
       Redix.command!(Verk.Redis, ~w(LPUSH #{@queue_key} #{json}))
 
@@ -125,7 +125,7 @@ defmodule Verk.QueueTest do
 
     test "job with original_json" do
       job = %Verk.Job{class: "Class", args: []}
-      json = Poison.encode!(job)
+      json = Verk.Job.encode!(job)
 
       Redix.command!(Verk.Redis, ~w(LPUSH #{@queue_key} #{json}))
 
@@ -135,7 +135,7 @@ defmodule Verk.QueueTest do
     end
 
     test "job with no original_json" do
-      json = %Verk.Job{class: "Class", args: []} |> Poison.encode!
+      json = %Verk.Job{class: "Class", args: []} |> Verk.Job.encode!
 
       Redix.command!(Verk.Redis, ~w(LPUSH #{@queue_key} #{json}))
 
