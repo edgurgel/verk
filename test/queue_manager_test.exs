@@ -5,9 +5,14 @@ defmodule Verk.QueueManagerTest do
   alias Verk.{QueueManager.State, Job, RetrySet, DeadSet}
 
   @mrpop_script Verk.Scripts.sha("mrpop_lpush_src_dest")
+  @node_id "1"
 
   setup do
-    on_exit(fn -> unload() end)
+    Application.put_env(:verk, :local_node_id, @node_id)
+    on_exit fn ->
+      unload()
+      Application.delete_env(:verk, :local_node_id)
+    end
     :ok
   end
 
@@ -21,7 +26,7 @@ defmodule Verk.QueueManagerTest do
   describe "init/1" do
     test "sets up redis connection" do
       redis_url = Confex.get_env(:verk, :redis_url)
-      node_id = Confex.get_env(:verk, :node_id, "1")
+      node_id = Confex.fetch_env!(:verk, :local_node_id)
 
       expect(Redix, :start_link, [redis_url], {:ok, :redis})
       expect(Verk.Scripts, :load, [:redis], :ok)

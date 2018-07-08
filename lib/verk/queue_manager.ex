@@ -5,17 +5,14 @@ defmodule Verk.QueueManager do
 
   use GenServer
   require Logger
-  alias Verk.{DeadSet, RetrySet, Time, Job}
+  alias Verk.{DeadSet, RetrySet, Time, Job, InProgressQueue}
 
   @default_stacktrace_size 5
 
-  @external_resource "priv/lpop_rpush_src_dest.lua"
   @external_resource "priv/mrpop_lpush_src_dest.lua"
-  @lpop_rpush_src_dest_script_sha Verk.Scripts.sha("lpop_rpush_src_dest")
   @mrpop_lpush_src_dest_script_sha Verk.Scripts.sha("mrpop_lpush_src_dest")
 
   @max_jobs 100
-  @max_enqueue_inprogress 1000
 
   defmodule State do
     @moduledoc false
@@ -79,7 +76,7 @@ defmodule Verk.QueueManager do
   Connect to redis
   """
   def init([queue_name]) do
-    node_id = Confex.get_env(:verk, :node_id, "1")
+    node_id = Confex.fetch_env!(:verk, :local_node_id)
     {:ok, redis} = Redix.start_link(Confex.get_env(:verk, :redis_url))
     Verk.Scripts.load(redis)
 
@@ -91,16 +88,7 @@ defmodule Verk.QueueManager do
 
   @doc false
   def handle_call(:enqueue_inprogress, _from, state) do
-    in_progress_key = inprogress(state.queue_name, state.node_id)
-
-    case Redix.command(state.redis, [
-           "EVALSHA",
-           @lpop_rpush_src_dest_script_sha,
-           2,
-           in_progress_key,
-           "queue:#{state.queue_name}",
-           @max_enqueue_inprogress
-         ]) do
+    case InProgressQueue.enqueue_in_progress(state.queue_name, state.node_id, state.redis) do
       {:ok, [0, m]} ->
         Logger.info("Added #{m} jobs.")
 
