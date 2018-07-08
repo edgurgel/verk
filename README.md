@@ -199,6 +199,9 @@ Verk has an Event Manager that notifies the following events:
 * `Verk.Events.JobStarted`
 * `Verk.Events.JobFinished`
 * `Verk.Events.JobFailed`
+* `Verk.Events.QueueRunning`
+* `Verk.Events.QueuePausing`
+* `Verk.Events.QueuePaused`
 
 One can define an error tracking handler like this:
 
