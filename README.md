@@ -155,21 +155,6 @@ The following values are valid:
 * `:atoms!` - keys are converted to atoms using `String.to_existing_atom/1`
 
 
-### On Heroku
-
-Heroku provides [an experimental environment variable](https://devcenter.heroku.com/articles/dynos#local-environment-variables) named after the type and number of the dyno. _It is possible that two dynos with the same name could overlap for a short time during a dyno restart._
-
-```elixir
-config :verk, queues: [default: 25, priority: 10],
-              max_retry_count: 10,
-              poll_interval: {:system, :integer, "VERK_POLL_INTERVAL", 5000},
-              start_job_log_level: :info,
-              done_job_log_level: :info,
-              fail_job_log_level: :info,
-              node_id: {:system, "DYNO", "job.1"},
-              redis_url: {:system, "VERK_REDIS_URL", "redis://127.0.0.1:6379"}
-```
-
 ## Queues
 
 It's possible to dynamically add and remove queues from Verk.
@@ -181,6 +166,140 @@ Verk.add_queue(:new, 10) # Adds a queue named `new` with 10 workers
 ```elixir
 Verk.remove_queue(:new) # Terminate and delete the queue named `new`
 ```
+
+## Deployment
+
+The way Verk currently works, there are two pitfalls to pay attention to:
+
+1. **Each worker node's `node_id` MUST be unique.** If a node goes online with a
+  `node_id`, which is already in use by another running node, then the second
+  node will re-enqueue all jobs currently in progress on the first node, which
+  results in jobs executed multiple times.
+2. **Take caution around removing nodes.** If a node with jobs in progress is
+  killed, those jobs will not be restarted until another node with the same
+  `node_id` comes online. If another node with the same `node_id` never comes
+  online, the jobs will be stuck forever. This means you should not use dynamic
+  `node_id`s such as Docker container ids or Kubernetes Deployment pod names.
+
+### On Heroku
+
+Heroku provides
+[an experimental environment variable](https://devcenter.heroku.com/articles/dynos#local-environment-variables)
+named after the type and number of the dyno.
+
+```elixir
+config :verk,
+  node_id: {:system, "DYNO", "job.1"}
+```
+
+_It is possible that two dynos with the same name could overlap for a short time
+during a dyno restart._ As the Heroku documentation says:
+
+> [...] $DYNO is not guaranteed to be unique within an app. For example, during
+> a deploy or restart, the same dyno identifier could be used for two running
+> dynos. It will be eventually consistent, however.
+
+This means that you are still at risk of violating the first rule above on
+`node_id` uniqueness. A slightly naive way of lowering the risk would be to
+add a delay in your application before the Verk queue starts.
+
+### On Kubernetes
+
+We recommend using a
+[StatefulSet](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/)
+to run your pool of workers. StatefulSets add a label,
+`statefulset.kubernetes.io/pod-name`, to all its pods with the value
+`{name}-{n}`, where `{name}` is the name of your StatefulSet and `{n}` is a
+number from 0 to `spec.replicas - 1`. StatefulSets maintain a sticky identity
+for its pods and guarantee that two identical pods are never up simultaneously.
+This way it satisfies both of our deployment rules mentioned above.
+
+Define your worker like this:
+
+```yaml
+# StatefulSets require a service, even though we don't use it directly for anything
+apiVersion: v1
+kind: Service
+metadata:
+ name: my-worker
+ labels:
+   app: my-worker
+spec:
+ clusterIP: None
+ selector:
+   app: my-worker
+
+---
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+ name: my-worker
+ labels:
+   app: my-worker
+spec:
+ selector:
+   matchLabels:
+     app: my-worker
+ serviceName: my-worker
+ # We run two workers in this example
+ replicas: 2
+ # The workers don't depend on each other, so we can use Parallel pod management
+ podManagementPolicy: Parallel
+ template:
+   metadata:
+     labels:
+       app: my-worker
+   spec:
+     # This should probably match up with the setting you used for Verk's :shutdown_timeout
+     terminationGracePeriodSeconds: 30
+     containers:
+       - name: my-worker
+         image: my-repo/my-worker
+         env:
+           - name: VERK_NODE_ID
+             valueFrom:
+               fieldRef:
+                 fieldPath: metadata.labels['statefulset.kubernetes.io/pod-name']
+```
+
+Notice how we use a `fieldRef` to expose the pod's
+`statefulset.kubernetes.io/pod-name` label as the `VERK_NODE_ID` environment
+variable. Instruct Verk to use this environment variable as `node_id`:
+
+```elixir
+config :verk,
+ node_id: {:system, "VERK_NODE_ID"}
+```
+
+Be careful when scaling the number of `replicas` down. Make sure that the pods
+that will be stopped and never come back do not have any jobs in progress.
+Scaling up is always safe.
+
+Don't use Deployments for pods that will run Verk. If you hardcode `node_id`
+into your config, multiple pods with the same `node_id`will be online at the
+same time, violating the first rule. If you use a non-sticky environment
+variable, such as `HOSTNAME`, you'll violate the second rule and cause jobs to
+get stuck every time you deploy.
+
+If your application serves as e.g. both an API and Verk queue, then it may be
+wise to run a separate Deployment for your API, which does not run Verk. In that
+case you can configure your application to check an environment variable,
+`VERK_DISABLED`, for whether it should handle any Verk queues:
+
+```elixir
+# In your config.exs
+config :verk,
+  queues: {:system, {MyApp.Env, :verk_queues, []}, "VERK_DISABLED"}
+
+# In some other file
+defmodule MyApp.Env do
+  def verk_queues("true"), do: []
+  def verk_queues(_), do: [default: 25, priority: 10]
+end
+```
+
+Then set `VERK_DISABLED=true` in your Deployment's spec.
 
 ## Reliability
 
