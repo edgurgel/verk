@@ -372,6 +372,10 @@ Check [Verk Web](https://github.com/edgurgel/verk_web)!
 
 ![Dashboard](http://i.imgur.com/LsDKIVT.png)
 
+## Metrics ?
+
+Check [Verk Stats](https://github.com/edgurgel/verk-stats)
+
 ## Sponsorship
 
 Initial development sponsored by [Carnival.io](http://carnival.io)
