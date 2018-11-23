@@ -1,6 +1,9 @@
 defmodule Verk.Job do
   @moduledoc """
-  The Job struct
+  The Job struct.
+
+  Set `config :verk, max_retry_count: value` on your config file to set the default max
+  amount of retries on all your `Verk.Job` when none is informed. Defaults at `25`.
   """
 
   @keys [

@@ -1,6 +1,9 @@
 defmodule Verk.DeadSet do
   @moduledoc """
-  This module interacts with jobs in the dead set
+  This module interacts with jobs in the dead set.
+
+  Set `config :verk, max_dead_jobs: value` on your config file to set the max
+  amount of dead jobs to be stored on your dead queue. Defaults at `100`.
   """
   import Verk.Dsl
   alias Verk.{SortedSet, Job}
