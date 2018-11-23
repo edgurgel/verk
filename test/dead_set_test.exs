@@ -5,61 +5,85 @@ defmodule Verk.DeadSetTest do
   import :meck
 
   setup do
-    { :ok, redis } = Confex.get_env(:verk, :redis_url) |> Redix.start_link
+    {:ok, redis} = Confex.get_env(:verk, :redis_url) |> Redix.start_link()
     Redix.command!(redis, ~w(DEL dead))
-    on_exit fn -> unload() end
-    { :ok, %{ redis: redis } }
+    on_exit(fn -> unload() end)
+    {:ok, %{redis: redis}}
   end
 
   describe "add/3" do
-    test "adds a job", %{ redis: redis } do
-      job = %Verk.Job{ retry_count: 1 }
+    test "adds a job", %{redis: redis} do
+      job = %Verk.Job{retry_count: 1}
       payload = Verk.Job.encode!(job)
       failed_at = 1
 
       assert add(job, failed_at, redis) == :ok
 
-      assert Redix.command!(redis, ["ZRANGE", key(), 0, -1, "WITHSCORES"]) == [payload, to_string(failed_at)]
+      assert Redix.command!(redis, ["ZRANGE", key(), 0, -1, "WITHSCORES"]) == [
+               payload,
+               to_string(failed_at)
+             ]
     end
 
-    test "replaces old jobs", %{ redis: redis } do
-      job1 = %Verk.Job{ retry_count: 1 }
+    test "replaces old jobs", %{redis: redis} do
+      job1 = %Verk.Job{retry_count: 1}
       payload1 = Verk.Job.encode!(job1)
-      job2 = %Verk.Job{ retry_count: 2 }
+      job2 = %Verk.Job{retry_count: 2}
       payload2 = Verk.Job.encode!(job2)
       failed_at = 60 * 60 * 24 * 7
 
       assert add(job1, failed_at + 1, redis) == :ok
       assert add(job2, failed_at + 2, redis) == :ok
 
-      assert Redix.command!(redis, ["ZRANGE", key(), 0, 2, "WITHSCORES"])
-        == [payload1, to_string(failed_at + 1), payload2, to_string(failed_at + 2)]
+      assert Redix.command!(redis, ["ZRANGE", key(), 0, 2, "WITHSCORES"]) ==
+               [payload1, to_string(failed_at + 1), payload2, to_string(failed_at + 2)]
+    end
+
+    test "allows setting max_dead_jobs size, limiting queue size", %{redis: redis} do
+      Application.put_env(:verk, :max_dead_jobs, 1)
+
+      job1 = %Verk.Job{retry_count: 1}
+      _payload1 = Verk.Job.encode!(job1)
+      job2 = %Verk.Job{retry_count: 2}
+      payload2 = Verk.Job.encode!(job2)
+      failed_at = 60 * 60 * 24 * 7
+
+      assert add(job1, failed_at + 1, redis) == :ok
+      assert add(job2, failed_at + 2, redis) == :ok
+
+      assert Redix.command!(redis, ["ZRANGE", key(), 0, 2, "WITHSCORES"]) ==
+               [payload2, to_string(failed_at + 2)]
+
+      Application.put_env(:verk, :max_dead_jobs, 100)
     end
   end
 
   describe "add!/3" do
-    test "add!/3", %{ redis: redis } do
-      job = %Verk.Job{ retry_count: 1 }
+    test "add!/3", %{redis: redis} do
+      job = %Verk.Job{retry_count: 1}
       payload = Verk.Job.encode!(job)
       failed_at = 1
 
       assert add!(job, failed_at, redis) == nil
 
-      assert Redix.command!(redis, ["ZRANGE", key(), 0, -1, "WITHSCORES"]) == [payload, to_string(failed_at)]
+      assert Redix.command!(redis, ["ZRANGE", key(), 0, -1, "WITHSCORES"]) == [
+               payload,
+               to_string(failed_at)
+             ]
     end
 
-    test "replaces old jobs", %{ redis: redis } do
-      job1 = %Verk.Job{ retry_count: 1 }
+    test "replaces old jobs", %{redis: redis} do
+      job1 = %Verk.Job{retry_count: 1}
       payload1 = Verk.Job.encode!(job1)
-      job2 = %Verk.Job{ retry_count: 2 }
+      job2 = %Verk.Job{retry_count: 2}
       payload2 = Verk.Job.encode!(job2)
       failed_at = 60 * 60 * 24 * 7
 
       assert add!(job1, failed_at + 1, redis) == nil
       assert add!(job2, failed_at + 2, redis) == nil
 
-      assert Redix.command!(redis, ["ZRANGE", key(), 0, 2, "WITHSCORES"])
-        == [payload1, to_string(failed_at + 1), payload2, to_string(failed_at + 2)]
+      assert Redix.command!(redis, ["ZRANGE", key(), 0, 2, "WITHSCORES"]) ==
+               [payload1, to_string(failed_at + 1), payload2, to_string(failed_at + 2)]
     end
   end
 
@@ -68,7 +92,7 @@ defmodule Verk.DeadSetTest do
       expect(SortedSet, :count, [key(), Verk.Redis], {:ok, 1})
 
       assert count() == {:ok, 1}
-      assert validate SortedSet
+      assert validate(SortedSet)
     end
   end
 
@@ -77,7 +101,7 @@ defmodule Verk.DeadSetTest do
       expect(SortedSet, :count!, [key(), Verk.Redis], 1)
 
       assert count!() == 1
-      assert validate SortedSet
+      assert validate(SortedSet)
     end
   end
 
@@ -86,7 +110,7 @@ defmodule Verk.DeadSetTest do
       expect(SortedSet, :clear, [key(), Verk.Redis], :ok)
 
       assert clear() == :ok
-      assert validate SortedSet
+      assert validate(SortedSet)
     end
   end
 
@@ -95,7 +119,7 @@ defmodule Verk.DeadSetTest do
       expect(SortedSet, :clear!, [key(), Verk.Redis], nil)
 
       assert clear!() == nil
-      assert validate SortedSet
+      assert validate(SortedSet)
     end
   end
 
@@ -104,10 +128,10 @@ defmodule Verk.DeadSetTest do
       job = %Verk.Job{class: "Class", args: []}
       json = Verk.Job.encode!(job)
 
-      expect(SortedSet, :range, [key(), 0, -1, Verk.Redis], {:ok, [%{ job | original_json: json }]})
+      expect(SortedSet, :range, [key(), 0, -1, Verk.Redis], {:ok, [%{job | original_json: json}]})
 
-      assert range() == {:ok, [%{ job | original_json: json }]}
-      assert validate SortedSet
+      assert range() == {:ok, [%{job | original_json: json}]}
+      assert validate(SortedSet)
     end
   end
 
@@ -116,10 +140,10 @@ defmodule Verk.DeadSetTest do
       job = %Verk.Job{class: "Class", args: []}
       json = Verk.Job.encode!(job)
 
-      expect(SortedSet, :range, [key(), 1, 2, Verk.Redis], {:ok, [%{ job | original_json: json }]})
+      expect(SortedSet, :range, [key(), 1, 2, Verk.Redis], {:ok, [%{job | original_json: json}]})
 
-      assert range(1, 2) == {:ok, [%{ job | original_json: json }]}
-      assert validate SortedSet
+      assert range(1, 2) == {:ok, [%{job | original_json: json}]}
+      assert validate(SortedSet)
     end
   end
 
@@ -128,10 +152,10 @@ defmodule Verk.DeadSetTest do
       job = %Verk.Job{class: "Class", args: []}
       json = Verk.Job.encode!(job)
 
-      expect(SortedSet, :range!, [key(), 0, -1, Verk.Redis], [%{ job | original_json: json }])
+      expect(SortedSet, :range!, [key(), 0, -1, Verk.Redis], [%{job | original_json: json}])
 
-      assert range!() == [%{ job | original_json: json }]
-      assert validate SortedSet
+      assert range!() == [%{job | original_json: json}]
+      assert validate(SortedSet)
     end
   end
 
@@ -140,10 +164,10 @@ defmodule Verk.DeadSetTest do
       job = %Verk.Job{class: "Class", args: []}
       json = Verk.Job.encode!(job)
 
-      expect(SortedSet, :range!, [key(), 1, 2, Verk.Redis], [%{ job | original_json: json }])
+      expect(SortedSet, :range!, [key(), 1, 2, Verk.Redis], [%{job | original_json: json}])
 
-      assert range!(1, 2) == [%{ job | original_json: json }]
-      assert validate SortedSet
+      assert range!(1, 2) == [%{job | original_json: json}]
+      assert validate(SortedSet)
     end
   end
 
@@ -151,20 +175,20 @@ defmodule Verk.DeadSetTest do
     test "job with original_json" do
       job = %Verk.Job{class: "Class", args: []}
       json = Verk.Job.encode!(job)
-      job = %{ job | original_json: json }
+      job = %{job | original_json: json}
 
       expect(SortedSet, :delete_job, [key(), json, Verk.Redis], :ok)
 
       assert delete_job(job) == :ok
-      assert validate SortedSet
+      assert validate(SortedSet)
     end
 
     test "with original_json" do
-      json = %Verk.Job{class: "Class", args: []} |> Verk.Job.encode!
+      json = %Verk.Job{class: "Class", args: []} |> Verk.Job.encode!()
       expect(SortedSet, :delete_job, [key(), json, Verk.Redis], :ok)
 
       assert delete_job(json) == :ok
-      assert validate SortedSet
+      assert validate(SortedSet)
     end
   end
 
@@ -172,20 +196,20 @@ defmodule Verk.DeadSetTest do
     test "job with original_json" do
       job = %Verk.Job{class: "Class", args: []}
       json = Verk.Job.encode!(job)
-      job = %{ job | original_json: json }
+      job = %{job | original_json: json}
 
       expect(SortedSet, :delete_job!, [key(), json, Verk.Redis], nil)
 
       assert delete_job!(job) == nil
-      assert validate SortedSet
+      assert validate(SortedSet)
     end
 
     test "with original_json" do
-      json = %Verk.Job{class: "Class", args: []} |> Verk.Job.encode!
-      expect(SortedSet, :delete_job!, [key(), json, Verk.Redis], :nil)
+      json = %Verk.Job{class: "Class", args: []} |> Verk.Job.encode!()
+      expect(SortedSet, :delete_job!, [key(), json, Verk.Redis], nil)
 
       assert delete_job!(json) == nil
-      assert validate SortedSet
+      assert validate(SortedSet)
     end
   end
 end

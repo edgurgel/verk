@@ -5,8 +5,8 @@ defmodule Verk.DeadSet do
   import Verk.Dsl
   alias Verk.{SortedSet, Job}
 
-  @max_dead_jobs Confex.get_env(:verk, :max_dead_jobs, 100)
-  @timeout 60 * 60 * 24 * 7 # a week
+  # a week
+  @timeout 60 * 60 * 24 * 7
 
   @dead_key "dead"
 
@@ -18,11 +18,13 @@ defmodule Verk.DeadSet do
 
   Optionally a redis connection can be specified
   """
-  @spec add(%Job{}, integer,  GenServer.server) :: :ok | {:error, Redix.Error.t}
+  @spec add(%Job{}, integer, GenServer.server()) :: :ok | {:error, Redix.Error.t()}
   def add(job, timestamp, redis \\ Verk.Redis) do
-    case Redix.pipeline(redis, [["ZADD", @dead_key, timestamp, Job.encode!(job)],
-                                ["ZREMRANGEBYSCORE", @dead_key, "-inf", timestamp - @timeout],
-                                ["ZREMRANGEBYRANK", @dead_key, 0, -@max_dead_jobs]]) do
+    case Redix.pipeline(redis, [
+           ["ZADD", @dead_key, timestamp, Job.encode!(job)],
+           ["ZREMRANGEBYSCORE", @dead_key, "-inf", timestamp - @timeout],
+           ["ZREMRANGEBYRANK", @dead_key, 0, -max_dead_jobs() - 1]
+         ]) do
       {:ok, _} -> :ok
       {:error, error} -> {:error, error}
     end
@@ -33,7 +35,7 @@ defmodule Verk.DeadSet do
 
   Optionally a redis connection can be specified
   """
-  @spec add!(%Job{}, integer,  GenServer.server) :: nil
+  @spec add!(%Job{}, integer, GenServer.server()) :: nil
   def add!(job, timestamp, redis \\ Verk.Redis) do
     bangify(add(job, timestamp, redis))
   end
@@ -41,7 +43,7 @@ defmodule Verk.DeadSet do
   @doc """
   Counts how many jobs are inside the dead set
   """
-  @spec count(GenServer.Server) :: {:ok, integer} | {:error, Redix.Error.t}
+  @spec count(GenServer.Server) :: {:ok, integer} | {:error, Redix.Error.t()}
   def count(redis \\ Verk.Redis), do: SortedSet.count(@dead_key, redis)
 
   @doc """
@@ -53,19 +55,20 @@ defmodule Verk.DeadSet do
   @doc """
   Clears the dead set
   """
-  @spec clear(GenServer.server) :: :ok | {:error, RuntimeError.t | Redix.Error.t}
+  @spec clear(GenServer.server()) :: :ok | {:error, RuntimeError.t() | Redix.Error.t()}
   def clear(redis \\ Verk.Redis), do: SortedSet.clear(@dead_key, redis)
 
   @doc """
   Clears the dead set, raising if there's an error
   """
-  @spec clear!(GenServer.server) :: nil
+  @spec clear!(GenServer.server()) :: nil
   def clear!(redis \\ Verk.Redis), do: SortedSet.clear!(@dead_key, redis)
 
   @doc """
   List jobs from `start` to `stop`
   """
-  @spec range(integer, integer, GenServer.server) :: {:ok, [Verk.Job.T]} | {:error, Redix.Error.t}
+  @spec range(integer, integer, GenServer.server()) ::
+          {:ok, [Verk.Job.T]} | {:error, Redix.Error.t()}
   def range(start \\ 0, stop \\ -1, redis \\ Verk.Redis) do
     SortedSet.range(@dead_key, start, stop, redis)
   end
@@ -73,7 +76,7 @@ defmodule Verk.DeadSet do
   @doc """
   List jobs from `start` to `stop`, raising if there's an error
   """
-  @spec range!(integer, integer, GenServer.server) :: [Verk.Job.T]
+  @spec range!(integer, integer, GenServer.server()) :: [Verk.Job.T]
   def range!(start \\ 0, stop \\ -1, redis \\ Verk.Redis) do
     SortedSet.range!(@dead_key, start, stop, redis)
   end
@@ -81,20 +84,30 @@ defmodule Verk.DeadSet do
   @doc """
   Delete the job from the dead set
   """
-  @spec delete_job(%Job{} | String.t, GenServer.server) :: :ok | {:error, RuntimeError.t | Redix.Error.t}
+  @spec delete_job(%Job{} | String.t(), GenServer.server()) ::
+          :ok | {:error, RuntimeError.t() | Redix.Error.t()}
   def delete_job(original_json, redis \\ Verk.Redis)
+
   def delete_job(%Job{original_json: original_json}, redis) do
     delete_job(original_json, redis)
   end
+
   def delete_job(original_json, redis), do: SortedSet.delete_job(@dead_key, original_json, redis)
 
   @doc """
   Delete the job from the dead set, raising if there's an exception
   """
-  @spec delete_job!(%Job{} | String.t, GenServer.server) :: nil
+  @spec delete_job!(%Job{} | String.t(), GenServer.server()) :: nil
   def delete_job!(original_json, redis \\ Verk.Redis)
+
   def delete_job!(%Job{original_json: original_json}, redis) do
     delete_job!(original_json, redis)
   end
-  def delete_job!(original_json, redis), do: SortedSet.delete_job!(@dead_key, original_json, redis)
+
+  def delete_job!(original_json, redis),
+    do: SortedSet.delete_job!(@dead_key, original_json, redis)
+
+  defp max_dead_jobs do
+    Confex.get_env(:verk, :max_dead_jobs, 100)
+  end
 end
