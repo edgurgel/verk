@@ -15,9 +15,10 @@ defmodule Verk.RetrySet do
 
   Optionally a redis connection can be specified
   """
-  @spec add(%Job{}, integer,  GenServer.server) :: :ok | {:error, Redix.Error.t}
+  @spec add(%Job{}, integer, GenServer.server()) :: :ok | {:error, Redix.Error.t()}
   def add(job, failed_at, redis \\ Verk.Redis) do
     retry_at = calculate_retry_at(job.class, failed_at, job.retry_count)
+
     case Redix.command(redis, ["ZADD", @retry_key, to_string(retry_at), Job.encode!(job)]) do
       {:ok, _} -> :ok
       {:error, error} -> {:error, error}
@@ -29,31 +30,32 @@ defmodule Verk.RetrySet do
 
   Optionally a redis connection can be specified
   """
-  @spec add!(%Job{}, integer,  GenServer.server) :: nil
+  @spec add!(%Job{}, integer, GenServer.server()) :: nil
   def add!(job, failed_at, redis \\ Verk.Redis) do
     bangify(add(job, failed_at, redis))
   end
 
   defp calculate_retry_at(module_name, failed_at, retry_count) do
     module = Module.safe_concat([module_name])
+
     if :erlang.function_exported(module, :retry_at, 2) do
       apply(module, :retry_at, [failed_at, retry_count])
     else
       default_calculate_retry_at(failed_at, retry_count)
     end
-    rescue
-      ArgumentError -> default_calculate_retry_at(failed_at, retry_count)
+  rescue
+    ArgumentError -> default_calculate_retry_at(failed_at, retry_count)
   end
 
   defp default_calculate_retry_at(failed_at, retry_count) do
-    delay = :math.pow(retry_count, 4) + 15 + (:rand.uniform(30) * (retry_count + 1))
+    delay = :math.pow(retry_count, 4) + 15 + :rand.uniform(30) * (retry_count + 1)
     failed_at + delay
   end
 
   @doc """
   Counts how many jobs are inside the retry set
   """
-  @spec count(GenServer.Server) :: {:ok, integer} | {:error, Redix.Error.t}
+  @spec count(GenServer.Server) :: {:ok, integer} | {:error, Redix.Error.t()}
   def count(redis \\ Verk.Redis), do: SortedSet.count(@retry_key, redis)
 
   @doc """
@@ -69,7 +71,7 @@ defmodule Verk.RetrySet do
 
   An error tuple may be returned if Redis failed
   """
-  @spec clear(GenServer.server) :: {:ok, boolean} | {:error, Redix.Error.t}
+  @spec clear(GenServer.server()) :: {:ok, boolean} | {:error, Redix.Error.t()}
   def clear(redis \\ Verk.Redis), do: SortedSet.clear(@retry_key, redis)
 
   @doc """
@@ -77,13 +79,14 @@ defmodule Verk.RetrySet do
 
   It will return `true` if the retry set was cleared and `false` otherwise
   """
-  @spec clear!(GenServer.server) :: boolean
+  @spec clear!(GenServer.server()) :: boolean
   def clear!(redis \\ Verk.Redis), do: SortedSet.clear!(@retry_key, redis)
 
   @doc """
   List jobs from `start` to `stop`
   """
-  @spec range(integer, integer, GenServer.server) :: {:ok, [Verk.Job.T]} | {:error, Redix.Error.t}
+  @spec range(integer, integer, GenServer.server()) ::
+          {:ok, [Verk.Job.T]} | {:error, Redix.Error.t()}
   def range(start \\ 0, stop \\ -1, redis \\ Verk.Redis) do
     SortedSet.range(@retry_key, start, stop, redis)
   end
@@ -91,7 +94,7 @@ defmodule Verk.RetrySet do
   @doc """
   List jobs from `start` to `stop`, raising if there's an error
   """
-  @spec range!(integer, integer, GenServer.server) :: [Verk.Job.T]
+  @spec range!(integer, integer, GenServer.server()) :: [Verk.Job.T]
   def range!(start \\ 0, stop \\ -1, redis \\ Verk.Redis) do
     SortedSet.range!(@retry_key, start, stop, redis)
   end
@@ -99,7 +102,8 @@ defmodule Verk.RetrySet do
   @doc """
   List jobs from `start` to `stop` including their scores
   """
-  @spec range_with_score(integer, integer, GenServer.server) :: {:ok, [{Verk.Job.T, integer}]} | {:error, Redix.Error.t}
+  @spec range_with_score(integer, integer, GenServer.server()) ::
+          {:ok, [{Verk.Job.T, integer}]} | {:error, Redix.Error.t()}
   def range_with_score(start \\ 0, stop \\ -1, redis \\ Verk.Redis) do
     SortedSet.range_with_score(@retry_key, start, stop, redis)
   end
@@ -107,7 +111,7 @@ defmodule Verk.RetrySet do
   @doc """
   List jobs from `start` to `stop` including their scores, raising if there's an error
   """
-  @spec range_with_score!(integer, integer, GenServer.server) :: [{Verk.Job.T, integer}]
+  @spec range_with_score!(integer, integer, GenServer.server()) :: [{Verk.Job.T, integer}]
   def range_with_score!(start \\ 0, stop \\ -1, redis \\ Verk.Redis) do
     SortedSet.range_with_score!(@retry_key, start, stop, redis)
   end
@@ -120,11 +124,14 @@ defmodule Verk.RetrySet do
 
   An error tuple may be returned if Redis failed
   """
-  @spec delete_job(%Job{} | String.t, GenServer.server) :: {:ok, boolean}| {:error, Redix.Error.t}
+  @spec delete_job(%Job{} | String.t(), GenServer.server()) ::
+          {:ok, boolean} | {:error, Redix.Error.t()}
   def delete_job(original_json, redis \\ Verk.Redis)
+
   def delete_job(%Job{original_json: original_json}, redis) do
     delete_job(original_json, redis)
   end
+
   def delete_job(original_json, redis), do: SortedSet.delete_job(@retry_key, original_json, redis)
 
   @doc """
@@ -133,12 +140,15 @@ defmodule Verk.RetrySet do
   It returns `true` if the job was found and delete
   Otherwise it returns `false`
   """
-  @spec delete_job!(%Job{} | String.t, GenServer.server) :: boolean
+  @spec delete_job!(%Job{} | String.t(), GenServer.server()) :: boolean
   def delete_job!(original_json, redis \\ Verk.Redis)
+
   def delete_job!(%Job{original_json: original_json}, redis) do
     delete_job!(original_json, redis)
   end
-  def delete_job!(original_json, redis), do: SortedSet.delete_job!(@retry_key, original_json, redis)
+
+  def delete_job!(original_json, redis),
+    do: SortedSet.delete_job!(@retry_key, original_json, redis)
 
   @doc """
   Move the job out of the retry set to be retried immediately
@@ -148,12 +158,16 @@ defmodule Verk.RetrySet do
 
   An error tuple may be returned if Redis failed
   """
-  @spec requeue_job(%Job{} | String.t, GenServer.server) :: {:ok, boolean}| {:error, Redix.Error.t}
+  @spec requeue_job(%Job{} | String.t(), GenServer.server()) ::
+          {:ok, boolean} | {:error, Redix.Error.t()}
   def requeue_job(original_json, redis \\ Verk.Redis)
+
   def requeue_job(%Job{original_json: original_json}, redis) do
     requeue_job(original_json, redis)
   end
-  def requeue_job(original_json, redis), do: SortedSet.requeue_job(@retry_key, original_json, redis)
+
+  def requeue_job(original_json, redis),
+    do: SortedSet.requeue_job(@retry_key, original_json, redis)
 
   @doc """
   Move the job out of the retry set to be retried immediately, raising if there's an error
@@ -161,10 +175,13 @@ defmodule Verk.RetrySet do
   It returns `true` if the job was found and requeued
   Otherwise it returns `false`
   """
-  @spec requeue_job!(%Job{} | String.t, GenServer.server) :: boolean
+  @spec requeue_job!(%Job{} | String.t(), GenServer.server()) :: boolean
   def requeue_job!(original_json, redis \\ Verk.Redis)
+
   def requeue_job!(%Job{original_json: original_json}, redis) do
     requeue_job!(original_json, redis)
   end
-  def requeue_job!(original_json, redis), do: SortedSet.requeue_job!(@retry_key, original_json, redis)
+
+  def requeue_job!(original_json, redis),
+    do: SortedSet.requeue_job!(@retry_key, original_json, redis)
 end

@@ -15,7 +15,7 @@ defmodule Verk.EventProducer do
   end
 
   def init(:ok) do
-    {:producer, {:queue.new, 0}, dispatcher: GenStage.BroadcastDispatcher}
+    {:producer, {:queue.new(), 0}, dispatcher: GenStage.BroadcastDispatcher}
   end
 
   def handle_cast({:notify, event}, {queue, demand}) do

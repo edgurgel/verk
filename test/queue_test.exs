@@ -2,17 +2,21 @@ defmodule Verk.QueueTest do
   use ExUnit.Case
   import Verk.Queue
 
-  @queue     "default"
+  @queue "default"
   @queue_key "queue:default"
 
   setup do
-    { :ok, pid } = Confex.get_env(:verk, :redis_url)
-                    |> Redix.start_link([name: Verk.Redis])
+    {:ok, pid} =
+      Confex.get_env(:verk, :redis_url)
+      |> Redix.start_link(name: Verk.Redis)
+
     Redix.command!(pid, ~w(DEL #{@queue_key}))
-    on_exit fn ->
+
+    on_exit(fn ->
       ref = Process.monitor(pid)
       assert_receive {:DOWN, ^ref, _, _, _}
-    end
+    end)
+
     :ok
   end
 
@@ -70,7 +74,7 @@ defmodule Verk.QueueTest do
       json = Verk.Job.encode!(job)
       Redix.command!(Verk.Redis, ~w(LPUSH #{@queue_key} #{json}))
 
-      assert range(@queue) == {:ok, [%{ job | original_json: json }]}
+      assert range(@queue) == {:ok, [%{job | original_json: json}]}
     end
 
     test "with no items" do
@@ -78,14 +82,13 @@ defmodule Verk.QueueTest do
     end
   end
 
-
   describe "range!/1" do
     test "with items" do
       job = %Verk.Job{class: "Class", args: []}
       json = Verk.Job.encode!(job)
       Redix.command!(Verk.Redis, ~w(LPUSH #{@queue_key} #{json}))
 
-      assert range!(@queue) == [%{ job | original_json: json }]
+      assert range!(@queue) == [%{job | original_json: json}]
     end
 
     test "with no items" do
@@ -104,13 +107,13 @@ defmodule Verk.QueueTest do
 
       Redix.command!(Verk.Redis, ~w(LPUSH #{@queue_key} #{json}))
 
-      job = %{ job | original_json: json}
+      job = %{job | original_json: json}
 
       assert delete_job(@queue, job) == {:ok, true}
     end
 
     test "job with no original_json" do
-      json = %Verk.Job{class: "Class", args: []} |> Verk.Job.encode!
+      json = %Verk.Job{class: "Class", args: []} |> Verk.Job.encode!()
 
       Redix.command!(Verk.Redis, ~w(LPUSH #{@queue_key} #{json}))
 
@@ -129,13 +132,13 @@ defmodule Verk.QueueTest do
 
       Redix.command!(Verk.Redis, ~w(LPUSH #{@queue_key} #{json}))
 
-      job = %{ job | original_json: json}
+      job = %{job | original_json: json}
 
       assert delete_job!(@queue, job) == true
     end
 
     test "job with no original_json" do
-      json = %Verk.Job{class: "Class", args: []} |> Verk.Job.encode!
+      json = %Verk.Job{class: "Class", args: []} |> Verk.Job.encode!()
 
       Redix.command!(Verk.Redis, ~w(LPUSH #{@queue_key} #{json}))
 

@@ -3,7 +3,13 @@ defmodule Verk.JobTest do
   alias Verk.Job
 
   describe "encode!/1" do
-    @job %Job{queue: "test_queue", class: "DummyWorker", args: [1, 2, 3], original_json: "json_payload", max_retry_count: 5}
+    @job %Job{
+      queue: "test_queue",
+      class: "DummyWorker",
+      args: [1, 2, 3],
+      original_json: "json_payload",
+      max_retry_count: 5
+    }
     test "returns a valid json string" do
       result = Job.encode!(@job)
       assert {:ok, _} = Jason.decode(result)
@@ -15,7 +21,12 @@ defmodule Verk.JobTest do
         |> Job.encode!()
         |> Jason.decode!()
 
-      assert %{"queue" => "test_queue", "class" => "DummyWorker", "args" => "[1,2,3]", "max_retry_count" => 5} = map
+      assert %{
+               "queue" => "test_queue",
+               "class" => "DummyWorker",
+               "args" => "[1,2,3]",
+               "max_retry_count" => 5
+             } = map
     end
 
     test "does not encode the original json" do
@@ -43,14 +54,24 @@ defmodule Verk.JobTest do
       payload = ~s({ "queue" : "test_queue", "args" : "[1, 2, 3]",
                    "max_retry_count" : 5})
 
-      assert Job.decode!(payload) == %Job{ queue: "test_queue", args: [1, 2, 3], original_json: payload, max_retry_count: 5}
+      assert Job.decode!(payload) == %Job{
+               queue: "test_queue",
+               args: [1, 2, 3],
+               original_json: payload,
+               max_retry_count: 5
+             }
     end
 
     test "replaces map with array when job has no args" do
       payload = ~s({ "queue" : "test_queue", "args" : "{}",
                    "max_retry_count" : 5})
 
-      assert Job.decode!(payload) == %Job{ queue: "test_queue", args: [], original_json: payload, max_retry_count: 5}
+      assert Job.decode!(payload) == %Job{
+               queue: "test_queue",
+               args: [],
+               original_json: payload,
+               max_retry_count: 5
+             }
     end
   end
 
@@ -59,7 +80,14 @@ defmodule Verk.JobTest do
       payload = ~s({ "queue" : "test_queue", "args" : "[1, 2, 3]",
                    "max_retry_count" : 5})
 
-      assert Job.decode(payload) == {:ok, %Job{ queue: "test_queue", args: [1, 2, 3], original_json: payload, max_retry_count: 5}}
+      assert Job.decode(payload) ==
+               {:ok,
+                %Job{
+                  queue: "test_queue",
+                  args: [1, 2, 3],
+                  original_json: payload,
+                  max_retry_count: 5
+                }}
     end
 
     test "json decode error returns error tuple" do
@@ -73,7 +101,9 @@ defmodule Verk.JobTest do
       payload = ~s({ "queue" : "test_queue", "args" : "{}",
                    "max_retry_count" : 5})
 
-      assert Job.decode(payload) == {:ok, %Job{ queue: "test_queue", args: [], original_json: payload, max_retry_count: 5}}
+      assert Job.decode(payload) ==
+               {:ok,
+                %Job{queue: "test_queue", args: [], original_json: payload, max_retry_count: 5}}
     end
   end
 end

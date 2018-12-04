@@ -63,11 +63,12 @@ defmodule Verk.Manager do
   It adds the `queue` running with the amount of `size` of workers
   It always returns the child spec
   """
-  @spec add(atom, pos_integer) :: Supervisor.on_start_child
+  @spec add(atom, pos_integer) :: Supervisor.on_start_child()
   def add(queue, size) do
     unless :ets.insert_new(@table, {queue, size, :running}) do
-      Logger.error "Queue #{queue} is already running"
+      Logger.error("Queue #{queue} is already running")
     end
+
     Verk.Supervisor.start_child(queue, size)
   end
 

@@ -8,7 +8,7 @@ defmodule Verk.Queue do
   @doc """
   Counts how many jobs are enqueued on a queue
   """
-  @spec count(binary) :: {:ok, integer} |  {:error, atom | Redix.Error.t}
+  @spec count(binary) :: {:ok, integer} | {:error, atom | Redix.Error.t()}
   def count(queue) do
     Redix.command(Verk.Redis, ["LLEN", queue_name(queue)])
   end
@@ -28,7 +28,7 @@ defmodule Verk.Queue do
 
   An error tuple may be returned if Redis failed
   """
-  @spec clear(binary) :: {:ok, boolean} | {:error, Redix.Error.t}
+  @spec clear(binary) :: {:ok, boolean} | {:error, Redix.Error.t()}
   def clear(queue) do
     case Redix.command(Verk.Redis, ["DEL", queue_name(queue)]) do
       {:ok, 0} -> {:ok, false}
@@ -50,10 +50,10 @@ defmodule Verk.Queue do
   @doc """
   Lists enqueued jobs from `start` to `stop`
   """
-  @spec range(binary, integer, integer) :: {:ok, [Verk.Job.T]} | {:error, Redix.Error.t}
+  @spec range(binary, integer, integer) :: {:ok, [Verk.Job.T]} | {:error, Redix.Error.t()}
   def range(queue, start \\ 0, stop \\ -1) do
     case Redix.command(Verk.Redis, ["LRANGE", queue_name(queue), start, stop]) do
-      {:ok, jobs} -> {:ok, (for job <- jobs, do: Job.decode!(job))}
+      {:ok, jobs} -> {:ok, for(job <- jobs, do: Job.decode!(job))}
       {:error, error} -> {:error, error}
     end
   end
@@ -74,7 +74,7 @@ defmodule Verk.Queue do
 
   An error tuple may be returned if Redis failed
   """
-  @spec delete_job(binary, %Job{} | binary) :: {:ok, boolean} | {:error, Redix.Error.t}
+  @spec delete_job(binary, %Job{} | binary) :: {:ok, boolean} | {:error, Redix.Error.t()}
   def delete_job(queue, %Job{original_json: original_json}) do
     delete_job(queue, original_json)
   end

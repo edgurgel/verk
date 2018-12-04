@@ -11,7 +11,7 @@ defmodule Verk.ScheduleManager do
 
   @default_poll_interval 5000
   @schedule_key "schedule"
-  @retry_key Verk.RetrySet.key
+  @retry_key Verk.RetrySet.key()
 
   @enqueue_retriable_script_sha Verk.Scripts.sha("enqueue_retriable_job")
 
@@ -34,7 +34,7 @@ defmodule Verk.ScheduleManager do
 
     state = %State{redis: redis}
 
-    Logger.info "Schedule Manager started"
+    Logger.info("Schedule Manager started")
     schedule_fetch!(:fetch_retryable)
     schedule_fetch!(:fetch_scheduled)
     {:ok, state}
@@ -55,19 +55,23 @@ defmodule Verk.ScheduleManager do
   end
 
   defp handle_info(fetch_message, state, queue) do
-    now = Time.now |> DateTime.to_unix(:seconds)
+    now = Time.now() |> DateTime.to_unix(:seconds)
+
     case Redix.command(state.redis, ["EVALSHA", @enqueue_retriable_script_sha, 1, queue, now]) do
       {:ok, nil} ->
         schedule_fetch!(fetch_message)
         {:noreply, state}
+
       {:ok, _job} ->
         schedule_fetch!(fetch_message, 0)
         {:noreply, state}
+
       {:error, %Redix.Error{message: message}} ->
         Logger.error("Failed to fetch #{queue} set. Error: #{message}")
         {:stop, :redis_failed, state}
+
       error ->
-        Logger.error("Failed to fetch #{queue} set. Error: #{inspect error}")
+        Logger.error("Failed to fetch #{queue} set. Error: #{inspect(error)}")
         schedule_fetch!(fetch_message)
         {:noreply, state}
     end
@@ -77,6 +81,7 @@ defmodule Verk.ScheduleManager do
     interval = Confex.get_env(:verk, :poll_interval, @default_poll_interval)
     schedule_fetch!(fetch_message, interval)
   end
+
   defp schedule_fetch!(fetch_message, interval) do
     Process.send_after(self(), fetch_message, interval)
   end

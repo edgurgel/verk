@@ -1,12 +1,12 @@
 defmodule TestWorker do
   def perform(pid) do
-    send pid, :perform_executed
+    send(pid, :perform_executed)
   end
 end
 
 defmodule TestWorkerCurrentJob do
   def perform(pid) do
-    send pid, Verk.Worker.current_job
+    send(pid, Verk.Worker.current_job())
   end
 end
 
@@ -24,7 +24,7 @@ defmodule Verk.WorkerTest do
     test "cast perform runs the specified module with the args succeding" do
       worker = self()
       job = %Verk.Job{jid: "job_id", class: "TestWorker", args: [worker]}
-      assert handle_cast({ :perform, job, worker }, :state) == { :stop, :normal, :state }
+      assert handle_cast({:perform, job, worker}, :state) == {:stop, :normal, :state}
 
       assert_receive :perform_executed
       assert_receive {:"$gen_cast", {:done, ^worker, "job_id"}}
@@ -33,7 +33,7 @@ defmodule Verk.WorkerTest do
     test "cast perform runs the specified atom module with the args succeding" do
       worker = self()
       job = %Verk.Job{jid: "job_id", class: TestWorker, args: [worker]}
-      assert handle_cast({ :perform, job, worker }, :state) == { :stop, :normal, :state }
+      assert handle_cast({:perform, job, worker}, :state) == {:stop, :normal, :state}
 
       assert_receive :perform_executed
       assert_receive {:"$gen_cast", {:done, ^worker, "job_id"}}
@@ -42,25 +42,31 @@ defmodule Verk.WorkerTest do
     test "cast perform runs the no exist module with the args succeding" do
       worker = self()
       job = %Verk.Job{jid: "job_id", class: TestWorkerNoExist, args: [worker]}
-      assert handle_cast({ :perform, job, worker }, :state) == { :stop, :failed, :state }
+      assert handle_cast({:perform, job, worker}, :state) == {:stop, :failed, :state}
 
-      exception = %UndefinedFunctionError{arity: 1, function: :perform, module: TestWorkerNoExist, reason: nil}
-      assert_receive { :"$gen_cast", { :failed, ^worker, "job_id", ^exception, _ } }
+      exception = %UndefinedFunctionError{
+        arity: 1,
+        function: :perform,
+        module: TestWorkerNoExist,
+        reason: nil
+      }
+
+      assert_receive {:"$gen_cast", {:failed, ^worker, "job_id", ^exception, _}}
     end
 
     test "cast perform runs the specified module with the args failing" do
       worker = self()
       job = %Verk.Job{jid: "job_id", class: "FailWorker", args: ["arg1"]}
       exception = ArgumentError.exception("invalid argument arg1")
-      assert handle_cast({ :perform, job, worker }, :state) == { :stop, :failed, :state }
+      assert handle_cast({:perform, job, worker}, :state) == {:stop, :failed, :state}
 
-      assert_receive { :"$gen_cast", { :failed, ^worker, "job_id", ^exception, _ } }
+      assert_receive {:"$gen_cast", {:failed, ^worker, "job_id", ^exception, _}}
     end
 
     test "cast perform accessing the job" do
       worker = self()
       job = %Verk.Job{jid: "job_id", class: "TestWorkerCurrentJob", args: [worker]}
-      assert handle_cast({ :perform, job, worker }, :state) == { :stop, :normal, :state }
+      assert handle_cast({:perform, job, worker}, :state) == {:stop, :normal, :state}
 
       assert_receive ^job
       assert_receive {:"$gen_cast", {:done, ^worker, "job_id"}}
