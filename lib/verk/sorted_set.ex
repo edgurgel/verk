@@ -80,7 +80,7 @@ defmodule Verk.SortedSet do
         # The Redis returned list alternates, [<job>, <job score>, ...].
         jobs_with_scores =
           jobs
-          |> Enum.chunk_every(2)
+          |> Enum.chunk(2)
           |> Enum.into([], fn [job, score] -> {Job.decode!(job), String.to_integer(score)} end)
 
         {:ok, jobs_with_scores}
