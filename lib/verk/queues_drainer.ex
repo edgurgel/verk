@@ -17,7 +17,7 @@ defmodule Verk.QueuesDrainer do
     end
 
     def handle_events([event], _from, parent) do
-      send parent, {:paused, event.queue}
+      send(parent, {:paused, event.queue})
       {:noreply, [], parent}
     end
   end
@@ -46,35 +46,36 @@ defmodule Verk.QueuesDrainer do
     do_terminate(shutdown_timeout)
   end
 
-  def terminate(reason, shutdown_timeout) do
+  def terminate(_reason, _shutdown_timeout) do
     Logger.info("Queues not being drainer as reason is not expected")
     :ok
   end
 
   defp do_terminate(shutdown_timeout) do
-    Logger.warn "Pausing all queues. Max timeout: #{shutdown_timeout}"
+    Logger.warn("Pausing all queues. Max timeout: #{shutdown_timeout}")
 
     {:ok, _pid} = Consumer.start_link()
 
-    queues = for {queue, _, :running} <- Verk.Manager.status(), into: MapSet.new do
-      Verk.pause_queue(queue)
-      queue
-    end
+    queues =
+      for {queue, _, :running} <- Verk.Manager.status(), into: MapSet.new() do
+        Verk.pause_queue(queue)
+        queue
+      end
 
     n_queues = MapSet.size(queues)
-    Logger.warn "Waiting for #{n_queues} queue(s)"
+    Logger.warn("Waiting for #{n_queues} queue(s)")
 
-    for x <- (0..n_queues), x > 0 do
+    for x <- 0..n_queues, x > 0 do
       receive do
-        {:paused, queue} -> Logger.info "Queue #{queue} paused!"
+        {:paused, queue} -> Logger.info("Queue #{queue} paused!")
       after
         shutdown_timeout ->
-          Logger.error "Waited the maximum amount of time to pause queues."
-          throw :shutdown_timeout
+          Logger.error("Waited the maximum amount of time to pause queues.")
+          throw(:shutdown_timeout)
       end
     end
 
-    Logger.warn "All queues paused. Shutting down."
+    Logger.warn("All queues paused. Shutting down.")
     :ok
   end
 end
