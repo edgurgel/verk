@@ -1,16 +1,38 @@
 defmodule Verk.Job do
   @moduledoc """
-  The Job struct
+  The Job struct.
+
+  Set `config :verk, max_retry_count: value` on your config file to set the default max
+  amount of retries on all your `Verk.Job` when none is informed. Defaults at `25`.
   """
 
-  @default_max_retry_count Confex.get_env(:verk, :max_retry_count, 25)
-  @keys [error_message: nil, failed_at: nil, retry_count: 0, queue: nil, class: nil, args: [],
-         jid: nil, finished_at: nil, enqueued_at: nil, retried_at: nil, created_at: nil, error_backtrace: nil,
-         max_retry_count: @default_max_retry_count]
+  @keys [
+    error_message: nil,
+    failed_at: nil,
+    retry_count: 0,
+    queue: nil,
+    class: nil,
+    args: [],
+    jid: nil,
+    finished_at: nil,
+    enqueued_at: nil,
+    retried_at: nil,
+    created_at: nil,
+    error_backtrace: nil,
+    max_retry_count: nil
+  ]
 
-  @type t :: %__MODULE__{error_message: String.t, failed_at: DateTime.t, retry_count: non_neg_integer,
-                         queue: String.t, class: String.t | atom, jid: String.t, finished_at: DateTime.t,
-                         retried_at: DateTime.t, error_backtrace: String.t}
+  @type t :: %__MODULE__{
+          error_message: String.t(),
+          failed_at: DateTime.t(),
+          retry_count: non_neg_integer,
+          queue: String.t(),
+          class: String.t() | atom,
+          jid: String.t(),
+          finished_at: DateTime.t(),
+          retried_at: DateTime.t(),
+          error_backtrace: String.t()
+        }
   defstruct [:original_json | @keys]
 
   @doc """
@@ -38,10 +60,12 @@ defmodule Verk.Job do
         map
         |> Map.update!("args", fn _ -> args end)
         |> Map.new(fn {k, v} -> {String.to_existing_atom(k), v} end)
+
       job =
         %__MODULE__{}
         |> struct(fields)
         |> build(payload)
+
       {:ok, job}
     end
   end
@@ -58,10 +82,12 @@ defmodule Verk.Job do
   end
 
   def default_max_retry_count do
-    @default_max_retry_count
+    Confex.get_env(:verk, :max_retry_count, 25)
   end
 
-  defp unwrap_args(wrapped_args) when is_binary(wrapped_args), do: Jason.decode(wrapped_args, keys: Application.get_env(:verk, :args_keys, :strings))
+  defp unwrap_args(wrapped_args) when is_binary(wrapped_args),
+    do: Jason.decode(wrapped_args, keys: Application.get_env(:verk, :args_keys, :strings))
+
   defp unwrap_args(args), do: {:ok, args}
 
   defp build(job = %{args: %{}}, payload) do
