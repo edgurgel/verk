@@ -1,11 +1,13 @@
 defmodule Verk.DeadSet do
   @moduledoc """
-  This module interacts with jobs in the dead set
+  This module interacts with jobs in the dead set.
+
+  Set `config :verk, max_dead_jobs: value` on your config file to set the max
+  amount of dead jobs to be stored on your dead queue. Defaults at `100`.
   """
   import Verk.Dsl
   alias Verk.{SortedSet, Job}
 
-  @max_dead_jobs Confex.get_env(:verk, :max_dead_jobs, 100)
   # a week
   @timeout 60 * 60 * 24 * 7
 
@@ -24,7 +26,7 @@ defmodule Verk.DeadSet do
     case Redix.pipeline(redis, [
            ["ZADD", @dead_key, timestamp, Job.encode!(job)],
            ["ZREMRANGEBYSCORE", @dead_key, "-inf", timestamp - @timeout],
-           ["ZREMRANGEBYRANK", @dead_key, 0, -@max_dead_jobs]
+           ["ZREMRANGEBYRANK", @dead_key, 0, -max_dead_jobs() - 1]
          ]) do
       {:ok, _} -> :ok
       {:error, error} -> {:error, error}
@@ -107,4 +109,8 @@ defmodule Verk.DeadSet do
 
   def delete_job!(original_json, redis),
     do: SortedSet.delete_job!(@dead_key, original_json, redis)
+
+  defp max_dead_jobs do
+    Confex.get_env(:verk, :max_dead_jobs, 100)
+  end
 end

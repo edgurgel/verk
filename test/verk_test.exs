@@ -122,6 +122,22 @@ defmodule VerkTest do
       assert is_binary(jid)
     end
 
+    test "a job without a max_retry_count" do
+      Application.put_env(:verk, :max_retry_count, 100)
+      job = %Verk.Job{queue: "test_queue", class: "TestWorker"}
+      encoded_job = "encoded_job"
+
+      expect(Verk.Job, :encode!, 1, encoded_job)
+      expect(Redix, :command, [Verk.Redis, ["LPUSH", "queue:test_queue", encoded_job]], {:ok, :_})
+
+      {:ok, jid} = enqueue(job)
+      %Verk.Job{max_retry_count: max_retry_count} = capture(:first, Verk.Job, :encode!, [:_], 1)
+
+      assert max_retry_count == 100
+      assert is_binary(jid)
+      Application.put_env(:verk, :max_retry_count, 25)
+    end
+
     test "a job without a queue" do
       job = %Verk.Job{queue: nil, jid: "job_id"}
 

@@ -71,6 +71,7 @@ The queue `default` will have a maximum of 25 jobs being processed at a time and
 ```elixir
 config :verk, queues: [default: 25, priority: 10],
               max_retry_count: 10,
+              max_dead_jobs: 100,
               poll_interval: 5000,
               start_job_log_level: :info,
               done_job_log_level: :info,
@@ -84,6 +85,7 @@ Verk supports the convention `{:system, "ENV_NAME", default}` for reading enviro
 ```elixir
 config :verk, queues: [default: 25, priority: 10],
               max_retry_count: 10,
+              max_dead_jobs: 100,
               poll_interval: {:system, :integer, "VERK_POLL_INTERVAL", 5000},
               start_job_log_level: :info,
               done_job_log_level: :info,

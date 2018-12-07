@@ -38,6 +38,24 @@ defmodule Verk.DeadSetTest do
       assert Redix.command!(redis, ["ZRANGE", key(), 0, 2, "WITHSCORES"]) ==
                [payload1, to_string(failed_at + 1), payload2, to_string(failed_at + 2)]
     end
+
+    test "allows setting max_dead_jobs size, limiting queue size", %{redis: redis} do
+      Application.put_env(:verk, :max_dead_jobs, 1)
+
+      job1 = %Verk.Job{retry_count: 1}
+      _payload1 = Verk.Job.encode!(job1)
+      job2 = %Verk.Job{retry_count: 2}
+      payload2 = Verk.Job.encode!(job2)
+      failed_at = 60 * 60 * 24 * 7
+
+      assert add(job1, failed_at + 1, redis) == :ok
+      assert add(job2, failed_at + 2, redis) == :ok
+
+      assert Redix.command!(redis, ["ZRANGE", key(), 0, 2, "WITHSCORES"]) ==
+               [payload2, to_string(failed_at + 2)]
+
+      Application.put_env(:verk, :max_dead_jobs, 100)
+    end
   end
 
   describe "add!/3" do

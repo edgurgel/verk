@@ -1,9 +1,11 @@
 defmodule Verk.Job do
   @moduledoc """
-  The Job struct
+  The Job struct.
+
+  Set `config :verk, max_retry_count: value` on your config file to set the default max
+  amount of retries on all your `Verk.Job` when none is informed. Defaults at `25`.
   """
 
-  @default_max_retry_count Confex.get_env(:verk, :max_retry_count, 25)
   @keys [
     error_message: nil,
     failed_at: nil,
@@ -17,7 +19,7 @@ defmodule Verk.Job do
     retried_at: nil,
     created_at: nil,
     error_backtrace: nil,
-    max_retry_count: @default_max_retry_count
+    max_retry_count: nil
   ]
 
   @type t :: %__MODULE__{
@@ -80,7 +82,7 @@ defmodule Verk.Job do
   end
 
   def default_max_retry_count do
-    @default_max_retry_count
+    Confex.get_env(:verk, :max_retry_count, 25)
   end
 
   defp unwrap_args(wrapped_args) when is_binary(wrapped_args),
