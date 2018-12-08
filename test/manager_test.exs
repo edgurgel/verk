@@ -4,7 +4,7 @@ defmodule Verk.ManagerTest do
   import Verk.Manager
 
   setup do
-    on_exit fn -> unload() end
+    on_exit(fn -> unload() end)
     :ok
   end
 
@@ -17,7 +17,11 @@ defmodule Verk.ManagerTest do
     test "creates an ETS table with queues" do
       queues = [default: 25, low_priority: 10]
       init(queues)
-      assert :ets.tab2list(:verk_manager) == [{:default, 25, :running}, {:low_priority, 10, :running}]
+
+      assert :ets.tab2list(:verk_manager) == [
+               {:default, 25, :running},
+               {:low_priority, 10, :running}
+             ]
     end
   end
 
@@ -48,8 +52,13 @@ defmodule Verk.ManagerTest do
       expect(Verk.WorkersManager, :pause, [queue], :ok)
 
       assert pause(queue) == true
-      assert :ets.tab2list(:verk_manager) == [{:default, 25, :paused}, {:low_priority, 10, :running}]
-      assert validate Verk.WorkersManager
+
+      assert :ets.tab2list(:verk_manager) == [
+               {:default, 25, :paused},
+               {:low_priority, 10, :running}
+             ]
+
+      assert validate(Verk.WorkersManager)
     end
 
     test "does nothing if queue does not exist" do
@@ -59,7 +68,11 @@ defmodule Verk.ManagerTest do
       queue = :no_queue
 
       assert pause(queue) == false
-      assert :ets.tab2list(:verk_manager) == [{:default, 25, :running}, {:low_priority, 10, :running}]
+
+      assert :ets.tab2list(:verk_manager) == [
+               {:default, 25, :running},
+               {:low_priority, 10, :running}
+             ]
     end
   end
 
@@ -73,8 +86,13 @@ defmodule Verk.ManagerTest do
       expect(Verk.WorkersManager, :resume, [queue], :ok)
 
       assert resume(queue) == true
-      assert :ets.tab2list(:verk_manager) == [{:default, 25, :running}, {:low_priority, 10, :running}]
-      assert validate Verk.WorkersManager
+
+      assert :ets.tab2list(:verk_manager) == [
+               {:default, 25, :running},
+               {:low_priority, 10, :running}
+             ]
+
+      assert validate(Verk.WorkersManager)
     end
 
     test "does nothing if queue does not exist" do
@@ -84,7 +102,11 @@ defmodule Verk.ManagerTest do
       queue = :no_queue
 
       assert pause(queue) == false
-      assert :ets.tab2list(:verk_manager) == [{:default, 25, :paused}, {:low_priority, 10, :running}]
+
+      assert :ets.tab2list(:verk_manager) == [
+               {:default, 25, :paused},
+               {:low_priority, 10, :running}
+             ]
     end
   end
 
@@ -96,7 +118,7 @@ defmodule Verk.ManagerTest do
 
       assert add(:default, 25) == {:ok, :child}
       assert :ets.tab2list(:verk_manager) == [{:default, 25, :running}]
-      assert validate Verk.Supervisor
+      assert validate(Verk.Supervisor)
     end
   end
 
@@ -109,7 +131,7 @@ defmodule Verk.ManagerTest do
 
       assert remove(:default) == :ok
       assert :ets.tab2list(:verk_manager) == [{:low_priority, 10, :running}]
-      assert validate Verk.Supervisor
+      assert validate(Verk.Supervisor)
     end
 
     test "does nothing if queue is not running" do
@@ -119,7 +141,7 @@ defmodule Verk.ManagerTest do
       expect(Verk.Supervisor, :stop_child, [:default], {:error, :not_found})
 
       assert remove(:default) == {:error, :not_found}
-      assert validate Verk.Supervisor
+      assert validate(Verk.Supervisor)
     end
   end
 end

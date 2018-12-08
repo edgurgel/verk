@@ -33,13 +33,14 @@ defmodule Verk.QueueStats do
   @doc """
   Lists the queues and their stats searching for a `prefix` if provided
   """
-  @spec all(binary) :: Map.t
+  @spec all(binary) :: Map.t()
   def all(prefix \\ "") do
     GenServer.call(__MODULE__, {:all, prefix})
   end
 
   defp status(queue, queues, running_counter) do
     status = queues[queue] || Verk.Manager.status(queue)
+
     if status == :running and running_counter == 0 do
       :idle
     else
@@ -49,25 +50,37 @@ defmodule Verk.QueueStats do
 
   @doc false
   def init(_) do
-    QueueStatsCounters.init
+    QueueStatsCounters.init()
     Process.send_after(self(), :persist_stats, @persist_interval)
     {:consumer, %State{}, subscribe_to: [Verk.EventProducer]}
   end
 
   def handle_call({:all, prefix}, _from, state) do
-    result = for {queue, running, finished, failed} <- QueueStatsCounters.all(prefix), is_list(queue) do
-      queue = to_string(queue)
-      %{queue: queue, status: status(queue, state.queues, running),
-        running_counter: running, finished_counter: finished, failed_counter: failed}
-    end
-    queues = for %{queue: queue, status: status} <- result, into: state.queues, do: {queue, status}
+    result =
+      for {queue, running, finished, failed} <- QueueStatsCounters.all(prefix), is_list(queue) do
+        queue = to_string(queue)
+
+        %{
+          queue: queue,
+          status: status(queue, state.queues, running),
+          running_counter: running,
+          finished_counter: finished,
+          failed_counter: failed
+        }
+      end
+
+    queues =
+      for %{queue: queue, status: status} <- result, into: state.queues, do: {queue, status}
+
     {:reply, result, [], %State{queues: queues}}
   end
 
   def handle_events(events, _from, state) do
-    new_state = Enum.reduce(events, state, fn event, state ->
-      handle_event(event, state)
-    end)
+    new_state =
+      Enum.reduce(events, state, fn event, state ->
+        handle_event(event, state)
+      end)
+
     {:noreply, [], new_state}
   end
 
@@ -102,11 +115,14 @@ defmodule Verk.QueueStats do
 
   @doc false
   def handle_info(:persist_stats, state) do
-    case QueueStatsCounters.persist do
-      :ok -> :ok
+    case QueueStatsCounters.persist() do
+      :ok ->
+        :ok
+
       {:error, reason} ->
-        Logger.error("QueueStats failed to persist stats to Redis. Reason: #{inspect reason}")
+        Logger.error("QueueStats failed to persist stats to Redis. Reason: #{inspect(reason)}")
     end
+
     Process.send_after(self(), :persist_stats, @persist_interval)
     {:noreply, [], state}
   end

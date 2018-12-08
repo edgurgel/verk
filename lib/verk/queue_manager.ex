@@ -48,7 +48,7 @@ defmodule Verk.QueueManager do
   Add job to be retried in the assigned queue
   """
   def retry(queue_manager, job, exception, stacktrace, timeout \\ 5000) do
-    now = Time.now |> DateTime.to_unix
+    now = Time.now() |> DateTime.to_unix()
     GenServer.call(queue_manager, {:retry, job, now, exception, stacktrace}, timeout)
   catch
     :exit, {:timeout, _} -> :timeout
@@ -85,39 +85,70 @@ defmodule Verk.QueueManager do
 
     state = %State{queue_name: queue_name, redis: redis, node_id: node_id}
 
-    Logger.info "Queue Manager started for queue #{queue_name}"
+    Logger.info("Queue Manager started for queue #{queue_name}")
     {:ok, state}
   end
 
   @doc false
   def handle_call(:enqueue_inprogress, _from, state) do
     in_progress_key = inprogress(state.queue_name, state.node_id)
-    case Redix.command(state.redis, ["EVALSHA", @lpop_rpush_src_dest_script_sha, 2,
-                                     in_progress_key, "queue:#{state.queue_name}", @max_enqueue_inprogress]) do
+
+    case Redix.command(state.redis, [
+           "EVALSHA",
+           @lpop_rpush_src_dest_script_sha,
+           2,
+           in_progress_key,
+           "queue:#{state.queue_name}",
+           @max_enqueue_inprogress
+         ]) do
       {:ok, [0, m]} ->
         Logger.info("Added #{m} jobs.")
-        Logger.info("No more jobs to be added to the queue #{state.queue_name} from inprogress list.")
+
+        Logger.info(
+          "No more jobs to be added to the queue #{state.queue_name} from inprogress list."
+        )
+
         {:reply, :ok, state}
+
       {:ok, [n, m]} ->
         Logger.info("Added #{m} jobs.")
-        Logger.info("#{n} jobs still to be added to the queue #{state.queue_name} from inprogress list.")
+
+        Logger.info(
+          "#{n} jobs still to be added to the queue #{state.queue_name} from inprogress list."
+        )
+
         {:reply, :more, state}
+
       {:error, reason} ->
-        Logger.error("Failed to add jobs back to queue #{state.queue_name} from inprogress. Error: #{inspect reason}")
+        Logger.error(
+          "Failed to add jobs back to queue #{state.queue_name} from inprogress. Error: #{
+            inspect(reason)
+          }"
+        )
+
         {:stop, :redis_failed, state}
     end
   end
 
   def handle_call({:dequeue, n}, _from, state) do
-    case Redix.command(state.redis, ["EVALSHA", @mrpop_lpush_src_dest_script_sha, 2,  "queue:#{state.queue_name}",
-                                     inprogress(state.queue_name, state.node_id), min(@max_jobs, n)]) do
+    case Redix.command(state.redis, [
+           "EVALSHA",
+           @mrpop_lpush_src_dest_script_sha,
+           2,
+           "queue:#{state.queue_name}",
+           inprogress(state.queue_name, state.node_id),
+           min(@max_jobs, n)
+         ]) do
       {:ok, []} ->
         {:reply, [], state}
+
       {:ok, jobs} ->
         {:reply, jobs, state}
+
       {:error, %Redix.Error{message: message}} ->
         Logger.error("Failed to fetch jobs: #{message}")
         {:stop, :redis_failed, :redis_failed, state}
+
       {:error, _} ->
         {:reply, :redis_failed, state}
     end
@@ -125,21 +156,26 @@ defmodule Verk.QueueManager do
 
   def handle_call({:retry, job, failed_at, exception, stacktrace}, _from, state) do
     retry_count = (job.retry_count || 0) + 1
-    job         = build_retry_job(job, retry_count, failed_at, exception, stacktrace)
+    job = build_retry_job(job, retry_count, failed_at, exception, stacktrace)
 
     if retry_count <= (job.max_retry_count || Job.default_max_retry_count()) do
       RetrySet.add!(job, failed_at, state.redis)
     else
-      Logger.info("Max retries reached to job_id #{job.jid}, job: #{inspect job}")
+      Logger.info("Max retries reached to job_id #{job.jid}, job: #{inspect(job)}")
       DeadSet.add!(job, failed_at, state.redis)
     end
+
     {:reply, :ok, state}
   end
 
   defp build_retry_job(job, retry_count, failed_at, exception, stacktrace) do
-    job = %{job | error_backtrace: format_stacktrace(stacktrace),
-                  error_message: Exception.message(exception),
-                  retry_count: retry_count}
+    job = %{
+      job
+      | error_backtrace: format_stacktrace(stacktrace),
+        error_message: Exception.message(exception),
+        retry_count: retry_count
+    }
+
     if retry_count > 1 do
       # Set the retried_at if this job was already retried at least once
       %{job | retried_at: failed_at}
@@ -151,19 +187,31 @@ defmodule Verk.QueueManager do
 
   @doc false
   def handle_cast({:ack, job}, state) do
-    case Redix.command(state.redis, ["LREM", inprogress(state.queue_name, state.node_id), "-1", job.original_json]) do
+    case Redix.command(state.redis, [
+           "LREM",
+           inprogress(state.queue_name, state.node_id),
+           "-1",
+           job.original_json
+         ]) do
       {:ok, 1} -> :ok
-      _ -> Logger.error("Failed to acknowledge job #{inspect job}")
+      _ -> Logger.error("Failed to acknowledge job #{inspect(job)}")
     end
+
     {:noreply, state}
   end
 
   @doc false
   def handle_cast({:malformed, job}, state) do
-    case Redix.command(state.redis, ["LREM", inprogress(state.queue_name, state.node_id), "-1", job]) do
+    case Redix.command(state.redis, [
+           "LREM",
+           inprogress(state.queue_name, state.node_id),
+           "-1",
+           job
+         ]) do
       {:ok, 1} -> :ok
-      _ -> Logger.error("Failed to acknowledge job #{inspect job}")
+      _ -> Logger.error("Failed to acknowledge job #{inspect(job)}")
     end
+
     {:noreply, state}
   end
 
@@ -172,7 +220,9 @@ defmodule Verk.QueueManager do
   end
 
   defp format_stacktrace(stacktrace) when is_list(stacktrace) do
-    stacktrace_limit = Confex.get_env(:verk, :failed_job_stacktrace_size, @default_stacktrace_size)
+    stacktrace_limit =
+      Confex.get_env(:verk, :failed_job_stacktrace_size, @default_stacktrace_size)
+
     Exception.format_stacktrace(Enum.slice(stacktrace, 0..(stacktrace_limit - 1)))
   end
 

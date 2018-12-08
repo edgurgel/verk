@@ -6,11 +6,13 @@ defmodule Verk.QueuesDrainerTest do
 
   setup do
     {:ok, pid} = EventProducer.start_link()
-    new Verk, [:merge_expects]
-    on_exit fn ->
+    new(Verk, [:merge_expects])
+
+    on_exit(fn ->
       assert_down(pid)
       unload()
-    end
+    end)
+
     :ok
   end
 
