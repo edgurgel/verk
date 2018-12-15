@@ -46,7 +46,7 @@ defmodule Verk.QueuesDrainer do
     do_terminate(shutdown_timeout)
   end
 
-  def terminate(reason, shutdown_timeout) do
+  def terminate(_reason, _shutdown_timeout) do
     Logger.info("Queues not being drainer as reason is not expected")
     :ok
   end
