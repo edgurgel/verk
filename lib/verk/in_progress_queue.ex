@@ -9,7 +9,15 @@ defmodule Verk.InProgressQueue do
 
   def enqueue_in_progress(queue_name, node_id, redis) do
     in_progress_key = inprogress(queue_name, node_id)
-    Redix.command(redis, ["EVALSHA", @lpop_rpush_src_dest_script_sha, 2, in_progress_key, "queue:#{queue_name}", @max_enqueue_inprogress])
+
+    Redix.command(redis, [
+      "EVALSHA",
+      @lpop_rpush_src_dest_script_sha,
+      2,
+      in_progress_key,
+      "queue:#{queue_name}",
+      @max_enqueue_inprogress
+    ])
   end
 
   defp inprogress(queue_name, node_id) do

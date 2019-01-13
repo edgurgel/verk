@@ -8,15 +8,15 @@ defmodule Verk.Node.ManagerTest do
   @frequency 10
 
   setup do
-    new [Verk.Node, InProgressQueue], [:merge_expects]
+    new([Verk.Node, InProgressQueue], [:merge_expects])
     Application.put_env(:verk, :local_node_id, @verk_node_id)
     Application.put_env(:verk, :heartbeat, @frequency)
 
-    on_exit fn ->
+    on_exit(fn ->
       Application.delete_env(:verk, :local_node_id)
       Application.delete_env(:verk, :heartbeat)
       unload()
-    end
+    end)
 
     :ok
   end
@@ -59,8 +59,21 @@ defmodule Verk.Node.ManagerTest do
       expect(Verk.Node, :expire_in!, [@verk_node_id, 2 * @frequency, Verk.Redis], :ok)
       expect(Verk.Node, :queues!, ["dead-node", 0, Verk.Redis], {:more, ["queue_1"], 123})
       expect(Verk.Node, :queues!, ["dead-node", 123, Verk.Redis], {:ok, ["queue_2"]})
-      expect(InProgressQueue, :enqueue_in_progress, ["queue_1", dead_node_id, Verk.Redis], seq([{:ok, [3, 5]}, {:ok, [0, 3]}]))
-      expect(InProgressQueue, :enqueue_in_progress, ["queue_2", dead_node_id, Verk.Redis], {:ok, [0, 1]})
+
+      expect(
+        InProgressQueue,
+        :enqueue_in_progress,
+        ["queue_1", dead_node_id, Verk.Redis],
+        seq([{:ok, [3, 5]}, {:ok, [0, 3]}])
+      )
+
+      expect(
+        InProgressQueue,
+        :enqueue_in_progress,
+        ["queue_2", dead_node_id, Verk.Redis],
+        {:ok, [0, 1]}
+      )
+
       expect(Verk.Node, :deregister!, [dead_node_id, Verk.Redis], :ok)
 
       assert handle_info(:heartbeat, state) == {:noreply, state}

@@ -4,8 +4,8 @@ defmodule Verk.InProgressQueueTest do
   alias Verk.InProgressQueue
 
   setup do
-    new Redix
-    on_exit fn -> unload() end
+    new(Redix)
+    on_exit(fn -> unload() end)
     :ok
   end
 

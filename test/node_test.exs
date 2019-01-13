@@ -9,7 +9,7 @@ defmodule Verk.NodeTest do
   @node_queues_key "verk:node:123:queues"
 
   setup do
-    {:ok, redis} = :verk |> Confex.get_env(:redis_url) |> Redix.start_link
+    {:ok, redis} = :verk |> Confex.get_env(:redis_url) |> Redix.start_link()
     Redix.command!(redis, ["DEL", @verk_nodes_key, @node_queues_key])
     {:ok, %{redis: redis}}
   end

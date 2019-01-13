@@ -54,7 +54,9 @@ defmodule Verk.Supervisor do
 
   defp verk_node_id do
     case Application.fetch_env(:verk, :local_node_id) do
-      {:ok, local_verk_node_id} -> local_verk_node_id
+      {:ok, local_verk_node_id} ->
+        local_verk_node_id
+
       :error ->
         if Confex.get_env(:verk, :generate_node_id, false) do
           <<part1::32, part2::32>> = :crypto.strong_rand_bytes(8)

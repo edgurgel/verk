@@ -13,9 +13,11 @@ defmodule Verk.Node.Manager do
   @doc false
   def init(_) do
     local_verk_node_id = Application.fetch_env!(:verk, :local_node_id)
-    frequency          = Confex.get_env(:verk, :heartbeat, 30_000)
+    frequency = Confex.get_env(:verk, :heartbeat, 30_000)
 
-    Logger.info "Node Manager started for node #{local_verk_node_id}. Heartbeat will run every #{frequency} milliseconds"
+    Logger.info(
+      "Node Manager started for node #{local_verk_node_id}. Heartbeat will run every #{frequency} milliseconds"
+    )
 
     :ok = Verk.Node.register(local_verk_node_id, 2 * frequency, Verk.Redis)
     Process.send_after(self(), :heartbeat, frequency)
@@ -27,7 +29,7 @@ defmodule Verk.Node.Manager do
     faulty_nodes = find_faulty_nodes(local_verk_node_id)
 
     for verk_node_id <- faulty_nodes do
-      Logger.warn "Verk Node #{verk_node_id} seems to be down. Restoring jobs!"
+      Logger.warn("Verk Node #{verk_node_id} seems to be down. Restoring jobs!")
 
       cleanup_queues(verk_node_id)
 
@@ -42,6 +44,7 @@ defmodule Verk.Node.Manager do
     case Verk.Node.queues!(verk_node_id, cursor, Verk.Redis) do
       {:ok, queues} ->
         do_cleanup_queues(queues, verk_node_id)
+
       {:more, queues, cursor} ->
         do_cleanup_queues(queues, verk_node_id)
         cleanup_queues(verk_node_id, cursor)
@@ -49,16 +52,17 @@ defmodule Verk.Node.Manager do
   end
 
   defp do_cleanup_queues(queues, verk_node_id) do
-    Enum.each(queues, &(enqueue_inprogress(verk_node_id, &1)))
+    Enum.each(queues, &enqueue_inprogress(verk_node_id, &1))
   end
 
   defp find_faulty_nodes(local_verk_node_id, cursor \\ 0) do
     case Verk.Node.members(cursor, Verk.Redis) do
       {:ok, verk_nodes} ->
         do_find_faulty_nodes(verk_nodes, local_verk_node_id)
+
       {:more, verk_nodes, cursor} ->
         do_find_faulty_nodes(verk_nodes, local_verk_node_id) ++
-        find_faulty_nodes(local_verk_node_id, cursor)
+          find_faulty_nodes(local_verk_node_id, cursor)
     end
   end
 
@@ -79,13 +83,18 @@ defmodule Verk.Node.Manager do
         Logger.info("Added #{m} jobs.")
         Logger.info("No more jobs to be added to the queue #{queue} from inprogress list.")
         :ok
+
       {:ok, [n, m]} ->
         Logger.info("Added #{m} jobs.")
         Logger.info("#{n} jobs still to be added to the queue #{queue} from inprogress list.")
         enqueue_inprogress(node_id, queue)
+
       {:error, reason} ->
-        Logger.error("Failed to add jobs back to queue #{queue} from inprogress. Error: #{inspect reason}")
-        throw :error
+        Logger.error(
+          "Failed to add jobs back to queue #{queue} from inprogress. Error: #{inspect(reason)}"
+        )
+
+        throw(:error)
     end
   end
 end

@@ -9,10 +9,12 @@ defmodule Verk.QueueManagerTest do
 
   setup do
     Application.put_env(:verk, :local_node_id, @node_id)
-    on_exit fn ->
+
+    on_exit(fn ->
       unload()
       Application.delete_env(:verk, :local_node_id)
-    end
+    end)
+
     :ok
   end
 
