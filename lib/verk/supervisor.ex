@@ -16,18 +16,13 @@ defmodule Verk.Supervisor do
     Supervisor.start_link(__MODULE__, [], name: __MODULE__)
   end
 
-  defp generate_node_id do
-    <<part1::32, part2::32>> = :crypto.strong_rand_bytes(8)
-    "#{part1}#{part2}"
-  end
-
   @doc false
   def init(_) do
     redis_url = Confex.get_env(:verk, :redis_url)
     shutdown_timeout = Confex.get_env(:verk, :shutdown_timeout, 30_000)
-    verk_node_id = Confex.get_env(:verk, :node_id, generate_node_id())
+    local_verk_node_id = verk_node_id()
 
-    Application.put_env(:verk, :local_node_id, verk_node_id)
+    Application.put_env(:verk, :local_node_id, local_verk_node_id)
 
     redis = worker(Redix, [redis_url, [name: Verk.Redis]], id: Verk.Redis)
     node_manager = worker(Verk.Node.Manager, [], id: Verk.Node.Manager)
@@ -55,6 +50,19 @@ defmodule Verk.Supervisor do
     ]
 
     supervise(children, strategy: :one_for_one)
+  end
+
+  defp verk_node_id do
+    case Application.fetch_env(:verk, :local_node_id) do
+      {:ok, local_verk_node_id} -> local_verk_node_id
+      :error ->
+        if Confex.get_env(:verk, :generate_node_id, false) do
+          <<part1::32, part2::32>> = :crypto.strong_rand_bytes(8)
+          "#{part1}#{part2}"
+        else
+          Confex.get_env(:verk, :node_id, "1")
+        end
+    end
   end
 
   @doc false

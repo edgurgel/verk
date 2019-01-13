@@ -6,9 +6,11 @@ defmodule Verk.SupervisorTest do
   setup do
     new(Supervisor)
     Application.delete_env(:verk, :local_node_id)
+    Application.put_env(:verk, :node_id, "123")
 
     on_exit(fn ->
       unload()
+      Application.delete_env(:verk, :node_id)
       Application.delete_env(:verk, :local_node_id)
     end)
 
@@ -32,16 +34,23 @@ defmodule Verk.SupervisorTest do
       assert {Verk.QueuesDrainer, _, _, _, :worker, [Verk.QueuesDrainer]} = drainer
     end
 
-    test "defines local_node_id if not defined" do
-      Application.delete_env(:verk, :node_id)
+    test "defines local_node_id randomly if generate_node_id is true" do
+      Application.put_env(:verk, :generate_node_id, true)
       assert {:ok, _} = init([])
-      assert Application.get_env(:verk, :local_node_id) != nil
+      assert Application.get_env(:verk, :local_node_id) != "123"
     end
 
-    test "defines local_node_id as node_id" do
-      Application.put_env(:verk, :node_id, 123)
+    test "defines local_node_id as node_id if generate_node_id is false" do
+      Application.put_env(:verk, :generate_node_id, false)
       assert {:ok, _} = init([])
-      assert Application.get_env(:verk, :local_node_id) == 123
+      assert Application.get_env(:verk, :local_node_id) == "123"
+    end
+
+    test "does nothing if node_id if local_node_id is already defined" do
+      Application.put_env(:verk, :generate_node_id, true)
+      Application.put_env(:verk, :local_node_id, "456")
+      assert {:ok, _} = init([])
+      assert Application.get_env(:verk, :local_node_id) == "456"
     end
   end
 
