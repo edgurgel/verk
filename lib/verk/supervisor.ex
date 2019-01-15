@@ -18,14 +18,19 @@ defmodule Verk.Supervisor do
 
   @doc false
   def init(_) do
-    redis_url = Confex.get_env(:verk, :redis_url)
-    shutdown_timeout = Confex.get_env(:verk, :shutdown_timeout, 30_000)
     local_verk_node_id = verk_node_id()
 
     Application.put_env(:verk, :local_node_id, local_verk_node_id)
 
+    supervise(children(), strategy: :one_for_one)
+  end
+
+  defp children do
+    redis_url = Confex.get_env(:verk, :redis_url)
+    shutdown_timeout = Confex.get_env(:verk, :shutdown_timeout, 30_000)
+    generate_node_id = Confex.get_env(:verk, :generate_node_id)
+
     redis = worker(Redix, [redis_url, [name: Verk.Redis]], id: Verk.Redis)
-    node_manager = worker(Verk.Node.Manager, [], id: Verk.Node.Manager)
     event_producer = worker(Verk.EventProducer, [], id: Verk.EventProducer)
     queue_stats = worker(Verk.QueueStats, [], id: Verk.QueueStats)
     schedule_manager = worker(Verk.ScheduleManager, [], id: Verk.ScheduleManager)
@@ -41,7 +46,6 @@ defmodule Verk.Supervisor do
 
     children = [
       redis,
-      node_manager,
       event_producer,
       queue_stats,
       schedule_manager,
@@ -49,7 +53,13 @@ defmodule Verk.Supervisor do
       drainer
     ]
 
-    supervise(children, strategy: :one_for_one)
+    if generate_node_id do
+      node_manager = worker(Verk.Node.Manager, [], id: Verk.Node.Manager)
+
+      List.insert_at(children, 1, node_manager)
+    else
+      children
+    end
   end
 
   defp verk_node_id do
