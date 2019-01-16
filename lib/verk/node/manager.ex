@@ -21,6 +21,8 @@ defmodule Verk.Node.Manager do
 
     :ok = Verk.Node.register(local_verk_node_id, 2 * frequency, Verk.Redis)
     Process.send_after(self(), :heartbeat, frequency)
+    Process.flag(:trap_exit, true)
+    Verk.Scripts.load(Verk.Redis)
     {:ok, {local_verk_node_id, frequency}}
   end
 
@@ -28,16 +30,38 @@ defmodule Verk.Node.Manager do
   def handle_info(:heartbeat, state = {local_verk_node_id, frequency}) do
     faulty_nodes = find_faulty_nodes(local_verk_node_id)
 
-    for verk_node_id <- faulty_nodes do
-      Logger.warn("Verk Node #{verk_node_id} seems to be down. Restoring jobs!")
+    for faulty_verk_node_id <- faulty_nodes do
+      Logger.warn("Verk Node #{faulty_verk_node_id} seems to be down. Restoring jobs!")
 
-      cleanup_queues(verk_node_id)
+      cleanup_queues(faulty_verk_node_id)
 
-      Verk.Node.deregister!(verk_node_id, Verk.Redis)
+      Verk.Node.deregister!(faulty_verk_node_id, Verk.Redis)
     end
 
     heartbeat!(local_verk_node_id, frequency)
     {:noreply, state}
+  end
+
+  def terminate(reason = {:shutdown, _}, {local_verk_node_id, _}) do
+    do_terminate(reason, local_verk_node_id)
+  end
+
+  def terminate(reason = :shutdown, {local_verk_node_id, _}) do
+    do_terminate(reason, local_verk_node_id)
+  end
+
+  def terminate(reason, _state) do
+    Logger.warn("Node.Manager terminating. Reason: #{reason}")
+    :ok
+  end
+
+  defp do_terminate(reason, local_verk_node_id) do
+    Logger.warn("Local Verk Node '#{local_verk_node_id}' terminating. Reason: #{inspect(reason)}")
+
+    cleanup_queues(local_verk_node_id)
+
+    Verk.Node.deregister!(local_verk_node_id, Verk.Redis)
+    :ok
   end
 
   defp cleanup_queues(verk_node_id, cursor \\ 0) do

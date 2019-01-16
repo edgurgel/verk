@@ -24,6 +24,7 @@ defmodule Verk.Node.ManagerTest do
   describe "init/1" do
     test "registers local verk node id" do
       expect(Verk.Node, :register, [@verk_node_id, 2 * @frequency, Verk.Redis], :ok)
+      expect(Verk.Scripts, :load, 1, :ok)
 
       assert init([]) == {:ok, {@verk_node_id, @frequency}}
       assert_receive :heartbeat
@@ -78,6 +79,38 @@ defmodule Verk.Node.ManagerTest do
 
       assert handle_info(:heartbeat, state) == {:noreply, state}
       assert_receive :heartbeat
+    end
+  end
+
+  describe "terminate/2" do
+    test "non-shutdown reason" do
+      state = {@verk_node_id, @frequency}
+      assert terminate(:normal, state) == :ok
+    end
+
+    test "deregisters itself" do
+      state = {@verk_node_id, @frequency}
+
+      expect(Verk.Node, :queues!, [@verk_node_id, 0, Verk.Redis], {:more, ["queue_1"], 123})
+      expect(Verk.Node, :queues!, [@verk_node_id, 123, Verk.Redis], {:ok, ["queue_2"]})
+
+      expect(
+        InProgressQueue,
+        :enqueue_in_progress,
+        ["queue_1", @verk_node_id, Verk.Redis],
+        seq([{:ok, [3, 5]}, {:ok, [0, 3]}])
+      )
+
+      expect(
+        InProgressQueue,
+        :enqueue_in_progress,
+        ["queue_2", @verk_node_id, Verk.Redis],
+        {:ok, [0, 1]}
+      )
+
+      expect(Verk.Node, :deregister!, [@verk_node_id, Verk.Redis], :ok)
+
+      assert terminate(:shutdown, state) == :ok
     end
   end
 end
