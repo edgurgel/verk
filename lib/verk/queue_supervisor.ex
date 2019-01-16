@@ -22,7 +22,9 @@ defmodule Verk.Queue.Supervisor do
     children = [
       worker(QueueManager, [queue_manager, name], id: queue_manager),
       poolboy_spec(pool_name, size),
-      worker(WorkersManager, [workers_manager, name, queue_manager, pool_name, size],
+      worker(
+        WorkersManager,
+        [workers_manager, name, queue_manager, pool_name, size],
         id: workers_manager
       )
     ]
