@@ -28,18 +28,35 @@ defmodule Verk.Node.Manager do
 
   @doc false
   def handle_info(:heartbeat, state = {local_verk_node_id, frequency}) do
-    faulty_nodes = find_faulty_nodes(local_verk_node_id)
+    heartbeat(local_verk_node_id, frequency)
 
-    for faulty_verk_node_id <- faulty_nodes do
-      Logger.warn("Verk Node #{faulty_verk_node_id} seems to be down. Restoring jobs!")
+    with {:ok, faulty_nodes} <- find_faulty_nodes(local_verk_node_id) do
+      for faulty_verk_node_id <- faulty_nodes do
+        Logger.warn("Verk Node #{faulty_verk_node_id} seems to be down. Restoring jobs!")
 
-      cleanup_queues(faulty_verk_node_id)
+        cleanup_queues(faulty_verk_node_id)
 
-      Verk.Node.deregister!(faulty_verk_node_id, Verk.Redis)
+        Verk.Node.deregister!(faulty_verk_node_id, Verk.Redis)
+      end
+    else
+      {:error, reason} ->
+        Logger.error("Failed while looking for faulty nodes. Reason: #{inspect(reason)}")
     end
 
-    heartbeat!(local_verk_node_id, frequency)
+    Process.send_after(self(), :heartbeat, frequency)
     {:noreply, state}
+  end
+
+  defp heartbeat(local_verk_node_id, frequency) do
+    case Verk.Node.expire_in(local_verk_node_id, 2 * frequency, Verk.Redis) do
+      {:ok, _} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.error(
+          "Failed to heartbeat node '#{local_verk_node_id}'. Reason: #{inspect(reason)}"
+        )
+    end
   end
 
   def terminate(reason = {:shutdown, _}, {local_verk_node_id, _}) do
@@ -82,11 +99,14 @@ defmodule Verk.Node.Manager do
   defp find_faulty_nodes(local_verk_node_id, cursor \\ 0) do
     case Verk.Node.members(cursor, Verk.Redis) do
       {:ok, verk_nodes} ->
-        do_find_faulty_nodes(verk_nodes, local_verk_node_id)
+        {:ok, do_find_faulty_nodes(verk_nodes, local_verk_node_id)}
 
       {:more, verk_nodes, cursor} ->
         do_find_faulty_nodes(verk_nodes, local_verk_node_id) ++
           find_faulty_nodes(local_verk_node_id, cursor)
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
@@ -94,11 +114,6 @@ defmodule Verk.Node.Manager do
     Enum.filter(verk_nodes, fn verk_node_id ->
       verk_node_id != local_verk_node_id and Verk.Node.ttl!(verk_node_id, Verk.Redis) < 0
     end)
-  end
-
-  defp heartbeat!(local_verk_node_id, frequency) do
-    Verk.Node.expire_in!(local_verk_node_id, 2 * frequency, Verk.Redis)
-    Process.send_after(self(), :heartbeat, frequency)
   end
 
   defp enqueue_inprogress(node_id, queue) do

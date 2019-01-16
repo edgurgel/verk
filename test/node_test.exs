@@ -80,9 +80,9 @@ defmodule Verk.NodeTest do
     end
   end
 
-  describe "expire_in!/3" do
+  describe "expire_in/3" do
     test "resets expiration item", %{redis: redis} do
-      assert expire_in!(@node, 888, redis)
+      assert {:ok, _} = expire_in(@node, 888, redis)
       assert_in_delta Redix.command!(redis, ["PTTL", @node_key]), 888, 5
     end
   end

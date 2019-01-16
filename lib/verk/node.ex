@@ -29,11 +29,12 @@ defmodule Verk.Node do
   end
 
   @spec members(integer, non_neg_integer, GenServer.t()) ::
-          {:ok, [String.t()]} | {:more, [String.t()], integer}
+          {:ok, [String.t()]} | {:more, [String.t()], integer} | {:error, term}
   def members(cursor \\ 0, count \\ 25, redis) do
-    case Redix.command!(redis, ["SSCAN", @verk_nodes_key, cursor, "COUNT", count]) do
-      ["0", verk_nodes] -> {:ok, verk_nodes}
-      [cursor, verk_nodes] -> {:more, verk_nodes, cursor}
+    case Redix.command(redis, ["SSCAN", @verk_nodes_key, cursor, "COUNT", count]) do
+      {:ok, ["0", verk_nodes]} -> {:ok, verk_nodes}
+      {:ok, [cursor, verk_nodes]} -> {:more, verk_nodes, cursor}
+      {:error, reason} -> {:error, reason}
     end
   end
 
@@ -42,9 +43,9 @@ defmodule Verk.Node do
     Redix.command!(redis, ["PTTL", verk_node_key(verk_node_id)])
   end
 
-  @spec expire_in!(String.t(), integer, GenServer.t()) :: integer
-  def expire_in!(verk_node_id, ttl, redis) do
-    Redix.command!(redis, ["PSETEX", verk_node_key(verk_node_id), ttl, "alive"])
+  @spec expire_in(String.t(), integer, GenServer.t()) :: {:ok, integer} | {:error, term}
+  def expire_in(verk_node_id, ttl, redis) do
+    Redix.command(redis, ["PSETEX", verk_node_key(verk_node_id), ttl, "alive"])
   end
 
   @spec queues!(String.t(), integer, non_neg_integer, GenServer.t()) ::
