@@ -8,6 +8,7 @@ otp_release:
 script:
   - mix test --no-start --trace --cover
   - MIX_ENV=test mix credo --strict
+  - if [[ `elixir -v` = *"1.7"* ]]; then mix format --check-formatted; fi
   - cd test/integration
   - mix deps.get
   - mix test --no-start --trace --include integration
