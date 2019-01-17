@@ -127,12 +127,12 @@ defmodule Verk.ManagerTest do
     test "adds queue to supervisor if not already there" do
       init_table([])
 
-      expect(Verk.Supervisor, :start_child, [:default, 25], {:ok, :child})
+      expect(Verk.Manager.Supervisor, :start_child, [:default, 25], {:ok, :child})
       expect(Verk.Node, :add_queue!, [@node_id, :default, Verk.Redis], :ok)
 
       assert add(:default, 25) == {:ok, :child}
       assert :ets.tab2list(:verk_manager) == [{:default, 25, :running}]
-      assert validate(Verk.Supervisor)
+      assert validate(Verk.Manager.Supervisor)
     end
   end
 
@@ -141,23 +141,23 @@ defmodule Verk.ManagerTest do
       queues = [{:default, 25, :paused}, {:low_priority, 10, :running}]
       init_table(queues)
 
-      expect(Verk.Supervisor, :stop_child, [:default], :ok)
+      expect(Verk.Manager.Supervisor, :stop_child, [:default], :ok)
       expect(Verk.Node, :remove_queue!, [@node_id, :default, Verk.Redis], :ok)
 
       assert remove(:default) == :ok
       assert :ets.tab2list(:verk_manager) == [{:low_priority, 10, :running}]
-      assert validate(Verk.Supervisor)
+      assert validate(Verk.Manager.Supervisor)
     end
 
     test "does nothing if queue is not running" do
       queues = [{:default, 25, :paused}]
       init_table(queues)
 
-      expect(Verk.Supervisor, :stop_child, [:default], {:error, :not_found})
+      expect(Verk.Manager.Supervisor, :stop_child, [:default], {:error, :not_found})
       expect(Verk.Node, :remove_queue!, [@node_id, :default, Verk.Redis], :ok)
 
       assert remove(:default) == {:error, :not_found}
-      assert validate(Verk.Supervisor)
+      assert validate(Verk.Manager.Supervisor)
     end
   end
 end

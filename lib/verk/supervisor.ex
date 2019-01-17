@@ -76,19 +76,4 @@ defmodule Verk.Supervisor do
         end
     end
   end
-
-  @doc false
-  def start_child(queue, size \\ 25) when is_atom(queue) and size > 0 do
-    Supervisor.start_child(__MODULE__, Verk.Queue.Supervisor.child_spec(queue, size))
-  end
-
-  @doc false
-  def stop_child(queue) when is_atom(queue) do
-    name = Verk.Queue.Supervisor.name(queue)
-
-    case Supervisor.terminate_child(__MODULE__, name) do
-      :ok -> Supervisor.delete_child(__MODULE__, name)
-      error = {:error, :not_found} -> error
-    end
-  end
 end

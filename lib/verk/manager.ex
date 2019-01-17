@@ -77,7 +77,7 @@ defmodule Verk.Manager do
 
     local_verk_node_id = Application.fetch_env!(:verk, :local_node_id)
     Verk.Node.add_queue!(local_verk_node_id, queue, Verk.Redis)
-    Verk.Supervisor.start_child(queue, size)
+    Verk.Manager.Supervisor.start_child(queue, size)
   end
 
   @doc """
@@ -89,6 +89,6 @@ defmodule Verk.Manager do
     :ets.delete(@table, queue)
     local_verk_node_id = Application.fetch_env!(:verk, :local_node_id)
     Verk.Node.remove_queue!(local_verk_node_id, queue, Verk.Redis)
-    Verk.Supervisor.stop_child(queue)
+    Verk.Manager.Supervisor.stop_child(queue)
   end
 end
