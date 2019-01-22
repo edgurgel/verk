@@ -16,7 +16,7 @@ defmodule Verk.QueueManager do
 
   defmodule State do
     @moduledoc false
-    defstruct [:queue_name, :redis, :node_id]
+    defstruct [:queue_name, :redis, :node_id, :track_node_id]
   end
 
   @doc """
@@ -80,7 +80,14 @@ defmodule Verk.QueueManager do
     {:ok, redis} = Redix.start_link(Confex.get_env(:verk, :redis_url))
     Verk.Scripts.load(redis)
 
-    state = %State{queue_name: queue_name, redis: redis, node_id: node_id}
+    track_node_id = Application.get_env(:verk, :generate_node_id, false)
+
+    state = %State{
+      queue_name: queue_name,
+      redis: redis,
+      node_id: node_id,
+      track_node_id: track_node_id
+    }
 
     Logger.info("Queue Manager started for queue #{queue_name}")
     {:ok, state}
@@ -118,19 +125,30 @@ defmodule Verk.QueueManager do
     end
   end
 
-  def handle_call({:dequeue, n}, _from, state) do
-    case Redix.command(state.redis, [
-           "EVALSHA",
-           @mrpop_lpush_src_dest_script_sha,
-           2,
-           "queue:#{state.queue_name}",
-           inprogress(state.queue_name, state.node_id),
-           min(@max_jobs, n)
-         ]) do
-      {:ok, []} ->
-        {:reply, [], state}
-
+  def handle_call({:dequeue, n}, _from, state = %State{track_node_id: false}) do
+    case Redix.command(state.redis, mrpop_lpush_src_dest(state.node_id, state.queue_name, n)) do
       {:ok, jobs} ->
+        {:reply, jobs, state}
+
+      {:error, %Redix.Error{message: message}} ->
+        Logger.error("Failed to fetch jobs: #{message}")
+        {:stop, :redis_failed, :redis_failed, state}
+
+      {:error, _} ->
+        {:reply, :redis_failed, state}
+    end
+  end
+
+  def handle_call({:dequeue, n}, _from, state = %State{track_node_id: true}) do
+    case Redix.pipeline(state.redis, [
+           ["MULTI"],
+           Verk.Node.add_node_redis_command(state.node_id),
+           Verk.Node.add_queue_redis_command(state.node_id, state.queue_name),
+           mrpop_lpush_src_dest(state.node_id, state.queue_name, n),
+           ["EXEC"]
+         ]) do
+      {:ok, response} ->
+        jobs = response |> List.last() |> List.last()
         {:reply, jobs, state}
 
       {:error, %Redix.Error{message: message}} ->
@@ -215,4 +233,15 @@ defmodule Verk.QueueManager do
   end
 
   defp format_stacktrace(stacktrace), do: inspect(stacktrace)
+
+  defp mrpop_lpush_src_dest(node_id, queue_name, n) do
+    [
+      "EVALSHA",
+      @mrpop_lpush_src_dest_script_sha,
+      2,
+      "queue:#{queue_name}",
+      inprogress(queue_name, node_id),
+      min(@max_jobs, n)
+    ]
+  end
 end

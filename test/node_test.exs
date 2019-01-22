@@ -1,6 +1,7 @@
 defmodule Verk.NodeTest do
   use ExUnit.Case
   import Verk.Node
+  doctest Verk.Node
 
   @verk_nodes_key "verk_nodes"
 
@@ -14,25 +15,14 @@ defmodule Verk.NodeTest do
     {:ok, %{redis: redis}}
   end
 
-  defp register(%{redis: redis}), do: register(@node, 555, redis)
+  defp register(%{redis: redis}) do
+    register(redis, @node)
+    :ok
+  end
 
-  describe "register/3" do
-    test "add to verk_nodes", %{redis: redis} do
-      assert register(@node, 555, redis) == :ok
-      assert Redix.command!(redis, ["SMEMBERS", "verk_nodes"]) == ["123"]
-      assert register(@node, 555, redis) == {:error, :node_id_already_running}
-    end
-
-    test "set verk:node: key", %{redis: redis} do
-      assert register(@node, 555, redis) == :ok
-      assert Redix.command!(redis, ["GET", @node_key]) == "alive"
-    end
-
-    test "expire verk:node: key", %{redis: redis} do
-      assert register(@node, 555, redis) == :ok
-      ttl = Redix.command!(redis, ["PTTL", @node_key])
-      assert_in_delta ttl, 555, 5
-    end
+  defp register(redis, verk_node) do
+    expire_in(verk_node, 555, redis)
+    Redix.command!(redis, add_node_redis_command(verk_node))
   end
 
   describe "deregister/2" do
@@ -59,10 +49,11 @@ defmodule Verk.NodeTest do
 
   describe "members/3" do
     setup %{redis: redis} do
-      register("node_1", 555, redis)
-      register("node_2", 555, redis)
-      register("node_3", 555, redis)
-      register("node_4", 555, redis)
+      register(redis, "node_1")
+      register(redis, "node_2")
+      register(redis, "node_3")
+      register(redis, "node_4")
+      :ok
     end
 
     test "list verk nodes", %{redis: redis} do
@@ -80,19 +71,19 @@ defmodule Verk.NodeTest do
     end
   end
 
-  describe "expire_in!/3" do
+  describe "expire_in/3" do
     test "resets expiration item", %{redis: redis} do
-      assert expire_in!(@node, 888, redis)
+      assert {:ok, _} = expire_in(@node, 888, redis)
       assert_in_delta Redix.command!(redis, ["PTTL", @node_key]), 888, 5
     end
   end
 
   describe "queues!/2" do
     setup %{redis: redis} do
-      add_queue!(@node, "queue_1", redis)
-      add_queue!(@node, "queue_2", redis)
-      add_queue!(@node, "queue_3", redis)
-      add_queue!(@node, "queue_4", redis)
+      Redix.command!(redis, add_queue_redis_command(@node, "queue_1"))
+      Redix.command!(redis, add_queue_redis_command(@node, "queue_2"))
+      Redix.command!(redis, add_queue_redis_command(@node, "queue_3"))
+      Redix.command!(redis, add_queue_redis_command(@node, "queue_4"))
       :ok
     end
 
@@ -100,23 +91,6 @@ defmodule Verk.NodeTest do
       {:ok, queues} = queues!(@node, 0, redis)
       queues = MapSet.new(queues)
       assert MapSet.equal?(queues, MapSet.new(["queue_1", "queue_2", "queue_3", "queue_4"]))
-    end
-  end
-
-  describe "add_queue!/3" do
-    test "add queue to verk:node::queues", %{redis: redis} do
-      queue_name = "default"
-      assert add_queue!(@node, queue_name, redis)
-      assert Redix.command!(redis, ["SMEMBERS", @node_queues_key]) == [queue_name]
-    end
-  end
-
-  describe "remove_queue!/3" do
-    test "remove queue from verk:node::queues", %{redis: redis} do
-      queue_name = "default"
-      assert Redix.command!(redis, ["SADD", @node_queues_key, queue_name]) == 1
-      assert remove_queue!(@node, queue_name, redis)
-      assert Redix.command!(redis, ["SMEMBERS", @node_queues_key]) == []
     end
   end
 end

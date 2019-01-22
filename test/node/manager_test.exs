@@ -23,7 +23,7 @@ defmodule Verk.Node.ManagerTest do
 
   describe "init/1" do
     test "registers local verk node id" do
-      expect(Verk.Node, :register, [@verk_node_id, 2 * @frequency, Verk.Redis], :ok)
+      expect(Verk.Node, :expire_in, [@verk_node_id, 2 * @frequency, Verk.Redis], {:ok, 1})
       expect(Verk.Scripts, :load, 1, :ok)
 
       assert init([]) == {:ok, {@verk_node_id, @frequency}}
@@ -35,7 +35,7 @@ defmodule Verk.Node.ManagerTest do
     test "heartbeat when only one node" do
       state = {@verk_node_id, @frequency}
       expect(Verk.Node, :members, [0, Verk.Redis], {:ok, [@verk_node_id]})
-      expect(Verk.Node, :expire_in!, [@verk_node_id, 2 * @frequency, Verk.Redis], :ok)
+      expect(Verk.Node, :expire_in, [@verk_node_id, 2 * @frequency, Verk.Redis], {:ok, 1})
       assert handle_info(:heartbeat, state) == {:noreply, state}
       assert_receive :heartbeat
     end
@@ -45,7 +45,7 @@ defmodule Verk.Node.ManagerTest do
       state = {@verk_node_id, @frequency}
       expect(Verk.Node, :members, [0, Verk.Redis], {:ok, [@verk_node_id, alive_node_id]})
       expect(Verk.Node, :ttl!, [alive_node_id, Verk.Redis], 500)
-      expect(Verk.Node, :expire_in!, [@verk_node_id, 2 * @frequency, Verk.Redis], :ok)
+      expect(Verk.Node, :expire_in, [@verk_node_id, 2 * @frequency, Verk.Redis], {:ok, 1})
       assert handle_info(:heartbeat, state) == {:noreply, state}
       assert_receive :heartbeat
     end
@@ -57,7 +57,7 @@ defmodule Verk.Node.ManagerTest do
       expect(Verk.Node, :members, [0, Verk.Redis], {:more, [@verk_node_id], 123})
       expect(Verk.Node, :members, [123, Verk.Redis], {:ok, [dead_node_id]})
       expect(Verk.Node, :ttl!, [dead_node_id, Verk.Redis], -2)
-      expect(Verk.Node, :expire_in!, [@verk_node_id, 2 * @frequency, Verk.Redis], :ok)
+      expect(Verk.Node, :expire_in, [@verk_node_id, 2 * @frequency, Verk.Redis], {:ok, 1})
       expect(Verk.Node, :queues!, ["dead-node", 0, Verk.Redis], {:more, ["queue_1"], 123})
       expect(Verk.Node, :queues!, ["dead-node", 123, Verk.Redis], {:ok, ["queue_2"]})
 

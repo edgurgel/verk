@@ -27,8 +27,6 @@ defmodule Verk.ManagerTest do
   describe "init/1" do
     test "creates an ETS table with queues" do
       queues = [default: 25, low_priority: 10]
-      expect(Verk.Node, :add_queue!, [@node_id, :default, Verk.Redis], :ok)
-      expect(Verk.Node, :add_queue!, [@node_id, :low_priority, Verk.Redis], :ok)
       init(queues)
 
       assert :ets.tab2list(:verk_manager) == [
@@ -128,7 +126,6 @@ defmodule Verk.ManagerTest do
       init_table([])
 
       expect(Verk.Manager.Supervisor, :start_child, [:default, 25], {:ok, :child})
-      expect(Verk.Node, :add_queue!, [@node_id, :default, Verk.Redis], :ok)
 
       assert add(:default, 25) == {:ok, :child}
       assert :ets.tab2list(:verk_manager) == [{:default, 25, :running}]
@@ -142,7 +139,6 @@ defmodule Verk.ManagerTest do
       init_table(queues)
 
       expect(Verk.Manager.Supervisor, :stop_child, [:default], :ok)
-      expect(Verk.Node, :remove_queue!, [@node_id, :default, Verk.Redis], :ok)
 
       assert remove(:default) == :ok
       assert :ets.tab2list(:verk_manager) == [{:low_priority, 10, :running}]
@@ -154,7 +150,6 @@ defmodule Verk.ManagerTest do
       init_table(queues)
 
       expect(Verk.Manager.Supervisor, :stop_child, [:default], {:error, :not_found})
-      expect(Verk.Node, :remove_queue!, [@node_id, :default, Verk.Redis], :ok)
 
       assert remove(:default) == {:error, :not_found}
       assert validate(Verk.Manager.Supervisor)

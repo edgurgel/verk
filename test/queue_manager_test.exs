@@ -13,6 +13,7 @@ defmodule Verk.QueueManagerTest do
     on_exit(fn ->
       unload()
       Application.delete_env(:verk, :local_node_id)
+      Application.delete_env(:verk, :generate_node_id)
     end)
 
     :ok
@@ -26,7 +27,7 @@ defmodule Verk.QueueManagerTest do
   end
 
   describe "init/1" do
-    test "sets up redis connection" do
+    test "sets up proper State" do
       redis_url = Confex.get_env(:verk, :redis_url)
       node_id = Confex.fetch_env!(:verk, :local_node_id)
 
@@ -34,7 +35,33 @@ defmodule Verk.QueueManagerTest do
       expect(Verk.Scripts, :load, [:redis], :ok)
 
       assert init(["queue_name"]) ==
-               {:ok, %State{node_id: node_id, queue_name: "queue_name", redis: :redis}}
+               {:ok,
+                %State{
+                  node_id: node_id,
+                  queue_name: "queue_name",
+                  redis: :redis,
+                  track_node_id: false
+                }}
+
+      assert validate([Redix, Verk.Scripts])
+    end
+
+    test "sets up proper State with generate_node_id true" do
+      redis_url = Confex.get_env(:verk, :redis_url)
+      node_id = Confex.fetch_env!(:verk, :local_node_id)
+      Application.put_env(:verk, :generate_node_id, true)
+
+      expect(Redix, :start_link, [redis_url], {:ok, :redis})
+      expect(Verk.Scripts, :load, [:redis], :ok)
+
+      assert init(["queue_name"]) ==
+               {:ok,
+                %State{
+                  node_id: node_id,
+                  queue_name: "queue_name",
+                  redis: :redis,
+                  track_node_id: true
+                }}
 
       assert validate([Redix, Verk.Scripts])
     end
@@ -98,8 +125,19 @@ defmodule Verk.QueueManagerTest do
     end
   end
 
-  describe "handle_call/3 dequeue" do
-    test "dequeue with an empty queue" do
+  describe "handle_call/3 dequeue track_node_id false" do
+    setup do
+      state = %State{
+        queue_name: "test_queue",
+        redis: :redis,
+        node_id: "test_node",
+        track_node_id: false
+      }
+
+      {:ok, state: state}
+    end
+
+    test "dequeue with an empty queue", %{state: state} do
       expect(
         Redix,
         :command,
@@ -110,14 +148,12 @@ defmodule Verk.QueueManagerTest do
         {:ok, []}
       )
 
-      state = %State{queue_name: "test_queue", redis: :redis, node_id: "test_node"}
-
       assert handle_call({:dequeue, 3}, :from, state) == {:reply, [], state}
 
       assert validate(Redix)
     end
 
-    test "dequeue with a non empty queue" do
+    test "dequeue with a non empty queue", %{state: state} do
       expect(
         Redix,
         :command,
@@ -128,13 +164,11 @@ defmodule Verk.QueueManagerTest do
         {:ok, ["job"]}
       )
 
-      state = %State{queue_name: "test_queue", redis: :redis, node_id: "test_node"}
-
       assert handle_call({:dequeue, 3}, :from, state) == {:reply, ["job"], state}
       assert validate([Redix])
     end
 
-    test "dequeue with a non empty queue and more than max_jobs" do
+    test "dequeue with a non empty queue and more than max_jobs", %{state: state} do
       expect(
         Redix,
         :command,
@@ -152,26 +186,140 @@ defmodule Verk.QueueManagerTest do
         {:ok, ["job"]}
       )
 
-      state = %State{queue_name: "test_queue", redis: :redis, node_id: "test_node"}
-
       assert handle_call({:dequeue, 500}, :from, state) == {:reply, ["job"], state}
       assert validate([Redix])
     end
 
-    test "dequeue and redis failed" do
+    test "dequeue and redis failed", %{state: state} do
       expect(Redix, :command, 2, {:error, :reason})
-
-      state = %State{queue_name: "test_queue", redis: :redis}
 
       assert handle_call({:dequeue, 3}, :from, state) == {:reply, :redis_failed, state}
 
       assert validate(Redix)
     end
 
-    test "dequeue and redis failed to evaluate the script" do
+    test "dequeue and redis failed to evaluate the script", %{state: state} do
       expect(Redix, :command, 2, {:error, %Redix.Error{message: "a message"}})
 
-      state = %State{queue_name: "test_queue", redis: :redis}
+      assert handle_call({:dequeue, 3}, :from, state) ==
+               {:stop, :redis_failed, :redis_failed, state}
+
+      assert validate(Redix)
+    end
+
+    test "dequeue and timeout" do
+      pid = spawn_link(fn -> :timer.sleep(5000) end)
+      assert dequeue(pid, 1, 1) == :timeout
+    end
+  end
+
+  describe "handle_call/3 dequeue track_node_id true" do
+    setup do
+      state = %State{
+        queue_name: "test_queue",
+        redis: :redis,
+        node_id: "test_node",
+        track_node_id: true
+      }
+
+      {:ok, state: state}
+    end
+
+    test "dequeue with an empty queue", %{state: state} do
+      expect(
+        Redix,
+        :pipeline,
+        [
+          :redis,
+          [
+            ["MULTI"],
+            ["SADD", "verk_nodes", state.node_id],
+            ["SADD", "verk:node:#{state.node_id}:queues", state.queue_name],
+            [
+              "EVALSHA",
+              @mrpop_script,
+              2,
+              "queue:test_queue",
+              "inprogress:test_queue:test_node",
+              3
+            ],
+            ["EXEC"]
+          ]
+        ],
+        {:ok, ["OK", "QUEUED", "QUEUED", "QUEUED", [0, 0, []]]}
+      )
+
+      assert handle_call({:dequeue, 3}, :from, state) == {:reply, [], state}
+
+      assert validate(Redix)
+    end
+
+    test "dequeue with a non empty queue", %{state: state} do
+      expect(
+        Redix,
+        :pipeline,
+        [
+          :redis,
+          [
+            ["MULTI"],
+            ["SADD", "verk_nodes", state.node_id],
+            ["SADD", "verk:node:#{state.node_id}:queues", state.queue_name],
+            [
+              "EVALSHA",
+              @mrpop_script,
+              2,
+              "queue:test_queue",
+              "inprogress:test_queue:test_node",
+              3
+            ],
+            ["EXEC"]
+          ]
+        ],
+        {:ok, ["OK", "QUEUED", "QUEUED", "QUEUED", [0, 0, ["job"]]]}
+      )
+
+      assert handle_call({:dequeue, 3}, :from, state) == {:reply, ["job"], state}
+      assert validate([Redix])
+    end
+
+    test "dequeue with a non empty queue and more than max_jobs", %{state: state} do
+      expect(
+        Redix,
+        :pipeline,
+        [
+          :redis,
+          [
+            ["MULTI"],
+            ["SADD", "verk_nodes", state.node_id],
+            ["SADD", "verk:node:#{state.node_id}:queues", state.queue_name],
+            [
+              "EVALSHA",
+              @mrpop_script,
+              2,
+              "queue:test_queue",
+              "inprogress:test_queue:test_node",
+              100
+            ],
+            ["EXEC"]
+          ]
+        ],
+        {:ok, ["OK", "QUEUED", "QUEUED", "QUEUED", [0, 0, ["job"]]]}
+      )
+
+      assert handle_call({:dequeue, 500}, :from, state) == {:reply, ["job"], state}
+      assert validate([Redix])
+    end
+
+    test "dequeue and redis failed", %{state: state} do
+      expect(Redix, :pipeline, 2, {:error, :reason})
+
+      assert handle_call({:dequeue, 3}, :from, state) == {:reply, :redis_failed, state}
+
+      assert validate(Redix)
+    end
+
+    test "dequeue and redis failed to evaluate the script", %{state: state} do
+      expect(Redix, :pipeline, 2, {:error, %Redix.Error{message: "a message"}})
 
       assert handle_call({:dequeue, 3}, :from, state) ==
                {:stop, :redis_failed, :redis_failed, state}

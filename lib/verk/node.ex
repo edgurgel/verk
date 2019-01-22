@@ -5,18 +5,6 @@ defmodule Verk.Node do
 
   @verk_nodes_key "verk_nodes"
 
-  @spec register(String.t(), non_neg_integer, GenServer.t()) ::
-          :ok | {:error, :verk_node_id_already_running}
-  def register(verk_node_id, ttl, redis) do
-    case Redix.pipeline!(redis, [
-           ["SADD", @verk_nodes_key, verk_node_id],
-           ["PSETEX", "verk:node:#{verk_node_id}", ttl, "alive"]
-         ]) do
-      [1, _] -> :ok
-      _ -> {:error, :node_id_already_running}
-    end
-  end
-
   @spec deregister!(String.t(), GenServer.t()) :: :ok
   def deregister!(verk_node_id, redis) do
     Redix.pipeline!(redis, [
@@ -29,11 +17,12 @@ defmodule Verk.Node do
   end
 
   @spec members(integer, non_neg_integer, GenServer.t()) ::
-          {:ok, [String.t()]} | {:more, [String.t()], integer}
+          {:ok, [String.t()]} | {:more, [String.t()], integer} | {:error, term}
   def members(cursor \\ 0, count \\ 25, redis) do
-    case Redix.command!(redis, ["SSCAN", @verk_nodes_key, cursor, "COUNT", count]) do
-      ["0", verk_nodes] -> {:ok, verk_nodes}
-      [cursor, verk_nodes] -> {:more, verk_nodes, cursor}
+    case Redix.command(redis, ["SSCAN", @verk_nodes_key, cursor, "COUNT", count]) do
+      {:ok, ["0", verk_nodes]} -> {:ok, verk_nodes}
+      {:ok, [cursor, verk_nodes]} -> {:more, verk_nodes, cursor}
+      {:error, reason} -> {:error, reason}
     end
   end
 
@@ -42,9 +31,9 @@ defmodule Verk.Node do
     Redix.command!(redis, ["PTTL", verk_node_key(verk_node_id)])
   end
 
-  @spec expire_in!(String.t(), integer, GenServer.t()) :: integer
-  def expire_in!(verk_node_id, ttl, redis) do
-    Redix.command!(redis, ["PSETEX", verk_node_key(verk_node_id), ttl, "alive"])
+  @spec expire_in(String.t(), integer, GenServer.t()) :: {:ok, integer} | {:error, term}
+  def expire_in(verk_node_id, ttl, redis) do
+    Redix.command(redis, ["PSETEX", verk_node_key(verk_node_id), ttl, "alive"])
   end
 
   @spec queues!(String.t(), integer, non_neg_integer, GenServer.t()) ::
@@ -62,12 +51,26 @@ defmodule Verk.Node do
     end
   end
 
-  def add_queue!(verk_node_id, queue, redis) do
-    Redix.command!(redis, ["SADD", verk_node_queues_key(verk_node_id), queue])
+  @doc """
+  Redis command to add a queue to the set of queues that a node is processing
+
+      iex> Verk.Node.add_queue_redis_command("123", "default")
+      ["SADD", "verk:node:123:queues", "default"]
+  """
+  @spec add_queue_redis_command(String.t(), String.t()) :: [String.t()]
+  def add_queue_redis_command(verk_node_id, queue) do
+    ["SADD", verk_node_queues_key(verk_node_id), queue]
   end
 
-  def remove_queue!(verk_node_id, queue, redis) do
-    Redix.command!(redis, ["SREM", verk_node_queues_key(verk_node_id), queue])
+  @doc """
+  Redis command to add a queue to the set of queues that a node is processing
+
+      iex> Verk.Node.add_node_redis_command("123")
+      ["SADD", "verk_nodes", "123"]
+  """
+  @spec add_node_redis_command(String.t()) :: [String.t()]
+  def add_node_redis_command(verk_node_id) do
+    ["SADD", @verk_nodes_key, verk_node_id]
   end
 
   defp verk_node_key(verk_node_id), do: "verk:node:#{verk_node_id}"
