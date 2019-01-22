@@ -66,6 +66,17 @@ defmodule Verk.Node do
   @doc """
   Redis command to add a queue to the set of queues that a node is processing
 
+      iex> Verk.Node.add_queue_redis_command("123", "default")
+      ["SADD", "verk:node:123:queues", "default"]
+  """
+  @spec add_queue_redis_command(String.t(), String.t()) :: [String.t()]
+  def add_queue_redis_command(verk_node_id, queue) do
+    ["SADD", verk_node_queues_key(verk_node_id), queue]
+  end
+
+  @doc """
+  Redis command to add a queue to the set of queues that a node is processing
+
       iex> Verk.Node.add_node_redis_command("123")
       ["SADD", "verk_nodes", "123"]
   """
