@@ -85,14 +85,6 @@ defmodule Verk.Node do
     ["SADD", @verk_nodes_key, verk_node_id]
   end
 
-  def add_queue!(verk_node_id, queue, redis) do
-    Redix.command!(redis, ["SADD", verk_node_queues_key(verk_node_id), queue])
-  end
-
-  def remove_queue!(verk_node_id, queue, redis) do
-    Redix.command!(redis, ["SREM", verk_node_queues_key(verk_node_id), queue])
-  end
-
   defp verk_node_key(verk_node_id), do: "verk:node:#{verk_node_id}"
   defp verk_node_queues_key(verk_node_id), do: "verk:node:#{verk_node_id}:queues"
 end

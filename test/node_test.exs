@@ -90,10 +90,10 @@ defmodule Verk.NodeTest do
 
   describe "queues!/2" do
     setup %{redis: redis} do
-      add_queue!(@node, "queue_1", redis)
-      add_queue!(@node, "queue_2", redis)
-      add_queue!(@node, "queue_3", redis)
-      add_queue!(@node, "queue_4", redis)
+      Redix.command!(redis, add_queue_redis_command(@node, "queue_1"))
+      Redix.command!(redis, add_queue_redis_command(@node, "queue_2"))
+      Redix.command!(redis, add_queue_redis_command(@node, "queue_3"))
+      Redix.command!(redis, add_queue_redis_command(@node, "queue_4"))
       :ok
     end
 
@@ -101,23 +101,6 @@ defmodule Verk.NodeTest do
       {:ok, queues} = queues!(@node, 0, redis)
       queues = MapSet.new(queues)
       assert MapSet.equal?(queues, MapSet.new(["queue_1", "queue_2", "queue_3", "queue_4"]))
-    end
-  end
-
-  describe "add_queue!/3" do
-    test "add queue to verk:node::queues", %{redis: redis} do
-      queue_name = "default"
-      assert add_queue!(@node, queue_name, redis)
-      assert Redix.command!(redis, ["SMEMBERS", @node_queues_key]) == [queue_name]
-    end
-  end
-
-  describe "remove_queue!/3" do
-    test "remove queue from verk:node::queues", %{redis: redis} do
-      queue_name = "default"
-      assert Redix.command!(redis, ["SADD", @node_queues_key, queue_name]) == 1
-      assert remove_queue!(@node, queue_name, redis)
-      assert Redix.command!(redis, ["SMEMBERS", @node_queues_key]) == []
     end
   end
 end
