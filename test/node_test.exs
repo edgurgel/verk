@@ -1,6 +1,7 @@
 defmodule Verk.NodeTest do
   use ExUnit.Case
   import Verk.Node
+  doctest Verk.Node
 
   @verk_nodes_key "verk_nodes"
 
