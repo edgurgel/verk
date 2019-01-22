@@ -15,25 +15,14 @@ defmodule Verk.NodeTest do
     {:ok, %{redis: redis}}
   end
 
-  defp register(%{redis: redis}), do: register(@node, 555, redis)
+  defp register(%{redis: redis}) do
+    register(redis, @node)
+    :ok
+  end
 
-  describe "register/3" do
-    test "add to verk_nodes", %{redis: redis} do
-      assert register(@node, 555, redis) == :ok
-      assert Redix.command!(redis, ["SMEMBERS", "verk_nodes"]) == ["123"]
-      assert register(@node, 555, redis) == {:error, :node_id_already_running}
-    end
-
-    test "set verk:node: key", %{redis: redis} do
-      assert register(@node, 555, redis) == :ok
-      assert Redix.command!(redis, ["GET", @node_key]) == "alive"
-    end
-
-    test "expire verk:node: key", %{redis: redis} do
-      assert register(@node, 555, redis) == :ok
-      ttl = Redix.command!(redis, ["PTTL", @node_key])
-      assert_in_delta ttl, 555, 5
-    end
+  defp register(redis, verk_node) do
+    expire_in(verk_node, 555, redis)
+    Redix.command!(redis, add_node_redis_command(verk_node))
   end
 
   describe "deregister/2" do
@@ -60,10 +49,11 @@ defmodule Verk.NodeTest do
 
   describe "members/3" do
     setup %{redis: redis} do
-      register("node_1", 555, redis)
-      register("node_2", 555, redis)
-      register("node_3", 555, redis)
-      register("node_4", 555, redis)
+      register(redis, "node_1")
+      register(redis, "node_2")
+      register(redis, "node_3")
+      register(redis, "node_4")
+      :ok
     end
 
     test "list verk nodes", %{redis: redis} do

@@ -23,7 +23,7 @@ defmodule Verk.Node.ManagerTest do
 
   describe "init/1" do
     test "registers local verk node id" do
-      expect(Verk.Node, :register, [@verk_node_id, 2 * @frequency, Verk.Redis], :ok)
+      expect(Verk.Node, :expire_in, [@verk_node_id, 2 * @frequency, Verk.Redis], {:ok, 1})
       expect(Verk.Scripts, :load, 1, :ok)
 
       assert init([]) == {:ok, {@verk_node_id, @frequency}}

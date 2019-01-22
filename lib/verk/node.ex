@@ -5,18 +5,6 @@ defmodule Verk.Node do
 
   @verk_nodes_key "verk_nodes"
 
-  @spec register(String.t(), non_neg_integer, GenServer.t()) ::
-          :ok | {:error, :verk_node_id_already_running}
-  def register(verk_node_id, ttl, redis) do
-    case Redix.pipeline!(redis, [
-           ["SADD", @verk_nodes_key, verk_node_id],
-           ["PSETEX", "verk:node:#{verk_node_id}", ttl, "alive"]
-         ]) do
-      [1, _] -> :ok
-      _ -> {:error, :node_id_already_running}
-    end
-  end
-
   @spec deregister!(String.t(), GenServer.t()) :: :ok
   def deregister!(verk_node_id, redis) do
     Redix.pipeline!(redis, [

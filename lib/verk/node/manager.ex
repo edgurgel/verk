@@ -19,7 +19,8 @@ defmodule Verk.Node.Manager do
       "Node Manager started for node #{local_verk_node_id}. Heartbeat will run every #{frequency} milliseconds"
     )
 
-    :ok = Verk.Node.register(local_verk_node_id, 2 * frequency, Verk.Redis)
+    heartbeat(local_verk_node_id, frequency)
+
     Process.send_after(self(), :heartbeat, frequency)
     Process.flag(:trap_exit, true)
     Verk.Scripts.load(Verk.Redis)
