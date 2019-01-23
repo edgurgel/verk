@@ -303,6 +303,34 @@ end
 
 Then set `VERK_DISABLED=true` in your Deployment's spec.
 
+### EXPERIMENTAL - Generate Node ID
+
+Since Verk 1.6.0 there is a new experimental optional configuration `generate_node_id`. Node IDs are completely controlled automatically by Verk if this configuration is set to `true`. 
+
+
+#### Under the hood
+
+* Each time a job is moved to the list of jobs inprogress of a queue this node is added to `verk_nodes` (`SADD verk_nodes node_id`) and the queue is added to `verk:node:#{node_id}:queues` (`SADD verk:node:123:queues queue_name`)
+
+* Each frequency milliseconds we set the node key to expire in 2 * frequency
+`PSETEX verk:node:#{node_id} 2 * frequency alive`
+
+* Each frequency milliseconds check for all the keys of all nodes (`verk_nodes`). If the key expired it means that this node is dead and it needs to have its jobs restored.
+
+To restore we go through all the running queues (`verk:node:#{node_id}:queues`) of that node and enqueue them from inprogress back to the queue. Each "enqueue back from in progress" is atomic (<3 lua) so we won't have duplicates.
+
+#### Configuration
+
+The default `frequency` is 30_000 milliseconds but it can be changed by setting the configuration key `heartbeat`.
+
+```elixir
+config :verk,
+  queues: [default: 5, priority: 5],
+  redis_url: "redis://127.0.0.1:6379",
+  generate_node_id: true,
+  heartbeat: 30_000,
+```
+
 ## Reliability
 
 Verk's goal is to never have a job that exists only in memory. It uses Redis as the single source of truth to retry and track jobs that were being processed if some crash happened.
