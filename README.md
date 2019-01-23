@@ -18,7 +18,7 @@ It also has one GenStage producer called `Verk.EventProducer`.
 
 The image below is an overview of Verk's supervision tree running with a queue named `default` having 5 workers.
 
-![Supervision Tree](http://i.imgur.com/ATsNAvJ.png)
+![Supervision Tree](https://i.imgur.com/1vzAVfZ.png)
 
 Feature set:
 
