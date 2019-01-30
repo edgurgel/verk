@@ -38,7 +38,7 @@ defmodule Verk.Mixfile do
       {:earmark, "~> 1.0", only: :dev},
       {:ex_doc, "== 0.18.4", only: :dev},
       {:coverex, "== 1.4.13", only: :test},
-      {:meck, "~> 0.8", only: :test}
+      {:meck, "~> 0.8.13", only: :test}
     ]
   end
 
