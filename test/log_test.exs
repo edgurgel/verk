@@ -55,7 +55,7 @@ defmodule Verk.LogTest do
 
       start_time =
         Verk.Time.now()
-        |> Time.shift(-2, :seconds)
+        |> Time.shift(-2, :second)
 
       assert capture_log(fn ->
                Verk.Log.fail(job, start_time, worker)

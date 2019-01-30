@@ -15,7 +15,7 @@ defmodule Verk.Time do
   Supported units are those specified by `System.time_unit`
   """
   @spec shift(DateTime.t(), integer, System.time_unit()) :: DateTime.t()
-  def shift(%DateTime{} = datetime, amount, units \\ :seconds) when is_integer(amount) do
+  def shift(%DateTime{} = datetime, amount, units \\ :second) when is_integer(amount) do
     datetime
     |> DateTime.to_unix(units)
     |> Kernel.+(amount)
@@ -28,7 +28,7 @@ defmodule Verk.Time do
   A positive result indicates that `datetime2` occurred after `datetime1`.
   """
   @spec diff(DAteTime.t(), DateTime.t(), System.time_unit()) :: integer
-  def diff(datetime1 = %DateTime{}, datetime2 = %DateTime{}, units \\ :seconds) do
+  def diff(datetime1 = %DateTime{}, datetime2 = %DateTime{}, units \\ :second) do
     unix_dt1 = DateTime.to_unix(datetime1, units)
     unix_dt2 = DateTime.to_unix(datetime2, units)
     unix_dt2 - unix_dt1

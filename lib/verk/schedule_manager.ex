@@ -55,7 +55,7 @@ defmodule Verk.ScheduleManager do
   end
 
   defp handle_info(fetch_message, state, queue) do
-    now = Time.now() |> DateTime.to_unix(:seconds)
+    now = Time.now() |> DateTime.to_unix(:second)
 
     case Redix.command(state.redis, ["EVALSHA", @enqueue_retriable_script_sha, 1, queue, now]) do
       {:ok, nil} ->

@@ -192,11 +192,11 @@ defmodule VerkTest do
 
     test "a job with a jid, a queue and a perform_in passing a redis connection" do
       now = Time.now()
-      perform_at = Time.shift(now, 100, :seconds)
+      perform_at = Time.shift(now, 100, :second)
       job = %Verk.Job{queue: "test_queue", jid: "job_id", class: "TestWorker", args: []}
       encoded_job = "encoded_job"
       expect(Verk.Job, :encode!, [job], encoded_job)
-      perform_at_secs = DateTime.to_unix(perform_at, :seconds)
+      perform_at_secs = DateTime.to_unix(perform_at, :second)
 
       expect(
         Redix,
