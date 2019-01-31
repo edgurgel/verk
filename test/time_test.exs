@@ -7,7 +7,7 @@ defmodule Verk.TimeTest do
       time1 = DateTime.from_unix!(10)
       time2 = DateTime.from_unix!(0)
 
-      assert Time.shift(time1, -10, :seconds) == time2
+      assert Time.shift(time1, -10, :second) == time2
     end
   end
 
@@ -26,8 +26,8 @@ defmodule Verk.TimeTest do
       time1 = DateTime.from_unix!(10)
       time2 = DateTime.from_unix!(0)
 
-      assert Time.diff(time2, time1, :seconds) == 10
-      assert Time.diff(time2, time1, :micro_seconds) == 10_000_000
+      assert Time.diff(time2, time1, :second) == 10
+      assert Time.diff(time2, time1, :microsecond) == 10_000_000
     end
   end
 end
