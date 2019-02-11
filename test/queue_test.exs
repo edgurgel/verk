@@ -1,5 +1,5 @@
 defmodule Verk.QueueTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
   import Verk.Queue
 
   @queue "default"

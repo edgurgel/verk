@@ -1,15 +1,9 @@
 defmodule Verk.ManagerSupervisorTest do
-  use ExUnit.Case
-  import :meck
+  use ExUnit.Case, async: true
+  import Mimic
   import Verk.Manager.Supervisor
 
-  setup do
-    new(Supervisor)
-
-    on_exit(fn -> unload() end)
-
-    :ok
-  end
+  setup :verify_on_exit!
 
   describe "init/1" do
     test "defines tree" do
@@ -29,11 +23,9 @@ defmodule Verk.ManagerSupervisorTest do
         {:"test_queue.supervisor", {Verk.Queue.Supervisor, :start_link, [:test_queue, 30]},
          :permanent, :infinity, :supervisor, [Verk.Queue.Supervisor]}
 
-      expect(Supervisor, :start_child, [Verk.Manager.Supervisor, child], :ok)
+      expect(Supervisor, :start_child, fn Verk.Manager.Supervisor, ^child -> :ok end)
 
       assert start_child(queue, 30) == :ok
-
-      assert validate(Supervisor)
     end
   end
 
@@ -41,55 +33,39 @@ defmodule Verk.ManagerSupervisorTest do
     test "a queue successfully" do
       queue = :test_queue
 
-      expect(
-        Supervisor,
-        :terminate_child,
-        [Verk.Manager.Supervisor, :"test_queue.supervisor"],
+      expect(Supervisor, :terminate_child, fn Verk.Manager.Supervisor, :"test_queue.supervisor" ->
         :ok
-      )
+      end)
 
-      expect(Supervisor, :delete_child, [Verk.Manager.Supervisor, :"test_queue.supervisor"], :ok)
+      expect(Supervisor, :delete_child, fn Verk.Manager.Supervisor, :"test_queue.supervisor" ->
+        :ok
+      end)
 
       assert stop_child(queue) == :ok
-
-      assert validate(Supervisor)
     end
 
     test "a queue unsuccessfully terminating child" do
       queue = :test_queue
 
-      expect(
-        Supervisor,
-        :terminate_child,
-        [Verk.Manager.Supervisor, :"test_queue.supervisor"],
+      expect(Supervisor, :terminate_child, fn Verk.Manager.Supervisor, :"test_queue.supervisor" ->
         {:error, :not_found}
-      )
+      end)
 
       assert stop_child(queue) == {:error, :not_found}
-
-      assert validate(Supervisor)
     end
 
     test "a queue unsuccessfully deleting child" do
       queue = :test_queue
 
-      expect(
-        Supervisor,
-        :terminate_child,
-        [Verk.Manager.Supervisor, :"test_queue.supervisor"],
+      expect(Supervisor, :terminate_child, fn Verk.Manager.Supervisor, :"test_queue.supervisor" ->
         :ok
-      )
+      end)
 
-      expect(
-        Supervisor,
-        :delete_child,
-        [Verk.Manager.Supervisor, :"test_queue.supervisor"],
+      expect(Supervisor, :delete_child, fn Verk.Manager.Supervisor, :"test_queue.supervisor" ->
         {:error, :not_found}
-      )
+      end)
 
       assert stop_child(queue) == {:error, :not_found}
-
-      assert validate(Supervisor)
     end
   end
 end

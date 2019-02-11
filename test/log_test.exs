@@ -1,5 +1,5 @@
 defmodule Verk.LogTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
   import ExUnit.CaptureLog
 
   alias Verk.Time

@@ -1,5 +1,5 @@
 defmodule RedisScriptsTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   @lpop_rpush_src_dest_script File.read!("#{:code.priv_dir(:verk)}/lpop_rpush_src_dest.lua")
   @mrpop_lpush_src_dest_script File.read!("#{:code.priv_dir(:verk)}/mrpop_lpush_src_dest.lua")

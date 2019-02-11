@@ -1,5 +1,5 @@
 defmodule Verk.QueueSupervisorTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
   import Verk.Queue.Supervisor
 
   describe "init/1" do

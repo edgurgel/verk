@@ -1,5 +1,5 @@
 defmodule Verk.JobTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
   alias Verk.Job
 
   describe "encode!/1" do

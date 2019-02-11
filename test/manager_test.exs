@@ -1,7 +1,9 @@
 defmodule Verk.ManagerTest do
   use ExUnit.Case
-  import :meck
+  import Mimic
   import Verk.Manager
+
+  setup :verify_on_exit!
 
   @node_id 123
 
@@ -11,12 +13,6 @@ defmodule Verk.ManagerTest do
     on_exit(fn ->
       Application.delete_env(:verk, :local_node_id)
     end)
-  end
-
-  setup do
-    new(Verk.Node, [:merge_expects])
-    on_exit(fn -> unload() end)
-    :ok
   end
 
   defp init_table(queues) do
@@ -60,7 +56,7 @@ defmodule Verk.ManagerTest do
 
       queue = :default
 
-      expect(Verk.WorkersManager, :pause, [queue], :ok)
+      expect(Verk.WorkersManager, :pause, fn ^queue -> :ok end)
 
       assert pause(queue) == true
 
@@ -68,8 +64,6 @@ defmodule Verk.ManagerTest do
                {:default, 25, :paused},
                {:low_priority, 10, :running}
              ]
-
-      assert validate(Verk.WorkersManager)
     end
 
     test "does nothing if queue does not exist" do
@@ -94,7 +88,7 @@ defmodule Verk.ManagerTest do
 
       queue = :default
 
-      expect(Verk.WorkersManager, :resume, [queue], :ok)
+      expect(Verk.WorkersManager, :resume, fn ^queue -> :ok end)
 
       assert resume(queue) == true
 
@@ -102,8 +96,6 @@ defmodule Verk.ManagerTest do
                {:default, 25, :running},
                {:low_priority, 10, :running}
              ]
-
-      assert validate(Verk.WorkersManager)
     end
 
     test "does nothing if queue does not exist" do
@@ -125,11 +117,10 @@ defmodule Verk.ManagerTest do
     test "adds queue to supervisor if not already there" do
       init_table([])
 
-      expect(Verk.Manager.Supervisor, :start_child, [:default, 25], {:ok, :child})
+      expect(Verk.Manager.Supervisor, :start_child, fn :default, 25 -> {:ok, :child} end)
 
       assert add(:default, 25) == {:ok, :child}
       assert :ets.tab2list(:verk_manager) == [{:default, 25, :running}]
-      assert validate(Verk.Manager.Supervisor)
     end
   end
 
@@ -138,21 +129,19 @@ defmodule Verk.ManagerTest do
       queues = [{:default, 25, :paused}, {:low_priority, 10, :running}]
       init_table(queues)
 
-      expect(Verk.Manager.Supervisor, :stop_child, [:default], :ok)
+      expect(Verk.Manager.Supervisor, :stop_child, fn :default -> :ok end)
 
       assert remove(:default) == :ok
       assert :ets.tab2list(:verk_manager) == [{:low_priority, 10, :running}]
-      assert validate(Verk.Manager.Supervisor)
     end
 
     test "does nothing if queue is not running" do
       queues = [{:default, 25, :paused}]
       init_table(queues)
 
-      expect(Verk.Manager.Supervisor, :stop_child, [:default], {:error, :not_found})
+      expect(Verk.Manager.Supervisor, :stop_child, fn :default -> {:error, :not_found} end)
 
       assert remove(:default) == {:error, :not_found}
-      assert validate(Verk.Manager.Supervisor)
     end
   end
 end

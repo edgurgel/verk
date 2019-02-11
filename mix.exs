@@ -21,10 +21,7 @@ defmodule Verk.Mixfile do
   end
 
   def application do
-    [
-      applications: [:logger, :confex, :jason, :redix, :poolboy],
-      env: [node_id: "1", redis_url: "redis://127.0.0.1:6379"]
-    ]
+    [env: [node_id: "1", redis_url: "redis://127.0.0.1:6379"]]
   end
 
   defp deps do
@@ -38,7 +35,7 @@ defmodule Verk.Mixfile do
       {:earmark, "~> 1.0", only: :dev},
       {:ex_doc, "== 0.18.4", only: :dev},
       {:coverex, "== 1.4.13", only: :test},
-      {:meck, "~> 0.8.13", only: :test}
+      {:mimic, "~> 0.2", only: :test}
     ]
   end
 

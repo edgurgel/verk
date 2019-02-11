@@ -1,18 +1,16 @@
 defmodule Verk.QueueStatsTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
   import Verk.QueueStats
-  import :meck
+  import Mimic
   alias Verk.QueueStatsCounters
   alias Verk.QueueStats.State
+
+  setup :verify_on_exit!
 
   @table :queue_stats
 
   setup do
-    on_exit(fn -> unload() end)
-
-    {:ok, _} =
-      Confex.get_env(:verk, :redis_url)
-      |> Redix.start_link(name: Verk.Redis)
+    {:ok, _} = Confex.get_env(:verk, :redis_url) |> Redix.start_link(name: Verk.Redis)
 
     Redix.pipeline!(Verk.Redis, [
       [
@@ -79,7 +77,7 @@ defmodule Verk.QueueStatsTest do
       state = %State{queues: %{}}
       new_state = %State{queues: %{"default" => :running}}
 
-      expect(Verk.Manager, :status, ["default"], :running)
+      expect(Verk.Manager, :status, fn "default" -> :running end)
 
       assert handle_call({:all, ""}, :from, state) ==
                {
@@ -96,8 +94,6 @@ defmodule Verk.QueueStatsTest do
                  [],
                  new_state
                }
-
-      assert validate(Verk.Manager)
     end
 
     test "list counters searching for a prefix" do
