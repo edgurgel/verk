@@ -1,12 +1,13 @@
 defmodule Verk.SortedSetTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
   import Verk.SortedSet
-  import :meck
+  import Mimic
+
+  setup :verify_on_exit!
 
   @requeue_now_script Verk.Scripts.sha("requeue_job_now")
 
   setup do
-    on_exit(fn -> unload() end)
     {:ok, redis} = Confex.get_env(:verk, :redis_url) |> Redix.start_link()
     Redix.command!(redis, ~w(DEL sorted))
     {:ok, %{redis: redis}}
@@ -174,15 +175,11 @@ defmodule Verk.SortedSetTest do
     test "with no job in original queue", %{redis: redis} do
       json = %Verk.Job{class: "Class", queue: :default, args: []} |> Verk.Job.encode!()
 
-      expect(
-        Redix,
-        :command,
-        [redis, ["EVALSHA", @requeue_now_script, 1, "sorted", json]],
+      expect(Redix, :command, fn ^redis, ["EVALSHA", @requeue_now_script, 1, "sorted", ^json] ->
         {:ok, nil}
-      )
+      end)
 
       assert requeue_job("sorted", json, redis) == {:ok, false}
-      assert validate(Redix)
     end
 
     test "with job", %{redis: redis} do
@@ -190,29 +187,21 @@ defmodule Verk.SortedSetTest do
       json = Verk.Job.encode!(job)
       job = %{job | original_json: json}
 
-      expect(
-        Redix,
-        :command,
-        [redis, ["EVALSHA", @requeue_now_script, 1, "sorted", json]],
+      expect(Redix, :command, fn ^redis, ["EVALSHA", @requeue_now_script, 1, "sorted", ^json] ->
         {:ok, "job"}
-      )
+      end)
 
       assert requeue_job("sorted", job, redis) == {:ok, true}
-      assert validate(Redix)
     end
 
     test "with original json", %{redis: redis} do
       json = %Verk.Job{class: "Class", queue: :default, args: []} |> Verk.Job.encode!()
 
-      expect(
-        Redix,
-        :command,
-        [redis, ["EVALSHA", @requeue_now_script, 1, "sorted", json]],
+      expect(Redix, :command, fn ^redis, ["EVALSHA", @requeue_now_script, 1, "sorted", ^json] ->
         {:ok, "job"}
-      )
+      end)
 
       assert requeue_job("sorted", json, redis) == {:ok, true}
-      assert validate(Redix)
     end
   end
 
@@ -220,15 +209,11 @@ defmodule Verk.SortedSetTest do
     test "with no job in original queue", %{redis: redis} do
       json = %Verk.Job{class: "Class", queue: :default, args: []} |> Verk.Job.encode!()
 
-      expect(
-        Redix,
-        :command,
-        [redis, ["EVALSHA", @requeue_now_script, 1, "sorted", json]],
+      expect(Redix, :command, fn ^redis, ["EVALSHA", @requeue_now_script, 1, "sorted", ^json] ->
         {:ok, nil}
-      )
+      end)
 
       assert requeue_job!("sorted", json, redis) == false
-      assert validate(Redix)
     end
 
     test "with job", %{redis: redis} do
@@ -236,29 +221,21 @@ defmodule Verk.SortedSetTest do
       json = Verk.Job.encode!(job)
       job = %{job | original_json: json}
 
-      expect(
-        Redix,
-        :command,
-        [redis, ["EVALSHA", @requeue_now_script, 1, "sorted", json]],
+      expect(Redix, :command, fn ^redis, ["EVALSHA", @requeue_now_script, 1, "sorted", ^json] ->
         {:ok, "job"}
-      )
+      end)
 
       assert requeue_job!("sorted", job, redis) == true
-      assert validate(Redix)
     end
 
     test "with original json", %{redis: redis} do
       json = %Verk.Job{class: "Class", queue: :default, args: []} |> Verk.Job.encode!()
 
-      expect(
-        Redix,
-        :command,
-        [redis, ["EVALSHA", @requeue_now_script, 1, "sorted", json]],
+      expect(Redix, :command, fn ^redis, ["EVALSHA", @requeue_now_script, 1, "sorted", ^json] ->
         {:ok, "job"}
-      )
+      end)
 
       assert requeue_job!("sorted", json, redis) == true
-      assert validate(Redix)
     end
   end
 

@@ -1,5 +1,5 @@
 defmodule Verk.NodeTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
   import Verk.Node
   doctest Verk.Node
 
