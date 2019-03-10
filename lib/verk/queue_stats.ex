@@ -26,7 +26,7 @@ defmodule Verk.QueueStats do
   @persist_interval 10_000
 
   @doc false
-  def start_link() do
+  def start_link(_) do
     GenStage.start_link(__MODULE__, :ok, name: __MODULE__)
   end
 

@@ -3,7 +3,7 @@ defmodule Verk.Manager.Supervisor do
   use Supervisor
 
   @doc false
-  def start_link, do: Supervisor.start_link(__MODULE__, [], name: __MODULE__)
+  def start_link(_), do: Supervisor.start_link(__MODULE__, [], name: __MODULE__)
 
   @doc false
   def init(_) do

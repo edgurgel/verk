@@ -8,7 +8,7 @@ defmodule Verk do
 
   It has an API that provides information about the queues
   """
-  alias Verk.{Job, Time, Manager}
+  alias Verk.{Job, Manager, Queue, Time}
 
   @schedule_key "schedule"
 
@@ -60,10 +60,10 @@ defmodule Verk do
 
   def enqueue(job = %Job{jid: nil}, redis), do: enqueue(%Job{job | jid: generate_jid()}, redis)
 
-  def enqueue(job = %Job{jid: jid, queue: queue}, redis) do
+  def enqueue(job = %Job{jid: jid}, redis) do
     job = %Job{job | enqueued_at: Time.now() |> DateTime.to_unix()}
 
-    case Redix.command(redis, ["LPUSH", "queue:#{queue}", Job.encode!(job)]) do
+    case Queue.enqueue(job, redis) do
       {:ok, _} -> {:ok, jid}
       {:error, reason} -> {:error, reason}
     end
