@@ -8,7 +8,7 @@ defmodule Verk.Mixfile do
   def project do
     [
       app: :verk,
-      version: "1.6.1",
+      version: "1.6.2",
       elixir: "~> 1.6",
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
