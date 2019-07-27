@@ -6,6 +6,8 @@ defmodule Verk.Job do
   amount of retries on all your `Verk.Job` when none is informed. Defaults at `25`.
   """
 
+  import Verk.Dsl
+
   @keys [
     error_message: nil,
     failed_at: nil,
@@ -33,7 +35,7 @@ defmodule Verk.Job do
           retried_at: DateTime.t(),
           error_backtrace: String.t()
         }
-  defstruct [:original_json | @keys]
+  defstruct [:original_json, :item_id | @keys]
 
   @doc """
   Encode the struct to a JSON string, raising if there is an error
@@ -53,7 +55,7 @@ defmodule Verk.Job do
   Decode the JSON payload storing the original json as part of the struct.
   """
   @spec decode(binary) :: {:ok, %__MODULE__{}} | {:error, Jason.DecodeError.t()}
-  def decode(payload) do
+  def decode(payload, item_id \\ nil) do
     with {:ok, map} <- Jason.decode(payload),
          {:ok, args} <- unwrap_args(map["args"]) do
       fields =
@@ -64,7 +66,7 @@ defmodule Verk.Job do
       job =
         %__MODULE__{}
         |> struct(fields)
-        |> build(payload)
+        |> build(payload, item_id)
 
       {:ok, job}
     end
@@ -74,11 +76,8 @@ defmodule Verk.Job do
   Decode the JSON payload storing the original json as part of the struct, raising if there is an error
   """
   @spec decode!(binary) :: %__MODULE__{}
-  def decode!(payload) do
-    case decode(payload) do
-      {:ok, job} -> job
-      {:error, error} -> raise error
-    end
+  def decode!(payload, item_id \\ nil) do
+    bangify(decode(payload, item_id))
   end
 
   def default_max_retry_count do
@@ -90,11 +89,11 @@ defmodule Verk.Job do
 
   defp unwrap_args(args), do: {:ok, args}
 
-  defp build(job = %{args: %{}}, payload) do
-    build(%{job | args: []}, payload)
+  defp build(job = %{args: %{}}, payload, item_id) do
+    build(%{job | args: []}, payload, item_id)
   end
 
-  defp build(job, payload) do
-    %Verk.Job{job | original_json: payload}
+  defp build(job, payload, item_id) do
+    %Verk.Job{job | original_json: payload, item_id: item_id}
   end
 end
