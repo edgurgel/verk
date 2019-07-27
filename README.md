@@ -1,6 +1,8 @@
 ![Verk](https://i.imgur.com/unSd0Zr.png)
 #  [![Build Status](https://travis-ci.org/edgurgel/verk.svg?branch=master)](https://travis-ci.org/edgurgel/verk) [![Hex pm](http://img.shields.io/hexpm/v/verk.svg?style=flat)](https://hex.pm/packages/verk) [![Coverage Status](https://coveralls.io/repos/edgurgel/verk/badge.svg?branch=master&service=github)](https://coveralls.io/github/edgurgel/verk?branch=master) [![hex.pm downloads](https://img.shields.io/hexpm/dt/verk.svg?style=flat)](https://hex.pm/packages/verk)
 
+> This README follows master, which may differ from the last version. Check [here](https://github.com/edgurgel/verk/tree/v1.6.3) for the README related to the last version.
+
 Verk is a job processing system backed by Redis. It uses the same job definition of Sidekiq/Resque.
 
 The goal is to be able to isolate the execution of a queue of jobs as much as possible.
@@ -11,21 +13,21 @@ Every queue has its own supervision tree:
 * A `QueueManager` that interacts with Redis to get jobs and enqueue them back to be retried if necessary;
 * A `WorkersManager` that will interact with the `QueueManager` and the pool to execute jobs.
 
-Verk will hold one connection to Redis per queue plus one dedicated to the `ScheduleManager` and one general connection for other use cases like deleting a job from retry set or enqueuing new jobs.
+Verk will hold one connection to Redis per queue plus one dedicated to the `ScheduleManager` and a pool of connections for other use cases like deleting a job from retry set or enqueuing new jobs.
 
 The `ScheduleManager` fetches jobs from the `retry` set to be enqueued back to the original queue when it's ready to be retried.
 
 It also has one GenStage producer called `Verk.EventProducer`.
 
-The image below is an overview of Verk's supervision tree running with a queue named `default` having 5 workers.
+The image below is an overview of Verk's supervision tree running with two queues named `queue_one` and `queue_two` each with 5 workers.
 
-![Supervision Tree](https://i.imgur.com/1vzAVfZ.png)
+![Supervision Tree](https://i.imgur.com/AeOsKio.png)
 
 Feature set:
 
 * Retry mechanism with exponential backoff
 * Dynamic addition/removal of queues
-* Reliable job processing (RPOPLPUSH and Lua scripts to the rescue)
+* Reliable job processing using Redis Streams!
 * Error and event tracking
 
 ## Installation
@@ -38,13 +40,7 @@ def deps do
 end
 ```
 
-and run `$ mix deps.get`. Add `:verk` to your applications list if your Elixir version is 1.3 or lower:
-
-```elixir
-def application do
-  [applications: [:verk]]
-end
-```
+and run `$ mix deps.get`.
 
 Add `Verk.Supervisor` to your supervision tree:
 
@@ -168,168 +164,6 @@ Verk.add_queue(:new, 10) # Adds a queue named `new` with 10 workers
 
 ```elixir
 Verk.remove_queue(:new) # Terminate and delete the queue named `new`
-```
-
-## Deployment
-
-The way Verk currently works, there are two pitfalls to pay attention to:
-
-1. **Each worker node's `node_id` MUST be unique.** If a node goes online with a
-  `node_id`, which is already in use by another running node, then the second
-  node will re-enqueue all jobs currently in progress on the first node, which
-  results in jobs executed multiple times.
-2. **Take caution around removing nodes.** If a node with jobs in progress is
-  killed, those jobs will not be restarted until another node with the same
-  `node_id` comes online. If another node with the same `node_id` never comes
-  online, the jobs will be stuck forever. This means you should not use dynamic
-  `node_id`s such as Docker container ids or Kubernetes Deployment pod names.
-
-### On Heroku
-
-Heroku provides
-[an experimental environment variable](https://devcenter.heroku.com/articles/dynos#local-environment-variables)
-named after the type and number of the dyno.
-
-```elixir
-config :verk,
-  node_id: {:system, "DYNO", "job.1"}
-```
-
-_It is possible that two dynos with the same name could overlap for a short time
-during a dyno restart._ As the Heroku documentation says:
-
-> [...] $DYNO is not guaranteed to be unique within an app. For example, during
-> a deploy or restart, the same dyno identifier could be used for two running
-> dynos. It will be eventually consistent, however.
-
-This means that you are still at risk of violating the first rule above on
-`node_id` uniqueness. A slightly naive way of lowering the risk would be to
-add a delay in your application before the Verk queue starts.
-
-### On Kubernetes
-
-We recommend using a
-[StatefulSet](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/)
-to run your pool of workers. StatefulSets add a label,
-`statefulset.kubernetes.io/pod-name`, to all its pods with the value
-`{name}-{n}`, where `{name}` is the name of your StatefulSet and `{n}` is a
-number from 0 to `spec.replicas - 1`. StatefulSets maintain a sticky identity
-for its pods and guarantee that two identical pods are never up simultaneously.
-This way it satisfies both of our deployment rules mentioned above.
-
-Define your worker like this:
-
-```yaml
-# StatefulSets require a service, even though we don't use it directly for anything
-apiVersion: v1
-kind: Service
-metadata:
- name: my-worker
- labels:
-   app: my-worker
-spec:
- clusterIP: None
- selector:
-   app: my-worker
-
----
-
-apiVersion: apps/v1
-kind: StatefulSet
-metadata:
- name: my-worker
- labels:
-   app: my-worker
-spec:
- selector:
-   matchLabels:
-     app: my-worker
- serviceName: my-worker
- # We run two workers in this example
- replicas: 2
- # The workers don't depend on each other, so we can use Parallel pod management
- podManagementPolicy: Parallel
- template:
-   metadata:
-     labels:
-       app: my-worker
-   spec:
-     # This should probably match up with the setting you used for Verk's :shutdown_timeout
-     terminationGracePeriodSeconds: 30
-     containers:
-       - name: my-worker
-         image: my-repo/my-worker
-         env:
-           - name: VERK_NODE_ID
-             valueFrom:
-               fieldRef:
-                 fieldPath: metadata.labels['statefulset.kubernetes.io/pod-name']
-```
-
-Notice how we use a `fieldRef` to expose the pod's
-`statefulset.kubernetes.io/pod-name` label as the `VERK_NODE_ID` environment
-variable. Instruct Verk to use this environment variable as `node_id`:
-
-```elixir
-config :verk,
- node_id: {:system, "VERK_NODE_ID"}
-```
-
-Be careful when scaling the number of `replicas` down. Make sure that the pods
-that will be stopped and never come back do not have any jobs in progress.
-Scaling up is always safe.
-
-Don't use Deployments for pods that will run Verk. If you hardcode `node_id`
-into your config, multiple pods with the same `node_id`will be online at the
-same time, violating the first rule. If you use a non-sticky environment
-variable, such as `HOSTNAME`, you'll violate the second rule and cause jobs to
-get stuck every time you deploy.
-
-If your application serves as e.g. both an API and Verk queue, then it may be
-wise to run a separate Deployment for your API, which does not run Verk. In that
-case you can configure your application to check an environment variable,
-`VERK_DISABLED`, for whether it should handle any Verk queues:
-
-```elixir
-# In your config.exs
-config :verk,
-  queues: {:system, {MyApp.Env, :verk_queues, []}, "VERK_DISABLED"}
-
-# In some other file
-defmodule MyApp.Env do
-  def verk_queues("true"), do: []
-  def verk_queues(_), do: [default: 25, priority: 10]
-end
-```
-
-Then set `VERK_DISABLED=true` in your Deployment's spec.
-
-### EXPERIMENTAL - Generate Node ID
-
-Since Verk 1.6.0 there is a new experimental optional configuration `generate_node_id`. Node IDs are completely controlled automatically by Verk if this configuration is set to `true`. 
-
-
-#### Under the hood
-
-* Each time a job is moved to the list of jobs inprogress of a queue this node is added to `verk_nodes` (`SADD verk_nodes node_id`) and the queue is added to `verk:node:#{node_id}:queues` (`SADD verk:node:123:queues queue_name`)
-
-* Each frequency milliseconds we set the node key to expire in 2 * frequency
-`PSETEX verk:node:#{node_id} 2 * frequency alive`
-
-* Each frequency milliseconds check for all the keys of all nodes (`verk_nodes`). If the key expired it means that this node is dead and it needs to have its jobs restored.
-
-To restore we go through all the running queues (`verk:node:#{node_id}:queues`) of that node and enqueue them from inprogress back to the queue. Each "enqueue back from in progress" is atomic (<3 lua) so we won't have duplicates.
-
-#### Configuration
-
-The default `frequency` is 30_000 milliseconds but it can be changed by setting the configuration key `heartbeat`.
-
-```elixir
-config :verk,
-  queues: [default: 5, priority: 5],
-  redis_url: "redis://127.0.0.1:6379",
-  generate_node_id: true,
-  heartbeat: 30_000,
 ```
 
 ## Reliability
