@@ -32,7 +32,7 @@ defmodule Verk.Worker do
   @doc false
   def handle_cast({:perform, job, manager}, state) do
     :erlang.put(@process_dict_key, job)
-    [job.class] |> Module.safe_concat() |> apply(:perform, job.args)
+    [job.class] |> Module.safe_concat() |> apply(:perform, job.args ++ [job])
     GenServer.cast(manager, {:done, self(), job.jid})
     {:stop, :normal, state}
   rescue
