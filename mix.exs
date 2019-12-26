@@ -28,9 +28,9 @@ defmodule Verk.Mixfile do
     [
       {:redix, "~> 0.8"},
       {:jason, "~> 1.0"},
-      {:poolboy, "~> 1.5.1"},
+      {:poolboy, "~> 1.5"},
       {:confex, "~> 3.3"},
-      {:gen_stage, "~> 0.12.1"},
+      {:gen_stage, "~> 0.12"},
       {:credo, "~> 0.9", only: [:dev, :test]},
       {:earmark, "~> 1.0", only: :dev},
       {:ex_doc, "== 0.18.4", only: :dev},
