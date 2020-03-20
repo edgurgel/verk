@@ -2,7 +2,7 @@ defmodule VerkTest do
   use ExUnit.Case, async: true
   import Mimic
   import Verk
-  alias Verk.{Time, Manager, Queue}
+  alias Verk.{Time, Manager}
 
   setup :verify_on_exit!
 
@@ -45,11 +45,15 @@ defmodule VerkTest do
       }
 
       now = Time.now()
+      encoded_job = "encoded_job"
       expected_job = %Verk.Job{job | enqueued_at: now |> DateTime.to_unix()}
 
       expect(Time, :now, fn -> now end)
+      expect(Verk.Job, :encode!, fn ^expected_job -> encoded_job end)
 
-      expect(Queue, :enqueue, fn ^expected_job, Verk.Redis -> {:ok, "job_id"} end)
+      expect(Redix, :command, fn Verk.Redis, ["LPUSH", "queue:test_queue", ^encoded_job] ->
+        {:ok, :_}
+      end)
 
       assert enqueue(job, Verk.Redis) == {:ok, "job_id"}
     end
@@ -64,11 +68,15 @@ defmodule VerkTest do
       }
 
       now = Time.now()
+      encoded_job = "encoded_job"
       expected_job = %Verk.Job{job | enqueued_at: now |> DateTime.to_unix()}
 
       expect(Time, :now, fn -> now end)
+      expect(Verk.Job, :encode!, fn ^expected_job -> encoded_job end)
 
-      expect(Queue, :enqueue, fn ^expected_job, Verk.Redis -> {:ok, "job_id"} end)
+      expect(Redix, :command, fn Verk.Redis, ["LPUSH", "queue:test_queue", ^encoded_job] ->
+        {:ok, :_}
+      end)
 
       assert enqueue(job) == {:ok, "job_id"}
     end
@@ -83,22 +91,27 @@ defmodule VerkTest do
       }
 
       now = Time.now()
+      encoded_job = "encoded_job"
       expected_job = %Verk.Job{job | enqueued_at: now |> DateTime.to_unix()}
 
       expect(Time, :now, fn -> now end)
-      expect(Queue, :enqueue, fn ^expected_job, Verk.Redis -> {:ok, "job_id"} end)
+      expect(Verk.Job, :encode!, fn ^expected_job -> encoded_job end)
+
+      expect(Redix, :command, fn Verk.Redis, ["LPUSH", "queue:test_queue", ^encoded_job] ->
+        {:ok, :_}
+      end)
 
       assert enqueue(job) == {:ok, "job_id"}
     end
 
     test "a job without a jid" do
       job = %Verk.Job{queue: "test_queue", class: "TestWorker", args: [], jid: nil}
+      encoded_job = "encoded_job"
 
-      expect(Queue, :enqueue, fn enqueued_job, Verk.Redis ->
-        assert job.queue == enqueued_job.queue
-        assert job.class == enqueued_job.class
-        assert job.args == enqueued_job.args
-        {:ok, enqueued_job.jid}
+      expect(Verk.Job, :encode!, fn _ -> encoded_job end)
+
+      expect(Redix, :command, fn Verk.Redis, ["LPUSH", "queue:test_queue", ^encoded_job] ->
+        {:ok, :_}
       end)
 
       {:ok, jid} = enqueue(job)
@@ -109,14 +122,16 @@ defmodule VerkTest do
     test "a job without a max_retry_count" do
       Application.put_env(:verk, :max_retry_count, 100)
       job = %Verk.Job{queue: "test_queue", class: "TestWorker"}
+      encoded_job = "encoded_job"
 
-      expect(Queue, :enqueue, fn enqueued_job, Verk.Redis ->
-        assert job.queue == enqueued_job.queue
-        assert job.class == enqueued_job.class
-        assert job.args == enqueued_job.args
-        assert enqueued_job.max_retry_count == 100
-        assert is_binary(enqueued_job.jid)
-        {:ok, enqueued_job.jid}
+      expect(Verk.Job, :encode!, fn job ->
+        assert job.max_retry_count == 100
+        assert is_binary(job.jid)
+        encoded_job
+      end)
+
+      expect(Redix, :command, fn Verk.Redis, ["LPUSH", "queue:test_queue", ^encoded_job] ->
+        {:ok, :_}
       end)
 
       {:ok, _jid} = enqueue(job)

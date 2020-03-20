@@ -2,7 +2,6 @@ defmodule Verk.ManagerTest do
   use ExUnit.Case
   import Mimic
   import Verk.Manager
-  alias Verk.QueueList
 
   setup :verify_on_exit!
 
@@ -24,8 +23,6 @@ defmodule Verk.ManagerTest do
   describe "init/1" do
     test "creates an ETS table with queues" do
       queues = [default: 25, low_priority: 10]
-      expect(QueueList, :add, fn :default -> :ok end)
-      expect(QueueList, :add, fn :low_priority -> :ok end)
       init(queues)
 
       assert :ets.tab2list(:verk_manager) == [
@@ -120,7 +117,6 @@ defmodule Verk.ManagerTest do
     test "adds queue to supervisor if not already there" do
       init_table([])
 
-      expect(QueueList, :add, fn :default -> :ok end)
       expect(Verk.Manager.Supervisor, :start_child, fn :default, 25 -> {:ok, :child} end)
 
       assert add(:default, 25) == {:ok, :child}

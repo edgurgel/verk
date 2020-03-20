@@ -8,8 +8,8 @@ defmodule Verk.Mixfile do
   def project do
     [
       app: :verk,
-      version: "2.0.0",
-      elixir: "~> 1.8",
+      version: "1.6.3",
+      elixir: "~> 1.6",
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
       test_coverage: [tool: Coverex.Task, coveralls: true],
@@ -21,21 +21,21 @@ defmodule Verk.Mixfile do
   end
 
   def application do
-    [env: [redis_url: "redis://127.0.0.1:6379"]]
+    [env: [node_id: "1", redis_url: "redis://127.0.0.1:6379"]]
   end
 
   defp deps do
     [
-      {:redix, "~> 0.10"},
+      {:redix, "~> 0.8"},
       {:jason, "~> 1.0"},
-      {:poolboy, "~> 1.5"},
+      {:poolboy, "~> 1.5.1"},
       {:confex, "~> 3.3"},
-      {:gen_stage, "~> 0.12"},
-      {:credo, "~> 1.0", only: [:dev, :test], runtime: false},
-      {:earmark, "~> 1.0", only: :dev, runtime: false},
-      {:ex_doc, "~> 0.21", only: :dev, runtime: false},
+      {:gen_stage, "~> 0.12.1"},
+      {:credo, "~> 0.9", only: [:dev, :test]},
+      {:earmark, "~> 1.0", only: :dev},
+      {:ex_doc, "== 0.18.4", only: :dev},
       {:coverex, "== 1.4.13", only: :test},
-      {:mimic, "~> 1.1", only: :test}
+      {:mimic, "~> 0.2", only: :test}
     ]
   end
 
