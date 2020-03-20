@@ -18,7 +18,6 @@ defmodule Verk.Manager do
     ets = :ets.new(@table, @ets_options)
 
     for {queue, size} <- queues do
-      Verk.QueueList.add(queue)
       :ets.insert_new(@table, {queue, size, :running})
     end
 
@@ -74,7 +73,6 @@ defmodule Verk.Manager do
       Logger.error("Queue #{queue} is already running")
     end
 
-    Verk.QueueList.add(queue)
     Verk.Manager.Supervisor.start_child(queue, size)
   end
 

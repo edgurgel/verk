@@ -19,7 +19,8 @@ defmodule IntegrationTest do
   end
 
   setup do
-    Application.ensure_all_started(:redix)
+    Application.put_env(:verk, :generate_node_id, false, persistent: true)
+    Application.delete_env(:verk, :local_node_id, persistent: true)
     {:ok, redis} = Redix.start_link(Confex.get_env(:verk, :redis_url))
     Redix.command!(redis, ["FLUSHDB"])
     {:ok, redis: redis}
@@ -48,21 +49,27 @@ defmodule IntegrationTest do
     assert Redix.command!(redis, ["SMEMBERS", "verk_nodes"]) == []
     Application.stop(:integration)
 
+    assert_receive %Verk.Events.QueuePausing{queue: :queue_one}
+    assert_receive %Verk.Events.QueuePausing{queue: :queue_two}
     assert_receive %Verk.Events.QueuePaused{queue: :queue_one}
     assert_receive %Verk.Events.QueuePaused{queue: :queue_two}
   end
 
   @tag integration: true
-  test "maintains verk_nodes", %{redis: redis} do
+  test "generate_node_id true maintains verk_nodes", %{redis: redis} do
     enqueue_jobs!(redis)
 
+    Application.put_env(:verk, :generate_node_id, true, persistent: true)
     Application.ensure_all_started(:integration)
     {:ok, _consumer} = Consumer.start()
     node_id = Application.fetch_env!(:verk, :local_node_id)
+    assert Redix.command!(redis, ["SMEMBERS", "verk_nodes"]) == [node_id]
     assert Redix.command!(redis, ["TTL", "verk:node:#{node_id}"]) > 0
 
     Application.stop(:integration)
 
+    assert_receive %Verk.Events.QueuePausing{queue: :queue_one}
+    assert_receive %Verk.Events.QueuePausing{queue: :queue_two}
     assert_receive %Verk.Events.QueuePaused{queue: :queue_one}
     assert_receive %Verk.Events.QueuePaused{queue: :queue_two}
   end

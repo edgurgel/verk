@@ -6,7 +6,7 @@ defmodule Verk.DeadSet do
   amount of dead jobs to be stored on your dead queue. Defaults at `100`.
   """
   import Verk.Dsl
-  alias Verk.{Job, SortedSet}
+  alias Verk.{SortedSet, Job}
 
   # a week
   @timeout 60 * 60 * 24 * 7

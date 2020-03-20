@@ -6,7 +6,7 @@ defmodule Verk.Queue.Supervisor do
   * A `Verk.WorkersManager`
   """
   use Supervisor
-  alias Verk.{QueueManager, WorkersManager}
+  alias Verk.{WorkersManager, QueueManager}
 
   @doc false
   def start_link(name, size) do
