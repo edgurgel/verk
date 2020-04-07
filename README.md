@@ -297,8 +297,8 @@ config :verk,
 
 # In some other file
 defmodule MyApp.Env do
-  def verk_queues("true"), do: []
-  def verk_queues(_), do: [default: 25, priority: 10]
+  def verk_queues("true"), do: {:ok, []}
+  def verk_queues(_), do: {:ok, [default: 25, priority: 10]}
 end
 ```
 
