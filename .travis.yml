@@ -1,14 +1,14 @@
 language: elixir
 elixir:
-  - 1.6.5
-  - 1.7.3
+  - 1.9
+  - 1.10
 otp_release:
-  - 20.0
   - 21.0
+  - 22.0
 script:
   - mix test --trace --cover
   - MIX_ENV=test mix credo --strict
-  - if [[ `elixir -v` = *"1.7"* ]]; then mix format --check-formatted; fi
+  - mix format --check-formatted
   - cd test/integration
   - mix deps.get
   - mix test --no-start --trace --include integration
