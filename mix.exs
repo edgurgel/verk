@@ -8,7 +8,7 @@ defmodule Verk.Mixfile do
   def project do
     [
       app: :verk,
-      version: "1.6.5",
+      version: "1.7.0",
       elixir: "~> 1.9",
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
@@ -34,7 +34,7 @@ defmodule Verk.Mixfile do
       {:credo, "~> 0.9", only: [:dev, :test]},
       {:earmark, "~> 1.0", only: :dev},
       {:ex_doc, "== 0.18.4", only: :dev},
-      {:coverex, "== 1.4.13", only: :test},
+      {:coverex, "== 1.5.0", only: :test},
       {:mimic, "~> 0.2", only: :test}
     ]
   end
