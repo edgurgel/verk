@@ -33,7 +33,7 @@ defmodule Verk.Mixfile do
       {:gen_stage, "~> 1.0"},
       {:credo, "~> 0.9", only: [:dev, :test]},
       {:earmark, "~> 1.0", only: :dev},
-      {:ex_doc, "== 0.18.4", only: :dev},
+      {:ex_doc, "~> 0.20", only: :dev},
       {:coverex, "== 1.5.0", only: :test},
       {:mimic, "~> 0.2", only: :test}
     ]
