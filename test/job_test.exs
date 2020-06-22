@@ -155,6 +155,20 @@ defmodule Verk.JobTest do
                {:ok,
                 %Job{queue: "test_queue", args: [], original_json: payload, max_retry_count: 5}}
     end
+
+    test "discards unknown job attributes" do
+      payload = ~s({ "queue" : "test_queue", "args" : "[1, 2, 3]",
+                   "max_retry_count" : 5, "newrelic": {}})
+
+      assert Job.decode(payload) ==
+               {:ok,
+                %Job{
+                  queue: "test_queue",
+                  args: [1, 2, 3],
+                  original_json: payload,
+                  max_retry_count: 5
+                }}
+    end
   end
 
   describe "default_max_retry_count/0" do
