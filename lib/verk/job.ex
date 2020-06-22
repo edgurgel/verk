@@ -22,6 +22,8 @@ defmodule Verk.Job do
     max_retry_count: nil
   ]
 
+  @string_keys @keys |> Keyword.keys() |> Enum.map(&Atom.to_string/1)
+
   @type t :: %__MODULE__{
           error_message: String.t(),
           failed_at: DateTime.t(),
@@ -58,6 +60,7 @@ defmodule Verk.Job do
          {:ok, args} <- unwrap_args(map["args"]) do
       fields =
         map
+        |> Map.take(@string_keys)
         |> Map.update!("args", fn _ -> args end)
         |> Map.new(fn {k, v} -> {String.to_existing_atom(k), v} end)
 
