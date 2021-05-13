@@ -1,6 +1,6 @@
 defmodule Verk.Worker do
   @moduledoc """
-  Worker executes the job, messages the manager when it's done and shutdowns
+  Worker executes the job, messages the manager when it's done and shutdowns.
   """
   use GenServer
   require Logger
@@ -8,7 +8,7 @@ defmodule Verk.Worker do
   @process_dict_key :verk_current_job
 
   @doc """
-  Get the current job that the worker is running
+  Get the current job that the worker is running.
   """
   @spec current_job :: %Verk.Job{}
   def current_job, do: :erlang.get(@process_dict_key)
@@ -19,7 +19,7 @@ defmodule Verk.Worker do
   end
 
   @doc """
-  Ask the worker to perform the job
+  Ask the worker to perform the job.
   """
   @spec perform_async(pid, pid, %Verk.Job{}) :: :ok
   def perform_async(worker, manager, job) do

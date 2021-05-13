@@ -1,10 +1,10 @@
 defmodule Verk.Stats do
   @moduledoc """
-  Basic stats for Verk
+  Basic stats for Verk.
   """
 
   @doc """
-  Total amount of processed and failed jobs
+  Total amount of processed and failed jobs.
   """
   @spec total(GenServer.server()) :: Map.t()
   def total(redis \\ Verk.Redis) do
@@ -13,7 +13,7 @@ defmodule Verk.Stats do
   end
 
   @doc """
-  Total amount of processed and failed jobs for a single queue
+  Total amount of processed and failed jobs for a single queue.
   """
   @spec queue_total(String.t(), GenServer.server()) :: Map.t()
   def queue_total(queue, redis \\ Verk.Redis) do

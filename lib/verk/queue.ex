@@ -1,12 +1,12 @@
 defmodule Verk.Queue do
   @moduledoc """
-  This module interacts with a queue
+  This module interacts with a queue.
   """
   alias Verk.Job
   import Verk.Dsl
 
   @doc """
-  Counts how many jobs are enqueued on a queue
+  Counts how many jobs are enqueued on a queue.
   """
   @spec count(binary) :: {:ok, integer} | {:error, atom | Redix.Error.t()}
   def count(queue) do
@@ -14,7 +14,7 @@ defmodule Verk.Queue do
   end
 
   @doc """
-  Counts how many jobs are enqueued on a queue, raising if there's an error
+  Counts how many jobs are enqueued on a queue, raising if there's an error.
   """
   @spec count!(binary) :: integer
   def count!(queue) do
@@ -24,9 +24,9 @@ defmodule Verk.Queue do
   @doc """
   Clears the `queue`
 
-  It will return `{:ok, true}` if the `queue` was cleared and `{:ok, false}` otherwise
+  It will return `{:ok, true}` if the `queue` was cleared and `{:ok, false}` otherwise.
 
-  An error tuple may be returned if Redis failed
+  An error tuple may be returned if Redis failed.
   """
   @spec clear(binary) :: {:ok, boolean} | {:error, Redix.Error.t()}
   def clear(queue) do
@@ -38,9 +38,9 @@ defmodule Verk.Queue do
   end
 
   @doc """
-  Clears the `queue`, raising if there's an error
+  Clears the `queue`, raising if there's an error.
 
-  It will return `true` if the `queue` was cleared and `false` otherwise
+  It will return `true` if the `queue` was cleared and `false` otherwise.
   """
   @spec clear!(binary) :: boolean
   def clear!(queue) do
@@ -48,7 +48,7 @@ defmodule Verk.Queue do
   end
 
   @doc """
-  Lists enqueued jobs from `start` to `stop`
+  Lists enqueued jobs from `start` to `stop`.
   """
   @spec range(binary, integer, integer) :: {:ok, [Verk.Job.T]} | {:error, Redix.Error.t()}
   def range(queue, start \\ 0, stop \\ -1) do
@@ -59,7 +59,7 @@ defmodule Verk.Queue do
   end
 
   @doc """
-  Lists enqueued jobs from `start` to `stop`, raising if there's an error
+  Lists enqueued jobs from `start` to `stop`, raising if there's an error.
   """
   @spec range!(binary, integer, integer) :: [Verk.Job.T]
   def range!(queue, start \\ 0, stop \\ -1) do
@@ -67,12 +67,12 @@ defmodule Verk.Queue do
   end
 
   @doc """
-  Deletes the job from the `queue`
+  Deletes the job from the `queue`.
 
-  It returns `{:ok, true}` if the job was found and deleted
-  Otherwise it returns `{:ok, false}`
+  It returns `{:ok, true}` if the job was found and deleted.
+  Otherwise it returns `{:ok, false}`.
 
-  An error tuple may be returned if Redis failed
+  An error tuple may be returned if Redis failed.
   """
   @spec delete_job(binary, %Job{} | binary) :: {:ok, boolean} | {:error, Redix.Error.t()}
   def delete_job(queue, %Job{original_json: original_json}) do
@@ -88,12 +88,12 @@ defmodule Verk.Queue do
   end
 
   @doc """
-  Delete job from the `queue`, raising if there's an error
+  Delete job from the `queue`, raising if there's an error.
 
-  It returns `true` if the job was found and delete
-  Otherwise it returns `false`
+  It returns `true` if the job was found and delete.
+  Otherwise it returns `false`.
 
-  An error will be raised if Redis failed
+  An error will be raised if Redis failed.
   """
   @spec delete_job!(binary, %Job{} | binary) :: boolean
   def delete_job!(queue, %Job{original_json: original_json}) do

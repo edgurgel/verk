@@ -1,8 +1,8 @@
 defmodule Verk.ScheduleManager do
   @moduledoc """
-  The ScheduleManager looks for jobs to be retried and accept jobs to scheduled to be retried
+  The ScheduleManager looks for jobs to be retried and accept jobs to scheduled to be retried.
 
-  The job is added back to the queue when it's ready to be run or retried
+  The job is added back to the queue when it's ready to be run or retried.
   """
 
   use GenServer
@@ -26,7 +26,7 @@ defmodule Verk.ScheduleManager do
   end
 
   @doc """
-  Connect to redis and timeout with the `poll_interval`
+  Connect to redis and timeout with the `poll_interval`.
   """
   def init(_) do
     {:ok, redis} = Redix.start_link(Confex.get_env(:verk, :redis_url))
@@ -41,14 +41,14 @@ defmodule Verk.ScheduleManager do
   end
 
   @doc """
-  Search for retryable jobs to be done and if removal succeeds enqueue the job
+  Search for retryable jobs to be done and if removal succeeds enqueue the job.
   """
   def handle_info(:fetch_retryable, state) do
     handle_info(:fetch_retryable, state, @retry_key)
   end
 
   @doc """
-  Search for scheduled jobs to be done and if removal succeeds enqueue the job
+  Search for scheduled jobs to be done and if removal succeeds enqueue the job.
   """
   def handle_info(:fetch_scheduled, state) do
     handle_info(:fetch_scheduled, state, @schedule_key)

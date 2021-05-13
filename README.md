@@ -1,5 +1,12 @@
 ![Verk](https://i.imgur.com/unSd0Zr.png)
-#  [![Build Status](https://travis-ci.org/edgurgel/verk.svg?branch=master)](https://travis-ci.org/edgurgel/verk) [![Hex pm](http://img.shields.io/hexpm/v/verk.svg?style=flat)](https://hex.pm/packages/verk) [![Coverage Status](https://coveralls.io/repos/edgurgel/verk/badge.svg?branch=master&service=github)](https://coveralls.io/github/edgurgel/verk?branch=master) [![hex.pm downloads](https://img.shields.io/hexpm/dt/verk.svg?style=flat)](https://hex.pm/packages/verk)
+
+[![Build Status](https://travis-ci.org/edgurgel/verk.svg?branch=master)](https://travis-ci.org/edgurgel/verk)
+[![Coverage Status](https://coveralls.io/repos/edgurgel/verk/badge.svg?branch=master&service=github)](https://coveralls.io/github/edgurgel/verk?branch=master)
+[![Module Version](https://img.shields.io/hexpm/v/verk.svg)](https://hex.pm/packages/verk)
+[![Hex Docs](https://img.shields.io/badge/hex-docs-lightgreen.svg)](https://hexdocs.pm/verk/)
+[![Total Download](https://img.shields.io/hexpm/dt/verk.svg)](https://hex.pm/packages/verk)
+[![License](https://img.shields.io/hexpm/l/verk.svg)](https://github.com/edgurgel/verk/blob/master/LICENSE)
+[![Last Updated](https://img.shields.io/github/last-commit/edgurgel/verk.svg)](https://github.com/edgurgel/verk/commits/master)
 
 Verk is a job processing system backed by Redis. It uses the same job definition of Sidekiq/Resque.
 
@@ -30,19 +37,25 @@ Feature set:
 
 ## Installation
 
-First, add Verk to your `mix.exs` dependencies:
+First, add `:verk` to your `mix.exs` dependencies:
 
 ```elixir
 def deps do
-  [{:verk, "~> 1.0"}]
+  [
+    {:verk, "~> 1.0"}
+  ]
 end
 ```
 
-and run `$ mix deps.get`. Add `:verk` to your applications list if your Elixir version is 1.3 or lower:
+and run `$ mix deps.get`.
+
+Add `:verk` to your applications list if your Elixir version is 1.3 or lower:
 
 ```elixir
 def application do
-  [applications: [:verk]]
+  [
+    applications: [:verk]
+  ]
 end
 ```
 
@@ -117,10 +130,10 @@ Verk.enqueue(%Verk.Job{queue: :default, class: "ExampleWorker", args: [1,2], max
 
 This job can also be scheduled using `Verk.schedule/2`:
 
- ```elixir
- perform_at = Timex.shift(Timex.now, seconds: 30)
- Verk.schedule(%Verk.Job{queue: :default, class: "ExampleWorker", args: [1,2]}, perform_at)
- ```
+```elixir
+perform_at = Timex.shift(Timex.now, seconds: 30)
+Verk.schedule(%Verk.Job{queue: :default, class: "ExampleWorker", args: [1,2]}, perform_at)
+```
 
 ### Retry at
 
@@ -178,6 +191,7 @@ The way Verk currently works, there are two pitfalls to pay attention to:
   `node_id`, which is already in use by another running node, then the second
   node will re-enqueue all jobs currently in progress on the first node, which
   results in jobs executed multiple times.
+
 2. **Take caution around removing nodes.** If a node with jobs in progress is
   killed, those jobs will not be restarted until another node with the same
   `node_id` comes online. If another node with the same `node_id` never comes
@@ -272,7 +286,7 @@ variable. Instruct Verk to use this environment variable as `node_id`:
 
 ```elixir
 config :verk,
- node_id: {:system, "VERK_NODE_ID"}
+  node_id: {:system, "VERK_NODE_ID"}
 ```
 
 Be careful when scaling the number of `replicas` down. Make sure that the pods
@@ -306,7 +320,7 @@ Then set `VERK_DISABLED=true` in your Deployment's spec.
 
 ### EXPERIMENTAL - Generate Node ID
 
-Since Verk 1.6.0 there is a new experimental optional configuration `generate_node_id`. Node IDs are completely controlled automatically by Verk if this configuration is set to `true`. 
+Since Verk 1.6.0 there is a new experimental optional configuration `generate_node_id`. Node IDs are completely controlled automatically by Verk if this configuration is set to `true`.
 
 
 #### Under the hood
@@ -318,7 +332,7 @@ Since Verk 1.6.0 there is a new experimental optional configuration `generate_no
 
 * Each frequency milliseconds check for all the keys of all nodes (`verk_nodes`). If the key expired it means that this node is dead and it needs to have its jobs restored.
 
-To restore we go through all the running queues (`verk:node:#{node_id}:queues`) of that node and enqueue them from inprogress back to the queue. Each "enqueue back from in progress" is atomic (<3 lua) so we won't have duplicates.
+To restore we go through all the running queues (`verk:node:#{node_id}:queues`) of that node and enqueue them from inprogress back to the queue. Each "enqueue back from in progress" is atomic (<3 Lua) so we won't have duplicates.
 
 #### Configuration
 
@@ -383,19 +397,19 @@ Notice the selector to get just the type JobFailed. If no selector is set every 
 
 Then adding the consumer to your supervision tree:
 
-  ```elixir
-  defmodule Example.App do
-    use Application
+```elixir
+defmodule Example.App do
+  use Application
 
-    def start(_type, _args) do
-      import Supervisor.Spec
-      tree = [supervisor(Verk.Supervisor, []),
-              worker(TrackingErrorHandler, [])]
-      opts = [name: Simple.Sup, strategy: :one_for_one]
-      Supervisor.start_link(tree, opts)
-    end
+  def start(_type, _args) do
+    import Supervisor.Spec
+    tree = [supervisor(Verk.Supervisor, []),
+            worker(TrackingErrorHandler, [])]
+    opts = [name: Simple.Sup, strategy: :one_for_one]
+    Supervisor.start_link(tree, opts)
   end
-  ```
+end
+```
 
 ## Dashboard ?
 
@@ -406,6 +420,13 @@ Check [Verk Web](https://github.com/edgurgel/verk_web)!
 ## Metrics ?
 
 Check [Verk Stats](https://github.com/edgurgel/verk-stats)
+
+## License
+
+Copyright (c) 2013 Eduardo Gurgel Pinho
+
+Verk is released under the MIT License. See the [LICENSE.md](./LICENSE.md) file
+for further details.
 
 ## Sponsorship
 

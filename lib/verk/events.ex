@@ -1,11 +1,11 @@
 defmodule Verk.Events do
   @moduledoc """
-  Events generated while jobs are being processed
+  Events generated while jobs are being processed.
   """
 
   defmodule JobFinished do
     @moduledoc """
-    When a job finishes this event is generated
+    When a job finishes this event is generated.
     """
     @type t :: %__MODULE__{job: Verk.Job.t(), finished_at: DateTime.t(), started_at: DateTime.t()}
     defstruct [:job, :started_at, :finished_at]
@@ -13,7 +13,7 @@ defmodule Verk.Events do
 
   defmodule JobStarted do
     @moduledoc """
-    When a job starts this event is generated
+    When a job starts this event is generated.
     """
     @type t :: %__MODULE__{job: Verk.Job.t(), started_at: DateTime.t()}
     defstruct [:job, :started_at]
@@ -21,7 +21,7 @@ defmodule Verk.Events do
 
   defmodule JobFailed do
     @moduledoc """
-    When a job fails this event is generated
+    When a job fails this event is generated.
     """
     @type t :: %__MODULE__{
             job: Verk.Job.t(),
@@ -35,7 +35,7 @@ defmodule Verk.Events do
 
   defmodule QueueRunning do
     @moduledoc """
-    When a queue is running
+    When a queue is running.
     """
     @type t :: %__MODULE__{queue: atom}
     defstruct [:queue]
@@ -43,7 +43,7 @@ defmodule Verk.Events do
 
   defmodule QueuePausing do
     @moduledoc """
-    When a queue is pausing
+    When a queue is pausing.
     """
     @type t :: %__MODULE__{queue: atom}
     defstruct [:queue]
@@ -51,7 +51,7 @@ defmodule Verk.Events do
 
   defmodule QueuePaused do
     @moduledoc """
-    When a queue paused
+    When a queue paused.
     """
     @type t :: %__MODULE__{queue: atom}
     defstruct [:queue]

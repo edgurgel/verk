@@ -1,6 +1,6 @@
 defmodule Verk.Manager do
   @moduledoc """
-  A process that manages the state of each started queue
+  A process that manages the state of each started queue.
   """
 
   use GenServer
@@ -25,7 +25,7 @@ defmodule Verk.Manager do
   end
 
   @doc """
-  It returns the status of each queue currently
+  It returns the status of each queue currently.
 
   [{:default, 25, :paused}, {:low_priority, 10, :running}]
   """
@@ -33,7 +33,7 @@ defmodule Verk.Manager do
   def status, do: :ets.tab2list(@table)
 
   @doc """
-  It returns the status of each queue currently
+  It returns the status of each queue currently.
 
   [{:default, 25, :paused}, {:low_priority, 10, :running}]
   """
@@ -64,8 +64,8 @@ defmodule Verk.Manager do
   end
 
   @doc """
-  It adds the `queue` running with the amount of `size` of workers
-  It always returns the child spec
+  It adds the `queue` running with the amount of `size` of workers.
+  It always returns the child spec.
   """
   @spec add(atom, pos_integer) :: Supervisor.on_start_child()
   def add(queue, size) do
@@ -77,8 +77,8 @@ defmodule Verk.Manager do
   end
 
   @doc """
-  It removes the `queue`
-  It returns `:ok` if successful and `{:error, :not_found}` otherwise
+  It removes the `queue`.
+  It returns `:ok` if successful and `{:error, :not_found}` otherwise.
   """
   @spec remove(atom) :: :ok | {:error, :not_found}
   def remove(queue) do
