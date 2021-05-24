@@ -17,7 +17,7 @@ defmodule Verk.QueueStatsCounters do
   end
 
   @doc """
-  It outputs the current stats about each queue and `total` and search for a `prefix` if provided
+  It outputs the current stats about each queue and `total` and search for a `prefix` if provided.
   """
   def all(prefix) do
     prefix = to_charlist(prefix)
@@ -36,7 +36,7 @@ defmodule Verk.QueueStatsCounters do
   end
 
   @doc """
-  It Resets the started counter of a `queue`
+  It resets the started counter of a `queue`.
   """
   @spec reset_started(binary) :: :ok
   def reset_started(queue) do

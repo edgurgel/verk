@@ -20,7 +20,7 @@ defmodule Verk.QueueManager do
   end
 
   @doc """
-  Returns the atom that represents the QueueManager of the `queue`
+  Returns the atom that represents the QueueManager of the `queue`.
   """
   @spec name(binary | atom) :: atom
   def name(queue) do
@@ -33,7 +33,7 @@ defmodule Verk.QueueManager do
   end
 
   @doc """
-  Pop a job from the assigned queue and reply with it if not empty
+  Pop a job from the assigned queue and reply with it if not empty.
   """
   def dequeue(queue_manager, n, timeout \\ 5000) do
     GenServer.call(queue_manager, {:dequeue, n}, timeout)
@@ -42,7 +42,7 @@ defmodule Verk.QueueManager do
   end
 
   @doc """
-  Add job to be retried in the assigned queue
+  Add job to be retried in the assigned queue.
   """
   def retry(queue_manager, job, exception, stacktrace, timeout \\ 5000) do
     now = Time.now() |> DateTime.to_unix()
@@ -52,28 +52,28 @@ defmodule Verk.QueueManager do
   end
 
   @doc """
-  Acknowledge that a job was processed
+  Acknowledges that a job was processed.
   """
   def ack(queue_manager, job) do
     GenServer.cast(queue_manager, {:ack, job})
   end
 
   @doc """
-  Remove a malformed job from the inprogress queue
+  Removes a malformed job from the inprogress queue.
   """
   def malformed(queue_manager, job) do
     GenServer.cast(queue_manager, {:malformed, job})
   end
 
   @doc """
-  Enqueue inprogress jobs back to the queue
+  Enqueues inprogress jobs back to the queue.
   """
   def enqueue_inprogress(queue_manager) do
     GenServer.call(queue_manager, :enqueue_inprogress)
   end
 
   @doc """
-  Connect to redis
+  Connects to redis.
   """
   def init([queue_name]) do
     node_id = Confex.fetch_env!(:verk, :local_node_id)

@@ -1,18 +1,19 @@
 defmodule Verk.QueueStats do
   @moduledoc """
-  This process will update an :ets table with the following information per queue
+  This process will update an :ets table with the following information per queue:
 
     * Current amount of running jobs
     * Amount of finished jobs
     * Amount of failed jobs
 
-  It will persist to redis from time to time
+  It will persist to redis from time to time.
 
   It also holds information about the current status of queus. They can be:
-  * running
-  * idle
-  * pausing
-  * paused
+
+    * running
+    * idle
+    * pausing
+    * paused
   """
   use GenStage
   require Logger
@@ -31,7 +32,7 @@ defmodule Verk.QueueStats do
   end
 
   @doc """
-  Lists the queues and their stats searching for a `prefix` if provided
+  Lists the queues and their stats searching for a `prefix` if provided.
   """
   @spec all(binary) :: Map.t()
   def all(prefix \\ "") do

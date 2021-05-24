@@ -1,19 +1,19 @@
 defmodule Verk do
   @moduledoc """
-  Verk is a job processing system that integrates well with Sidekiq jobs
+  Verk is a job processing system that integrates well with Sidekiq jobs.
 
   Each queue will have a pool of workers handled by `poolboy` that will process jobs.
 
   Verk has a retry mechanism similar to Sidekiq that keeps retrying the jobs with a reasonable backoff.
 
-  It has an API that provides information about the queues
+  It has an API that provides information about the queues.
   """
   alias Verk.{Job, Time, Manager}
 
   @schedule_key "schedule"
 
   @doc """
-  Add a new `queue` with a pool of size `size` of workers
+  Add a new `queue` with a pool of size `size` of workers.
   """
   @spec add_queue(atom, pos_integer) :: Supervisor.on_start_child()
   def add_queue(queue, size \\ 25) when is_atom(queue) and size > 0 do
@@ -21,7 +21,7 @@ defmodule Verk do
   end
 
   @doc """
-  Remove `queue` from the list of queues that are being processed
+  Remove `queue` from the list of queues that are being processed.
   """
   @spec remove_queue(atom) :: :ok | {:error, :not_found}
   def remove_queue(queue) when is_atom(queue) do
@@ -32,15 +32,16 @@ defmodule Verk do
   defdelegate resume_queue(queue), to: Verk.Manager, as: :resume
 
   @doc """
-  Enqueues a Job to the specified queue returning the respective job id
+  Enqueues a Job to the specified queue returning the respective job id.
 
   The job must have:
-   * a valid `queue`
-   * a list of `args` to perform
-   * a module to perform (`class`)
-   * a valid `jid`
 
-  Optionally a Redix server can be passed which defaults to `Verk.Redis`
+    * a valid `queue`
+    * a list of `args` to perform
+    * a module to perform (`class`)
+    * a valid `jid`
+
+  Optionally a Redix server can be passed which defaults to `Verk.Redis`.
   """
   @spec enqueue(%Job{}, GenServer.server()) :: {:ok, binary} | {:error, term}
   def enqueue(job, redis \\ Verk.Redis)
@@ -70,15 +71,16 @@ defmodule Verk do
   end
 
   @doc """
-  Schedules a Job to the specified queue returning the respective job id
+  Schedules a Job to the specified queue returning the respective job id.
 
   The job must have:
-   * a valid `queue`
-   * a list of `args` to perform
-   * a module to perform (`class`)
-   * a valid `jid`
 
-  Optionally a Redix server can be passed which defaults to `Verk.Redis`
+    * a valid `queue`
+    * a list of `args` to perform
+    * a module to perform (`class`)
+    * a valid `jid`
+
+  Optionally a Redix server can be passed which defaults to `Verk.Redis`.
   """
   @spec schedule(%Job{}, %DateTime{}, GenServer.server()) :: {:ok, binary} | {:error, term}
   def schedule(job, datetime, redis \\ Verk.Redis)

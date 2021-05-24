@@ -1,6 +1,6 @@
 defmodule Verk.InProgressQueue do
   @moduledoc """
-  This module interacts with the in progress queue
+  This module interacts with the in progress queue.
   """
 
   @external_resource "priv/lpop_rpush_src_dest.lua"

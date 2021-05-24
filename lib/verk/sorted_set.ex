@@ -1,6 +1,6 @@
 defmodule Verk.SortedSet do
   @moduledoc """
-  This module interacts with the jobs on a sorted set
+  This module interacts with the jobs on a sorted set.
   """
   import Verk.Dsl
   alias Verk.Job
@@ -8,7 +8,7 @@ defmodule Verk.SortedSet do
   @requeue_now_script Verk.Scripts.sha("requeue_job_now")
 
   @doc """
-  Counts how many jobs are inside the sorted set
+  Counts how many jobs are inside the sorted set.
   """
   @spec count(String.t(), GenServer.server()) :: {:ok, integer} | {:error, Redix.Error.t()}
   def count(key, redis) do
@@ -16,7 +16,7 @@ defmodule Verk.SortedSet do
   end
 
   @doc """
-  Counts how many jobs are inside the sorted set, raising if there's an error
+  Counts how many jobs are inside the sorted set, raising if there's an error.
   """
   @spec count!(String.t(), GenServer.server()) :: integer
   def count!(key, redis) do
@@ -24,11 +24,11 @@ defmodule Verk.SortedSet do
   end
 
   @doc """
-  Clears the sorted set
+  Clears the sorted set.
 
-  It will return `{:ok, true}` if the sorted set was cleared and `{:ok, false}` otherwise
+  It will return `{:ok, true}` if the sorted set was cleared and `{:ok, false}` otherwise.
 
-  An error tuple may be returned if Redis failed
+  An error tuple may be returned if Redis failed.
   """
   @spec clear(String.t(), GenServer.server()) :: {:ok, boolean} | {:error, Redix.Error.t()}
   def clear(key, redis) do
@@ -40,9 +40,9 @@ defmodule Verk.SortedSet do
   end
 
   @doc """
-  Clears the sorted set, raising if there's an error
+  Clears the sorted set, raising if there's an error.
 
-  It will return `true` if the sorted set was cleared and `false` otherwise
+  It will return `true` if the sorted set was cleared and `false` otherwise.
   """
   @spec clear!(String.t(), GenServer.server()) :: boolean
   def clear!(key, redis) do
@@ -50,7 +50,7 @@ defmodule Verk.SortedSet do
   end
 
   @doc """
-  Lists jobs from `start` to `stop`
+  Lists jobs from `start` to `stop`.
   """
   @spec range(String.t(), integer, integer, GenServer.server()) ::
           {:ok, [Verk.Job.T]} | {:error, Redix.Error.t()}
@@ -62,7 +62,7 @@ defmodule Verk.SortedSet do
   end
 
   @doc """
-  Lists jobs from `start` to `stop`, raising if there's an error
+  Lists jobs from `start` to `stop`, raising if there's an error.
   """
   @spec range!(String.t(), integer, integer, GenServer.server()) :: nil
   def range!(key, start \\ 0, stop \\ -1, redis) do
@@ -70,7 +70,7 @@ defmodule Verk.SortedSet do
   end
 
   @doc """
-  Lists jobs from `start` to `stop` along with the item scores
+  Lists jobs from `start` to `stop` along with the item scores.
   """
   @spec range_with_score(String.t(), integer, integer, GenServer.server()) ::
           {:ok, [{Verk.Job.T, integer}]} | {:error, Redix.Error.t()}
@@ -91,7 +91,7 @@ defmodule Verk.SortedSet do
   end
 
   @doc """
-  Lists jobs from `start` to `stop` along with the item scores, raising if there's an error
+  Lists jobs from `start` to `stop` along with the item scores, raising if there's an error.
   """
   @spec range_with_score!(String.t(), integer, integer, GenServer.server()) :: nil
   def range_with_score!(key, start \\ 0, stop \\ -1, redis) do
@@ -99,12 +99,12 @@ defmodule Verk.SortedSet do
   end
 
   @doc """
-  Deletes the job from the sorted set
+  Deletes the job from the sorted set.
 
-  It returns `{:ok, true}` if the job was found and deleted
-  Otherwise it returns `{:ok, false}`
+  It returns `{:ok, true}` if the job was found and deleted.
+  Otherwise it returns `{:ok, false}`.
 
-  An error tuple may be returned if Redis failed
+  An error tuple may be returned if Redis failed.
   """
   @spec delete_job(String.t(), %Job{} | String.t(), GenServer.server()) ::
           {:ok, boolean} | {:error, Redix.Error.t()}
@@ -121,10 +121,10 @@ defmodule Verk.SortedSet do
   end
 
   @doc """
-  Deletes the job from the sorted set, raising if there's an error
+  Deletes the job from the sorted set, raising if there's an error.
 
-  It returns `true` if the job was found and delete
-  Otherwise it returns `false`
+  It returns `true` if the job was found and delete.
+  Otherwise it returns `false`.
   """
   @spec delete_job!(String.t(), %Job{} | String.t(), GenServer.server()) :: boolean
   def delete_job!(key, %Job{original_json: original_json}, redis) do
@@ -136,12 +136,12 @@ defmodule Verk.SortedSet do
   end
 
   @doc """
-  Moves the job from the sorted set back to its original queue
+  Moves the job from the sorted set back to its original queue.
 
-  It returns `{:ok, true}` if the job was found and requeued
-  Otherwise it returns `{:ok, false}`
+  It returns `{:ok, true}` if the job was found and requeued.
+  Otherwise it returns `{:ok, false}`.
 
-  An error tuple may be returned if Redis failed
+  An error tuple may be returned if Redis failed.
   """
   @spec requeue_job(String.t(), %Job{} | String.t(), GenServer.server()) ::
           {:ok, boolean} | {:error, Redix.Error.t()}
@@ -166,10 +166,10 @@ defmodule Verk.SortedSet do
   end
 
   @doc """
-  Moves the job from the sorted set back to its original queue, raising if there's an error
+  Moves the job from the sorted set back to its original queue, raising if there's an error.
 
-  It returns `true` if the job was found and requeued
-  Otherwise it returns `false`
+  It returns `true` if the job was found and requeued.
+  Otherwise it returns `false`.
   """
   @spec requeue_job!(String.t(), %Job{} | String.t(), GenServer.server()) :: boolean
   def requeue_job!(key, %Job{original_json: original_json}, redis) do

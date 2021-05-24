@@ -1,11 +1,12 @@
 defmodule Verk.Supervisor do
   @moduledoc """
   Supervisor definition for Verk application. It consists of:
-  * `Verk.ScheduleManager`
-  * GenStage producer named `Verk.EventProducer`
-  * GenStage consumer `Verk.QueueStats`
-  * Redis connectionn named `Verk.Redis`
-  * A `Verk.Queue.Supervisor` per queue
+
+    * `Verk.ScheduleManager`
+    * GenStage producer named `Verk.EventProducer`
+    * GenStage consumer `Verk.QueueStats`
+    * Redis connectionn named `Verk.Redis`
+    * A `Verk.Queue.Supervisor` per queue
   """
   use Supervisor
 

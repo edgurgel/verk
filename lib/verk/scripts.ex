@@ -1,6 +1,6 @@
 defmodule Verk.Scripts do
   @moduledoc """
-  Provides helpers to load lua scripts into redis and calculate sha1
+  Provides helpers to load Lua scripts into Redis and calculate SHA1.
   """
 
   @spec load(pid) :: :ok

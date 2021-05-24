@@ -1,6 +1,7 @@
 defmodule Verk.QueuesDrainer do
   @moduledoc """
-  This process exists to pause queues once a `shutdown` is issued. Once all queues are paused the
+  This process exists to pause queues once a `shutdown` is issued. Once all
+  queues are paused the process will shutdown.
   """
 
   defmodule Consumer do

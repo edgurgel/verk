@@ -1,8 +1,8 @@
 defmodule Verk.WorkersManager do
   @moduledoc """
-  A WorkersManager assign jobs to workers from a pool (handled by poolboy) monitoring the job.
+  A WorkersManager assigns jobs to workers from a pool (handled by poolboy) monitoring the job..
 
-  It interacts with the related QueueManager to request jobs and to schedule jobs to be retried
+  It interacts with the related QueueManager to request jobs and to schedule jobs to be retried.
   """
 
   use GenServer
@@ -23,7 +23,7 @@ defmodule Verk.WorkersManager do
   end
 
   @doc """
-  Returns the atom that represents the WorkersManager of the `queue`
+  Returns the atom that represents the WorkersManager of the `queue`.
   """
   @spec name(binary | atom) :: atom
   def name(queue) do
@@ -37,10 +37,12 @@ defmodule Verk.WorkersManager do
   end
 
   @doc """
-  List running jobs
+  List running jobs.
 
-  Example:
+  Example
+
       [%{process: #PID<0.186.0>, job: %Verk.Job{...}, started_at: %DateTime{...}} ]
+
   """
   @spec running_jobs(binary | atom) :: Map.t()
   def running_jobs(queue, limit \\ 100) do
@@ -59,7 +61,7 @@ defmodule Verk.WorkersManager do
 
   @process_info_keys [:current_stacktrace, :initial_call, :reductions, :status]
   @doc """
-  List information about the process that is currently running a `job_id`
+  List information about the process that is currently running a `job_id`.
   """
   @spec inspect_worker(binary | atom, binary) :: {:ok, Map.t()} | {:error, :not_found}
   def inspect_worker(queue, job_id) do
@@ -79,7 +81,7 @@ defmodule Verk.WorkersManager do
   end
 
   @doc """
-  Pauses a `queue`
+  Pauses a `queue`.
   """
   @spec pause(binary | atom) :: :ok | :already_paused
   def pause(queue), do: GenServer.call(name(queue), :pause)
@@ -91,7 +93,7 @@ defmodule Verk.WorkersManager do
   def resume(queue), do: GenServer.call(name(queue), :resume)
 
   @doc """
-  Create a table to monitor workers saving data about the assigned queue/pool
+  Create a table to monitor workers saving data about the assigned queue/pool.
   """
   def init([workers_manager_name, queue_name, queue_manager_name, pool_name, size]) do
     monitors = :ets.new(workers_manager_name, [:named_table, read_concurrency: true])

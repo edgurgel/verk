@@ -1,6 +1,6 @@
 defmodule Verk.Node.Manager do
   @moduledoc """
-  NodeManager keeps track of the nodes that are working on the queues
+  NodeManager keeps track of the nodes that are working on the queues.
   """
 
   use GenServer

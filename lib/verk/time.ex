@@ -1,6 +1,6 @@
 defmodule Verk.Time do
   @moduledoc """
-  Internal API for time management and comparison functions
+  Internal API for time management and comparison functions.
   """
 
   @doc false
@@ -35,7 +35,7 @@ defmodule Verk.Time do
   end
 
   @doc """
-  returns true if the first argument occurred after the second argument
+  Returns true if the first argument occurred after the second argument.
   """
   @spec after?(DateTime.t(), DateTime.t()) :: boolean
   def after?(datetime1, datetime2) do
