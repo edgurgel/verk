@@ -103,7 +103,7 @@ defmodule Verk.Node.Manager do
         {:ok, faulty_nodes ++ do_find_faulty_nodes(verk_nodes, local_verk_node_id)}
 
       {:more, verk_nodes, cursor} ->
-        find_faulty_nodes(local_verk_node_id, cursor, do_find_faulty_nodes(verk_nodes, local_verk_node_id))
+        find_faulty_nodes(local_verk_node_id, cursor, faulty_nodes ++ do_find_faulty_nodes(verk_nodes, local_verk_node_id))
 
       {:error, reason} ->
         {:error, reason}
