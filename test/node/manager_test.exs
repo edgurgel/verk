@@ -55,8 +55,8 @@ defmodule Verk.Node.ManagerTest do
       dead_node_id = "dead-node"
       state = {@verk_node_id, @frequency}
 
-      expect(Verk.Node, :members, fn 0, Verk.Redis -> {:more, [@verk_node_id], 123} end)
-      expect(Verk.Node, :members, fn 123, Verk.Redis -> {:ok, [dead_node_id]} end)
+      expect(Verk.Node, :members, fn 0, Verk.Redis -> {:more, [dead_node_id], 123} end)
+      expect(Verk.Node, :members, fn 123, Verk.Redis -> {:ok, [@verk_node_id]} end)
       expect(Verk.Node, :ttl!, fn ^dead_node_id, Verk.Redis -> -2 end)
       expect(Verk.Node, :expire_in, fn @verk_node_id, @expiration, Verk.Redis -> {:ok, 1} end)
       expect(Verk.Node, :queues!, fn "dead-node", 0, Verk.Redis -> {:more, ["queue_1"], 123} end)
