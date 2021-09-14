@@ -97,14 +97,13 @@ defmodule Verk.Node.Manager do
     Enum.each(queues, &enqueue_inprogress(verk_node_id, &1))
   end
 
-  defp find_faulty_nodes(local_verk_node_id, cursor \\ 0) do
+  defp find_faulty_nodes(local_verk_node_id, cursor \\ 0, faulty_nodes \\ []) do
     case Verk.Node.members(cursor, Verk.Redis) do
       {:ok, verk_nodes} ->
-        {:ok, do_find_faulty_nodes(verk_nodes, local_verk_node_id)}
+        {:ok, faulty_nodes ++ do_find_faulty_nodes(verk_nodes, local_verk_node_id)}
 
       {:more, verk_nodes, cursor} ->
-        do_find_faulty_nodes(verk_nodes, local_verk_node_id) ++
-          find_faulty_nodes(local_verk_node_id, cursor)
+        find_faulty_nodes(local_verk_node_id, cursor, faulty_nodes ++ do_find_faulty_nodes(verk_nodes, local_verk_node_id))
 
       {:error, reason} ->
         {:error, reason}
